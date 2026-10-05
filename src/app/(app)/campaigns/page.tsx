@@ -1,16 +1,17 @@
-import { db } from "@/lib/db";
+import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { can } from "@/lib/rbac";
+import { listBrandsWithCampaigns } from "@/lib/campaigns";
 import { ActionForm } from "@/components/ActionForm";
 import { Field, Input } from "@/components/Field";
-import { createBrandAction, createCampaignAction } from "@/app/actions/campaigns";
+import { ProgressBar } from "@/components/ProgressBar";
+import { archiveBrandAction, createBrandAction, createCampaignAction } from "@/app/actions/campaigns";
+import { formatDateTime } from "@/lib/datetime";
+import { env } from "@/lib/env";
 
 export default async function CampaignsPage() {
   const user = await requireUser();
-  const brands = await db.brand.findMany({
-    where: { organizationId: user.organizationId, deletedAt: null }, orderBy: { name: "asc" },
-    include: { campaigns: { where: { deletedAt: null }, orderBy: { name: "asc" }, include: { _count: { select: { tasks: true } } } } },
-  });
+  const { brands, summaries } = await listBrandsWithCampaigns(user);
   const manage = can(user.role, "campaign:manage");
   return (
     <div className="space-y-6">
@@ -27,14 +28,26 @@ export default async function CampaignsPage() {
               <Field label="Name" name="name"><Input name="name" required /></Field></ActionForm></section>
         </div>
       )}
-      {brands.length === 0 && <p className="text-sm text-slate-500">No brands yet.</p>}
+      {brands.length === 0 && <p className="text-sm text-slate-500">No campaigns to show yet.</p>}
       {brands.map((b) => (
-        <section key={b.id} className="card">
-          <h2 className="font-medium">{b.name}</h2>
-          <ul className="mt-2 divide-y text-sm">
-            {b.campaigns.length === 0 && <li className="py-2 text-slate-400">No campaigns</li>}
-            {b.campaigns.map((c) => <li key={c.id} className="flex justify-between py-2"><span>{c.name}</span><span className="text-slate-400">{c._count.tasks} tasks</span></li>)}
-          </ul>
+        <section key={b.id} className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-medium">{b.name}</h2>
+            {manage && b.campaigns.length === 0 && <form action={archiveBrandAction}><input type="hidden" name="id" value={b.id} /><button className="text-xs text-red-600 underline">Archive brand</button></form>}
+          </div>
+          {b.campaigns.length === 0 && <p className="text-sm text-slate-400">No campaigns</p>}
+          <div className="grid gap-3 md:grid-cols-2">
+            {b.campaigns.map((c) => {
+              const s = summaries.get(c.id)!;
+              return (
+                <Link key={c.id} href={`/campaigns/${c.id}`} className="card block transition hover:border-brand-500 hover:shadow">
+                  <div className="flex items-start justify-between gap-2"><h3 className="font-medium">{c.name}</h3><span className="text-xs text-slate-400">{s.total} content</span></div>
+                  {(c.startDate || c.endDate) && <p className="text-xs text-slate-400">{formatDateTime(c.startDate, env.timezone).split(",").slice(0, 2).join(",")} → {formatDateTime(c.endDate, env.timezone).split(",").slice(0, 2).join(",")}</p>}
+                  <div className="mt-3">{s.total > 0 ? <ProgressBar s={s} /> : <p className="text-xs text-slate-400">No content yet</p>}</div>
+                </Link>
+              );
+            })}
+          </div>
         </section>
       ))}
     </div>

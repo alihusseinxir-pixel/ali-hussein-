@@ -1,11 +1,13 @@
 import "server-only";
-import type { Prisma, Role, TaskStage, Priority } from "@prisma/client";
+import { Prisma, type Role, type TaskStage, type Priority } from "@prisma/client";
 import { db } from "./db";
 import { env } from "./env";
 import { parseLocalDateTime } from "./datetime";
 import { logActivity } from "./activity";
 import { ForbiddenError, assertCan, can } from "./rbac";
 import { clearTaskCalendar, syncTaskCalendar } from "./calendar-sync";
+import { missingRequired, sanitizeExtra, type TemplateDef } from "./templates";
+import { resolveTemplateRef } from "./templates-db";
 import { contextSnapshot } from "./task-context";
 import { firstAssigneeRoles, initialStage, isReassignable } from "./workflow";
 import type { TaskInput } from "./task-schema";
@@ -164,6 +166,18 @@ function dataFrom(input: TaskInput) {
   return data;
 }
 
+/** Apply a template to the input: lock the content type, default the platform, enforce required fields, sanitise extras. */
+function applyTemplate(tpl: TemplateDef | null, input: TaskInput, existingExtra: Record<string, string> = {}) {
+  if (!tpl) return { extra: {} as Record<string, string> };
+  input.contentType = tpl.contentType;
+  if (!input.platform && tpl.platform) input.platform = tpl.platform;
+  const extra = sanitizeExtra(tpl, input.extra, existingExtra);
+  const missing = missingRequired(tpl, input as Partial<Record<string, unknown>>, extra);
+  if (missing.length) throw new TaskError(`${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} required for ${tpl.name}.`);
+  return { extra };
+}
+const extraJson = (e: Record<string, string>) => (Object.keys(e).length ? e : Prisma.DbNull);
+
 async function nextTaskCode(tx: Prisma.TransactionClient, organizationId: string) {
   const year = new Date().getFullYear();
   // Atomic per-org/year counter: concurrent creates can never collide.
@@ -179,6 +193,9 @@ async function nextTaskCode(tx: Prisma.TransactionClient, organizationId: string
 
 export async function createTask(actor: Actor, input: TaskInput) {
   assertCan(actor.role, "task:create");
+  const tpl = await resolveTemplateRef(actor.organizationId, input.templateRef);
+  if (input.templateRef && !tpl) throw new TaskError("Unknown template.");
+  const { extra } = applyTemplate(tpl, input);
   await resolveRefs(actor, input);
   const data = dataFrom(input);
   return db.$transaction(async (tx) => {
@@ -186,7 +203,7 @@ export async function createTask(actor: Actor, input: TaskInput) {
     const stage = initialStage(!!input.assigneeId);
     const task = await tx.task.create({
       data: {
-        ...data, organizationId: actor.organizationId, taskCode, stage,
+        ...data, organizationId: actor.organizationId, taskCode, stage, templateRef: tpl ? input.templateRef : null, extra: extraJson(extra),
         createdById: actor.id, currentAssigneeId: input.assigneeId,
       },
     });
@@ -221,6 +238,8 @@ export async function updateTask(actor: Actor, id: string, input: TaskInput) {
   if (["PUBLISHED", "COMPLETED"].includes(existing.stage)) throw new TaskError("Published or completed tasks are read-only.");
   // The assignee is changed through assignTask so history stays consistent.
   input.assigneeId = existing.currentAssigneeId;
+  const tpl = await resolveTemplateRef(actor.organizationId, existing.templateRef);
+  const { extra } = applyTemplate(tpl, input, (existing.extra as Record<string, string> | null) ?? {});
   await resolveRefs(actor, input);
   const data = dataFrom(input);
   const changed = TRACKED.filter((k) => {
@@ -229,7 +248,7 @@ export async function updateTask(actor: Actor, id: string, input: TaskInput) {
     return a !== b;
   });
   return db.$transaction(async (tx) => {
-    const task = await tx.task.update({ where: { id }, data });
+    const task = await tx.task.update({ where: { id }, data: { ...data, ...(tpl && { extra: extraJson(extra) }) } });
     if (changed.includes("deadline")) {
       await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: id, action: "task.deadline_changed",
         meta: { from: existing.deadline?.toISOString() ?? null, to: data.deadline?.toISOString() ?? null } });

@@ -38,6 +38,8 @@ export const taskInputSchema = z.object({
   publishAt: when,
   startDate: when,
   deadline: when,
+  templateRef: id,
+  extra: z.record(z.string(), z.string()).optional(),
 });
 export type TaskInput = z.infer<typeof taskInputSchema>;
 

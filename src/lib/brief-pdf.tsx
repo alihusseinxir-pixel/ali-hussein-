@@ -10,6 +10,7 @@ export interface BriefData {
   caption: string | null; hashtags: string | null;
   script: string | null; models: string | null; location: string | null; props: string | null; product: string | null;
   shooting: string; publishing: string; deadline: string; references: string | null; specialNotes: string | null;
+  extra: { label: string; value: string }[];
   team: { role: string; name: string }[];
   generatedAt: string; orgName: string;
 }
@@ -113,6 +114,7 @@ export function BriefDocument({ d }: { d: BriefData }) {
         <Section title="LOCATION" text={d.location} />
         <Section title="PROPS" text={d.props} />
         <Section title="PRODUCT" text={d.product} />
+        {d.extra.map((e) => <Section key={e.label} title={e.label.toUpperCase()} text={e.value} />)}
         <Section title="REFERENCES" text={d.references} />
         <Section title="SPECIAL NOTES" text={d.specialNotes} />
 

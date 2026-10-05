@@ -70,6 +70,7 @@ Pages: `/login /register /invite/[token] /dashboard /tasks /tasks/new /tasks/[id
 | task:delete (soft) | ✔ | ✔ | | | | | |
 | task:comment | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
 | campaign:manage | ✔ | ✔ | ✔ | | | | |
+| template:manage | ✔ | ✔ | ✔ | | | | |
 | approval:internal | ✔ | ✔ | ✔ | | | | |
 | approval:final, publish:manage | ✔ | | ✔ | | | | |
 | activity:view:all | ✔ | ✔ | | | | | |
@@ -128,10 +129,17 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - **Email** is an optional digest sent by the same job: one email per person with their new, still-unread notifications from the last 24 h, only when `SMTP_URL` is set and the user has not opted out. Failures leave `emailedAt` empty and are retried on the next run. Latency therefore equals the cron interval.
 - `TASK_REJECTED` exists in the enum but is not emitted: "request changes" is modelled as `REVISION_REQUESTED`.
 
+### Templates & campaigns (Phase 9)
+- **Built-in templates** (`src/lib/templates.ts`, pure data): Instagram Reel, Product Photography, Static Post, Carousel, Story, TikTok, UGC, Campaign Video, Product Shoot — one per content type. Each defines which of the 18 base fields the form shows, which are **required**, **extra fields** specific to that type (e.g. Photography: Background, Lighting, Angles, Shot list; Carousel: slide count + slide-by-slide copy; Reel: duration, music), the default platform, and starting text (Reel/TikTok/Campaign Video start with a `SCENE 01 – / 02 – / 03 –` script skeleton).
+- **Flow**: `/tasks/new` shows a picker (built-ins, your custom templates, or Blank) → the form is generated from the template. The server re-resolves the template and **enforces** it, so a hand-crafted request cannot bypass it: the content type is locked to the template's, required fields (including extras) are checked with readable messages, extras are sanitised (only defined keys, trimmed, 5 000 chars). The template reference and extras are stored on the task (`templateRef`, `extra` JSON) and shown on the task page and in the PDF brief. Editing re-applies the same rules, merges extras without wiping untouched values, and never hides a field that already holds data.
+- **Custom templates** (`ContentTemplate`, tenant-scoped, `template:manage` = Admin / Marketing Manager / Social Media Manager) extend a built-in with the organization's own starting text (e.g. house hashtags, CTA, props). Defaults for fields the base does not show are dropped. Deleting a custom template never touches existing tasks — they fall back to the free-form editor.
+- **Hierarchy**: Brand → Campaign → content. Each **task is one piece of content** (Reel 01, Post 01…), so "content" and "task" are the same record; this keeps one owner, one workflow and one calendar entry per piece.
+- **Campaign pages** (`/campaigns`, `/campaigns/[id]`): progress bar split into Planning / Production / Editing / Review & approval / Scheduled / Published, % published, overdue count, content grouped by type, "+ Add content" (opens the template picker with the campaign preselected), edit (name, description, dates; unique per brand), archive (blocked while anything is still in progress; brands only when they have no campaigns). **Visibility**: managers see every campaign; everyone else sees only campaigns containing tasks they may see, and the counts/progress they get are computed from *their* visible tasks only.
+
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
-- `components/`: `NotificationBell`, `BriefPanel`, `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
+- `components/`: `ProgressBar`, `TaskForm` (template-driven), `NotificationBell`, `BriefPanel`, `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
 - Planned: `WorkflowTimeline`, `HandoverModal`, `FileList`, `CommentThread`, `ReviewPanel`, `CalendarView` (FullCalendar), `NotificationBell`.
 
 ## 7. Folder structure
@@ -159,6 +167,7 @@ src/
 | 6 | Calendar (month/week/day), automatic events, dashboard "Today" | done |
 | 7 | Production Brief PDF (Arabic + English), download/preview, expiring share links | done |
 | 8 | Notification bell + inbox, deadline/overdue/publishing reminders, email digest | done |
-| 9–10 | Templates, analytics | planned |
+| 9 | Templates (built-in + custom, template-specific fields), campaign pages with progress | done |
+| 10 | Analytics | planned |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).

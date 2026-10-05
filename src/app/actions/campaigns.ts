@@ -1,9 +1,12 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { can } from "@/lib/rbac";
+import { ForbiddenError, can } from "@/lib/rbac";
+import { TaskError } from "@/lib/tasks";
+import { archiveBrand, archiveCampaign, updateCampaign } from "@/lib/campaigns";
 import { formToObject, zodErrors, type FormState } from "@/lib/form";
 
 export async function createBrandAction(_: FormState, fd: FormData): Promise<FormState> {
@@ -28,4 +31,32 @@ export async function createCampaignAction(_: FormState, fd: FormData): Promise<
   await db.campaign.create({ data: { organizationId: actor.organizationId, brandId: brand.id, name: p.data.name, createdById: actor.id } });
   revalidatePath("/campaigns");
   return { ok: true };
+}
+
+export async function updateCampaignAction(id: string, _: FormState, fd: FormData): Promise<FormState> {
+  const actor = await requireUser();
+  const raw = formToObject(fd);
+  try {
+    await updateCampaign(actor, id, { name: raw.name ?? "", description: raw.description, startDate: raw.startDate, endDate: raw.endDate });
+  } catch (e) {
+    if (e instanceof TaskError || e instanceof ForbiddenError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath(`/campaigns/${id}`); revalidatePath("/campaigns");
+  return { ok: true };
+}
+
+export async function archiveCampaignAction(id: string, _: FormState, __: FormData): Promise<FormState> {
+  const actor = await requireUser();
+  try { await archiveCampaign(actor, id); } catch (e) {
+    if (e instanceof TaskError || e instanceof ForbiddenError) return { error: e.message };
+    throw e;
+  }
+  redirect("/campaigns");
+}
+
+export async function archiveBrandAction(fd: FormData) {
+  const actor = await requireUser();
+  try { await archiveBrand(actor, String(fd.get("id"))); } catch (e) { if (!(e instanceof TaskError || e instanceof ForbiddenError)) throw e; }
+  revalidatePath("/campaigns");
 }

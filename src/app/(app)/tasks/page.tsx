@@ -18,6 +18,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
     q: sp.q?.trim() || undefined,
     stage: sp.stage && sp.stage in STAGE_LABELS ? (sp.stage as TaskStage) : undefined,
     priority: sp.priority && (PRIORITIES as readonly string[]).includes(sp.priority) ? (sp.priority as Priority) : undefined,
+    campaignId: sp.campaignId || undefined,
     mine: sp.mine === "1",
     overdue: sp.overdue === "1",
     sort: sp.sort === "created" || sp.sort === "priority" ? sp.sort : "deadline",
@@ -36,6 +37,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
       </div>
       <form className="card flex flex-wrap items-end gap-3 !p-3" action="/tasks">
         {filters.mine && <input type="hidden" name="mine" value="1" />}
+        {filters.campaignId && <input type="hidden" name="campaignId" value={filters.campaignId} />}
         <div><label className="label">Search</label><input name="q" defaultValue={sp.q} placeholder="Title or BASMA-2026-…" className="input" /></div>
         <div><label className="label">Stage</label>
           <select name="stage" defaultValue={sp.stage ?? ""} className="input"><option value="">All</option>{Object.entries(STAGE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
@@ -46,6 +48,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
         <label className="flex items-center gap-2 pb-2 text-sm"><input type="checkbox" name="overdue" value="1" defaultChecked={filters.overdue} /> Overdue only</label>
         <button className="btn-secondary">Filter</button>
       </form>
+      {filters.campaignId && <p className="text-sm text-slate-600">Filtered by campaign · <Link className="text-brand-600 underline" href="/tasks">clear</Link></p>}
       <div className="card overflow-x-auto !p-0">
         <table className="w-full text-left text-sm">
           <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500">

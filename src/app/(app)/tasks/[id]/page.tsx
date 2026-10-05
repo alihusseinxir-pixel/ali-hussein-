@@ -14,6 +14,8 @@ import { CommentBox } from "@/components/CommentBox";
 import { CommentThread } from "@/components/CommentThread";
 import { ReviewCard } from "@/components/ReviewCard";
 import { listComments, taskParticipants } from "@/lib/comments";
+import { extraEntries } from "@/lib/templates";
+import { resolveTemplateRef } from "@/lib/templates-db";
 import { BriefPanel } from "@/components/BriefPanel";
 import { FilesPanel } from "@/components/FilesPanel";
 import { MAX_UPLOAD_BYTES, listFiles } from "@/lib/files";
@@ -55,6 +57,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     ? await db.user.findMany({ where: { organizationId: user.organizationId, status: "ACTIVE", deletedAt: null, role: { in: stageOwnerRoles(next) } }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true } })
     : [];
   const revertTo = canHandOver ? revisionTarget(task.contentType, task.stage) : null;
+  const template = await resolveTemplateRef(user.organizationId, task.templateRef);
+  const extras = extraEntries(template, task.extra as Record<string, string> | null);
   const files = await listFiles(user, id);
   const canUpload = !["PUBLISHED", "COMPLETED"].includes(task.stage) && (isOwner || task.createdById === user.id || can(user.role, "task:edit:any"));
   const fileRows = files.map((f) => ({
@@ -80,6 +84,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
               <StageBadge s={task.stage} /><PriorityBadge p={task.priority} />
               <span>{task.contentType.replace(/_/g, " ").toLowerCase()}{task.platform && ` · ${task.platform.toLowerCase()}`}</span>
               {task.brand && <span>· {task.brand.name}{task.campaign && ` / ${task.campaign.name}`}</span>}
+              {template && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">{template.name}</span>}
             </div>
           </div>
           <div className="flex gap-2">
@@ -140,6 +145,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
       <section className="card grid gap-5 md:grid-cols-2">
         <h2 className="font-medium md:col-span-2">Brief &amp; content</h2>
         {wide.map((k) => <div key={k} className="md:col-span-2"><Section title={TASK_FIELD_LABELS[k]} value={task[k]} /></div>)}
+        {extras.map((e) => <Section key={e.label} title={e.label} value={e.value} />)}
         {(Object.keys(TASK_FIELD_LABELS) as (keyof typeof TASK_FIELD_LABELS)[]).filter((k) => !wide.includes(k as never)).map((k) => <Section key={k} title={TASK_FIELD_LABELS[k]} value={task[k]} />)}
       </section>
 

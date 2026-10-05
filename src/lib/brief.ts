@@ -5,6 +5,8 @@ import { formatDateTime } from "./datetime";
 import { ROLE_LABELS } from "./rbac";
 import { visibleTasksWhere, type Actor } from "./tasks";
 import type { BriefData } from "./brief-pdf";
+import { extraEntries } from "./templates";
+import { resolveTemplateRef } from "./templates-db";
 
 const stageName = (s: string) => s.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 
@@ -27,13 +29,14 @@ export async function loadBriefData(where: { actor: Actor; taskId: string } | { 
   for (const a of t.assignments) {
     if (!seen.has(a.user.name)) { seen.add(a.user.name); team.push({ role: ROLE_LABELS[a.user.role], name: a.user.name }); }
   }
+  const tpl = await resolveTemplateRef(t.organizationId, t.templateRef);
   const data: BriefData = {
     taskCode: t.taskCode, title: t.title, brand: t.brand?.name ?? null, campaign: t.campaign?.name ?? null,
     contentType: t.contentType, platform: t.platform, priority: t.priority, stage: stageName(t.stage),
     objective: t.objective, targetAudience: t.targetAudience, brief: t.brief, consumerInsight: t.consumerInsight, keyMessage: t.keyMessage,
     cta: t.cta, caption: t.caption, hashtags: t.hashtags, script: t.script, models: t.models, location: t.location, props: t.props,
     product: t.product, shooting: formatDateTime(t.shootingAt, tz), publishing: formatDateTime(t.publishAt, tz), deadline: formatDateTime(t.deadline, tz),
-    references: t.references, specialNotes: t.specialNotes, team, generatedAt: formatDateTime(new Date(), tz), orgName: t.organization.name,
+    references: t.references, specialNotes: t.specialNotes, extra: extraEntries(tpl, t.extra as Record<string, string> | null), team, generatedAt: formatDateTime(new Date(), tz), orgName: t.organization.name,
   };
   return { data, task: t };
 }

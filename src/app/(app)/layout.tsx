@@ -13,7 +13,7 @@ const NAV: NavItem[] = [
   { href: "/calendar", label: "Calendar" },
   { href: "/approvals", label: "Approvals", need: "approval:internal" },
   { href: "/team", label: "Team", need: "user:manage" },
-  { href: "/templates", label: "Templates", soon: "Phase 9" },
+  { href: "/templates", label: "Templates" },
   { href: "/files", label: "Files" },
   { href: "/notifications", label: "Notifications" },
 ];

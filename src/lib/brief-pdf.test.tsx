@@ -8,7 +8,7 @@ const data: BriefData = {
   brief: "فيديو قصير يربط بين أجواء المباراة وطعم الدجاج الطازج.\nKeep it fun, fast and 30 seconds max.", consumerInsight: "الجمهور يجتمع لمشاهدة المباراة 🍗", keyMessage: "Fresh with you, طازج معك",
   cta: "Order now", caption: "طازج × المباراة 🔥 #tazaj", hashtags: "#tazaj #طازج", script: "SCENE 01 – لقطة افتتاحية\nWide shot of friends watching the match.\nمشهد 2: لقطة قريبة للمنتج\nSlow zoom on the product.\nSCENE 3 - Closing\nLogo + CTA",
   models: "Ahmed, Sara", location: "Riyadh – Studio 2", props: "Jerseys, TV", product: "Tazaj grilled chicken", shooting: "7 Oct 2026, 4:00 pm", publishing: "10 Oct 2026, 8:00 pm", deadline: "8 Oct 2026, 12:00 pm",
-  references: "https://example.com/ref", specialNotes: null, team: [{ role: "Created by (Social Media Manager)", name: "Ali" }, { role: "Videographer", name: "أحمد" }], generatedAt: "5 Oct 2026, 11:00 pm", orgName: "Basma",
+  references: "https://example.com/ref", specialNotes: null, extra: [{ label: "Shot list", value: "1. Hero\n2. Detail" }, { label: "Lighting", value: "إضاءة ناعمة" }], team: [{ role: "Created by (Social Media Manager)", name: "Ali" }, { role: "Videographer", name: "أحمد" }], generatedAt: "5 Oct 2026, 11:00 pm", orgName: "Basma",
 };
 
 describe("brief pdf", () => {

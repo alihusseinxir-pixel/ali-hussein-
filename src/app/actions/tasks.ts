@@ -15,9 +15,17 @@ function toState(e: unknown): FormState {
   throw e;
 }
 
+/** Form fields named `extra.<key>` carry template-specific values. */
+function taskFormData(fd: FormData) {
+  const raw = formToObject(fd);
+  const extra: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw)) if (k.startsWith("extra.")) extra[k.slice(6)] = v;
+  return { ...raw, extra };
+}
+
 export async function createTaskAction(_: FormState, fd: FormData): Promise<FormState> {
   const actor = await requireUser();
-  const parsed = taskInputSchema.safeParse(formToObject(fd));
+  const parsed = taskInputSchema.safeParse(taskFormData(fd));
   if (!parsed.success) return zodErrors(parsed.error);
   let id: string;
   try { id = (await createTask(actor, parsed.data)).id; } catch (e) { return toState(e); }
@@ -26,7 +34,7 @@ export async function createTaskAction(_: FormState, fd: FormData): Promise<Form
 
 export async function updateTaskAction(taskId: string, _: FormState, fd: FormData): Promise<FormState> {
   const actor = await requireUser();
-  const parsed = taskInputSchema.safeParse(formToObject(fd));
+  const parsed = taskInputSchema.safeParse(taskFormData(fd));
   if (!parsed.success) return zodErrors(parsed.error);
   try { await updateTask(actor, taskId, parsed.data); } catch (e) { return toState(e); }
   redirect(`/tasks/${taskId}`);

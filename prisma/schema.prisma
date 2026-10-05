@@ -283,6 +283,8 @@ model Task {
   priority          Priority  @default(MEDIUM)
   stage             TaskStage @default(BRIEF)
   briefShareVersion Int       @default(0) // bump to revoke every outstanding share link
+  templateRef       String? // "builtin-key" or "custom:<ContentTemplate.id>"
+  extra             Json? // template-specific fields, e.g. { lighting: "...", shotList: "..." }
 
   createdById       String
   createdBy         User    @relation("TaskCreator", fields: [createdById], references: [id])
