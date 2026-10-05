@@ -73,16 +73,18 @@ describe("configuration from environment", () => {
   it("uses AWS_* variables and selects S3 automatically when a bucket is set", () => {
     expect(driverName(e({}))).toBe("local");
     expect(driverName(e({ STORAGE_DRIVER: "" }))).toBe("local"); // empty string = unset, as in .env.example
-    expect(driverName(e({ AWS_S3_BUCKET: "b" }))).toBe("s3");
-    expect(driverName(e({ AWS_S3_BUCKET: "b", STORAGE_DRIVER: "local" }))).toBe("local"); // explicit choice wins
+    expect(driverName(e({ S3_BUCKET: "b" }))).toBe("s3");
+    expect(driverName(e({ AWS_S3_BUCKET: "b" }))).toBe("s3"); // alias
+    expect(driverName(e({ S3_BUCKET: "b", STORAGE_DRIVER: "local" }))).toBe("local"); // explicit choice wins
     expect(() => driverName(e({ STORAGE_DRIVER: "ftp" }))).toThrow(/Unknown STORAGE_DRIVER/);
-    expect(s3ConfigFromEnv(e({ AWS_S3_BUCKET: "bkt", AWS_REGION: "eu-west-1", AWS_ACCESS_KEY_ID: "AK", AWS_SECRET_ACCESS_KEY: "SK" })))
+    expect(s3ConfigFromEnv(e({ S3_BUCKET: "bkt", AWS_REGION: "eu-west-1", AWS_ACCESS_KEY_ID: "AK", AWS_SECRET_ACCESS_KEY: "SK" })))
       .toMatchObject({ bucket: "bkt", region: "eu-west-1", accessKeyId: "AK", secretAccessKey: "SK", forcePathStyle: false });
   });
   it("accepts an IAM role (no keys) but not half a key pair, and still understands the legacy S3_* names", () => {
-    expect(s3ConfigFromEnv(e({ AWS_S3_BUCKET: "b" }))).toMatchObject({ accessKeyId: undefined, secretAccessKey: undefined });
-    expect(() => s3ConfigFromEnv(e({ AWS_S3_BUCKET: "b", AWS_ACCESS_KEY_ID: "AK" }))).toThrow(/both/);
-    expect(() => s3ConfigFromEnv(e({}))).toThrow(/AWS_S3_BUCKET/);
+    expect(s3ConfigFromEnv(e({ S3_BUCKET: "b" }))).toMatchObject({ accessKeyId: undefined, secretAccessKey: undefined });
+    expect(() => s3ConfigFromEnv(e({ S3_BUCKET: "b", AWS_ACCESS_KEY_ID: "AK" }))).toThrow(/both/);
+    expect(() => s3ConfigFromEnv(e({}))).toThrow(/S3_BUCKET/);
+    expect(s3ConfigFromEnv(e({ AWS_S3_BUCKET: "alias" })).bucket).toBe("alias");
     expect(s3ConfigFromEnv(e({ S3_BUCKET: "old", S3_REGION: "auto", S3_ENDPOINT: "https://r2" }))).toMatchObject({ bucket: "old", region: "auto", endpoint: "https://r2" });
   });
 });

@@ -36,7 +36,7 @@ beforeAll(async () => {
   dir = mkdtempSync(path.join(tmpdir(), "basma-fd-"));
   server = new S3rver({ port: 0, address: "127.0.0.1", silent: true, directory: dir, configureBuckets: [{ name: "basma-direct", configs: [] }] });
   const { port } = (await server.run()) as { port: number };
-  Object.assign(process.env, { AWS_S3_BUCKET: "basma-direct", AWS_REGION: "us-east-1", AWS_ACCESS_KEY_ID: "S3RVER", AWS_SECRET_ACCESS_KEY: "S3RVER", S3_ENDPOINT: `http://127.0.0.1:${port}`, S3_FORCE_PATH_STYLE: "true" });
+  Object.assign(process.env, { S3_BUCKET: "basma-direct", AWS_REGION: "us-east-1", AWS_ACCESS_KEY_ID: "S3RVER", AWS_SECRET_ACCESS_KEY: "S3RVER", S3_ENDPOINT: `http://127.0.0.1:${port}`, S3_FORCE_PATH_STYLE: "true" });
   delete process.env.STORAGE_DRIVER;
   m = {
     db: (await import("./db")).db, tasks: await import("./tasks"), files: await import("./files"), storage: (await import("./storage")).storage,
@@ -70,7 +70,7 @@ afterAll(async () => {
 });
 
 describe("direct upload flow (presigned PUT → verify → record)", () => {
-  it("uses the S3 driver because AWS_S3_BUCKET is set, and quarantines uploads under pending/", async () => {
+  it("uses the S3 driver because S3_BUCKET is set, and quarantines uploads under pending/", async () => {
     expect(m.storage.direct).toBeDefined();
     const p = await plan(video, PNG);
     expect(p.url).toContain("/pending/");

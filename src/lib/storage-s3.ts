@@ -76,15 +76,15 @@ export function createS3Storage(c: S3Config): Storage {
 }
 
 /**
- * Credentials and location come from the environment only (never from code):
- *   AWS_S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ * Credentials and location come from the environment only (never from code, never logged):
+ *   S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
  * Optional, for S3-compatible providers (Cloudflare R2, MinIO…): S3_ENDPOINT, S3_FORCE_PATH_STYLE; and S3_PREFIX for a folder in the bucket.
- * The older S3_BUCKET / S3_REGION / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY names still work as fallbacks.
+ * AWS_S3_BUCKET is accepted as an alias of S3_BUCKET; S3_REGION / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY as fallbacks.
  * Without keys the AWS SDK falls back to its default chain (IAM role / instance profile).
  */
 export function s3ConfigFromEnv(env: NodeJS.ProcessEnv = process.env): S3Config {
-  const bucket = env.AWS_S3_BUCKET || env.S3_BUCKET;
-  if (!bucket) throw new Error("S3 storage requires AWS_S3_BUCKET");
+  const bucket = env.S3_BUCKET || env.AWS_S3_BUCKET;
+  if (!bucket) throw new Error("S3 storage requires S3_BUCKET");
   const accessKeyId = env.AWS_ACCESS_KEY_ID || env.S3_ACCESS_KEY_ID || undefined;
   const secretAccessKey = env.AWS_SECRET_ACCESS_KEY || env.S3_SECRET_ACCESS_KEY || undefined;
   if (!!accessKeyId !== !!secretAccessKey) throw new Error("Set both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (or neither, to use an IAM role)");

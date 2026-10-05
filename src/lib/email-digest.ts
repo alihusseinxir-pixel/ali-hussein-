@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { logError } from "./log-safe";
 
 export interface DigestOptions {
   send: (to: string, subject: string, text: string) => Promise<void>;
@@ -28,7 +29,7 @@ export async function sendPendingEmails(o: DigestOptions): Promise<{ emails: num
     try {
       await o.send(u.email, subject, `Hi ${u.name},\n\n${lines.join("\n\n")}\n\nOpen BASMA MARKETING: ${o.appUrl}/notifications\n\nYou can turn these emails off on the Notifications page.`);
     } catch (e) {
-      console.error(`[email-digest] failed for ${u.email}`, e);
+      logError("email-digest", e);
       continue; // leave emailedAt null: retried on the next run while still fresh
     }
     await db.notification.updateMany({ where: { id: { in: list.map((n) => n.id) } }, data: { emailedAt: new Date() } });

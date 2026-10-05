@@ -1,4 +1,5 @@
 "use server";
+import { logError } from "@/lib/log-safe";
 import { randomBytes } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -102,7 +103,7 @@ export async function forgotPasswordAction(_: FormState, fd: FormData): Promise<
   try {
     await requestPasswordReset(parsed.data.email, { send: sendMail, appUrl: env.appUrl });
   } catch (e) {
-    console.error("[forgot-password]", e); // never reveal whether the account exists or mail failed
+    logError("forgot-password", e); // never reveal whether the account exists or mail failed
   }
   return { ok: true };
 }

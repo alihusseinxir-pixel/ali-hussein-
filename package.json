@@ -15,7 +15,8 @@
     "db:backfill-calendar": "tsx scripts/backfill-calendar.ts",
     "reminders": "tsx --conditions=react-server scripts/run-reminders.ts",
     "storage:migrate": "tsx --conditions=react-server scripts/migrate-storage.ts",
-    "storage:setup": "tsx --conditions=react-server scripts/setup-bucket.ts"
+    "storage:setup": "tsx --conditions=react-server scripts/setup-bucket.ts",
+    "storage:verify": "tsx --conditions=react-server scripts/verify-storage.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

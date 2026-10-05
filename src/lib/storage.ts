@@ -6,7 +6,7 @@ import { createS3Storage, s3ConfigFromEnv } from "./storage-s3";
 /**
  * Storage abstraction used for every uploaded file. Business code only ever sees this interface.
  *
- * Drivers (STORAGE_DRIVER; defaults to "s3" when AWS_S3_BUCKET is set, otherwise "local"):
+ * Drivers (STORAGE_DRIVER; defaults to "s3" when S3_BUCKET is set, otherwise "local"):
  *   local  files under STORAGE_DIR; all bytes pass through the app
  *   s3     AWS S3, or any S3-compatible service (Cloudflare R2, MinIO…) via S3_ENDPOINT
  *
@@ -32,7 +32,7 @@ export interface DirectStorage {
 
 let driver: Storage | undefined;
 export function driverName(env: NodeJS.ProcessEnv = process.env): "local" | "s3" {
-  const n = env.STORAGE_DRIVER || (env.AWS_S3_BUCKET || env.S3_BUCKET ? "s3" : "local"); // empty string counts as unset (as in .env.example)
+  const n = env.STORAGE_DRIVER || (env.S3_BUCKET || env.AWS_S3_BUCKET ? "s3" : "local"); // empty string counts as unset (as in .env.example)
   if (n !== "local" && n !== "s3") throw new Error(`Unknown STORAGE_DRIVER "${n}" (use "local" or "s3")`);
   return n;
 }
@@ -41,7 +41,7 @@ function current(): Storage {
   if (!driver) {
     if (driverName() === "s3") driver = createS3Storage(s3ConfigFromEnv());
     else {
-      if (process.env.NODE_ENV === "production") console.warn("[storage] Using LOCAL disk in production. Files are lost on ephemeral hosts; set AWS_S3_BUCKET to use S3.");
+      if (process.env.NODE_ENV === "production") console.warn("[storage] Using LOCAL disk in production. Files are lost on ephemeral hosts; set S3_BUCKET (and the AWS_* credentials) to use S3.");
       driver = createLocalStorage(process.env.STORAGE_DIR ?? "./uploads");
     }
   }

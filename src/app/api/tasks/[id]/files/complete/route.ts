@@ -1,4 +1,5 @@
 import type { NextRequest } from "next/server";
+import { logError } from "@/lib/log-safe";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/session";
 import { completeUpload } from "@/lib/files";
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } catch (e) {
     if (e instanceof ForbiddenError) return json({ error: e.message }, 403);
     if (e instanceof TaskError) return json({ error: e.message }, 400);
-    console.error(e);
+    logError("upload:complete", e);
     return json({ error: "Upload failed." }, 500);
   }
 }
