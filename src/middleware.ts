@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/register", "/invite", "/share", "/api/cron", "/forgot-password", "/reset-password"];
+const PUBLIC = ["/login", "/register", "/invite", "/share", "/api/cron", "/api/health", "/forgot-password", "/reset-password"];
 
 // Cheap gate only (cookie presence). Real verification happens in getCurrentUser() on every page/action.
 export function middleware(req: NextRequest) {

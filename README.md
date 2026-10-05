@@ -25,4 +25,5 @@ npm run typecheck && npm test && npm run build
 - Set a strong `SESSION_SECRET`, `APP_URL`, `SMTP_URL` (invitations, password reset, notification emails) and `CRON_SECRET`; schedule `POST /api/cron/reminders` (or `npm run reminders`) every ~5 minutes.
 - Uploads: set `S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (or an IAM role) to store files in S3 with presigned upload/download URLs; follow [docs/STORAGE.md](docs/STORAGE.md) (IAM policy, `npm run storage:setup`, `npm run storage:verify`). Credentials go only in your local `.env`. Without them, files go to local disk (`STORAGE_DIR`, needs a persistent volume).
 - Set `ALLOW_SIGNUP=false` once your organization exists.
+- Hosting on Render: see [docs/DEPLOY-RENDER.md](docs/DEPLOY-RENDER.md) (`render.yaml` Blueprint: database, web app, reminders cron).
 - CI runs on every push/PR (`.github/workflows/ci.yml`).
