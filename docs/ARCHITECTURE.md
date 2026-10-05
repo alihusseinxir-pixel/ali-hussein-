@@ -55,7 +55,7 @@ Server Actions (typed, CSRF-protected by Next) rather than a public REST API; a 
 | PDF (P7) | `GET /api/tasks/:id/brief.pdf` | task visibility |
 | Notifications (P8) | `markReadAction`, SSE `/api/notifications/stream` | own |
 
-Pages: `/login /register /invite/[token] /dashboard /tasks /tasks/new /tasks/[id] /tasks/[id]/edit /team /campaigns`.
+Pages: `/login /register /invite/[token] /dashboard /tasks /tasks/new /tasks/[id] /tasks/[id]/edit /campaigns /campaigns/[id] /calendar /approvals /files /templates /analytics /notifications /team`, plus `/share/brief/[token]` (public, signed).
 
 ## 4. Permission matrix (`src/lib/rbac.ts`)
 
@@ -75,6 +75,7 @@ Pages: `/login /register /invite/[token] /dashboard /tasks /tasks/new /tasks/[id
 | approval:final, publish:manage | ✔ | | ✔ | | | | |
 | activity:view:all | ✔ | ✔ | | | | | |
 | calendar:view:all | ✔ | ✔ | ✔ | | | | |
+| analytics:view:all (others: own numbers only) | ✔ | ✔ | ✔ | | | | |
 
 Visibility for roles without `task:view:all`: tasks they **created**, **currently own**, or **owned before** (read access is kept so history stays meaningful). Everything is additionally scoped to the organization.
 
@@ -136,10 +137,22 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - **Hierarchy**: Brand → Campaign → content. Each **task is one piece of content** (Reel 01, Post 01…), so "content" and "task" are the same record; this keeps one owner, one workflow and one calendar entry per piece.
 - **Campaign pages** (`/campaigns`, `/campaigns/[id]`): progress bar split into Planning / Production / Editing / Review & approval / Scheduled / Published, % published, overdue count, content grouped by type, "+ Add content" (opens the template picker with the campaign preselected), edit (name, description, dates; unique per brand), archive (blocked while anything is still in progress; brands only when they have no campaigns). **Visibility**: managers see every campaign; everyone else sees only campaigns containing tasks they may see, and the counts/progress they get are computed from *their* visible tasks only.
 
+### Analytics (Phase 10)
+- **Pure maths, tested**: `src/lib/analytics-calc.ts` takes plain rows (tasks, handovers, approvals) and returns every figure; `src/lib/analytics.ts` loads the organization's rows once and calls it. Organization-wide numbers are only returned to roles with `analytics:view:all` (Admin, Marketing Manager, Social Media Manager); everyone else receives **only their own row** (the payload contains nothing else — tested).
+- **Definitions** (also printed under the page):
+  - *Published*: the task was handed to PUBLISHED/COMPLETED; *time to publish* = created → that handover.
+  - *Delivery*: a person received a task into assigned/production/editing and later handed it forward; *delivery time* = receipt → hand-over. A manager reassignment aborts the interval, so nobody is credited for work they did not finish.
+  - *Sent back / revision*: a handover that returns work to a worker from review/approval (exactly the backward loops of the workflow; `PRODUCTION_REVIEW → EDITING` is a forward approval and is **not** a revision). Person revision rate = sent back ÷ deliveries; organization revision rate = reviewed tasks sent back at least once ÷ tasks that reached review.
+  - *Approval time*: from the task reaching a reviewer's stage to their decision (approve or request changes).
+  - *Overdue / open*: today's snapshot, not range-bound. Campaign figures are lifetime.
+- **Page** (`/analytics?range=30|90|365`): one filter row, KPI tiles, production volume (created vs published per week, or per month for 12 months), content by type, team table, campaign table. People without manager rights see "My performance".
+- **Charts** follow the data-viz method: a validated two-series palette (blue/orange: adjacent ΔE 33.6 normal / 24.7 protan, ≥ 3:1 contrast), 24 px max columns with a 2 px gap and 4 px rounded data-ends, hairline grid, a legend for the two series, per-band hover **and** keyboard-focus tooltips (value first, line keys), clean 1/2/5 axis ticks, a "View as table" for every chart, and meters whose track is a lighter step of the fill hue. The app has no dark theme yet, so only light chart tokens exist (`.viz-root` in `globals.css`).
+- **Scale note**: figures are aggregated in memory from a few narrow selects, which is fine for a marketing department; move to SQL aggregates before volumes reach the hundreds of thousands of rows. No CSV export yet.
+
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
-- `components/`: `ProgressBar`, `TaskForm` (template-driven), `NotificationBell`, `BriefPanel`, `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
+- `components/`: `charts/VolumeChart`, `charts/TypeBars`, `ProgressBar`, `TaskForm` (template-driven), `NotificationBell`, `BriefPanel`, `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
 - Planned: `WorkflowTimeline`, `HandoverModal`, `FileList`, `CommentThread`, `ReviewPanel`, `CalendarView` (FullCalendar), `NotificationBell`.
 
 ## 7. Folder structure
@@ -168,6 +181,6 @@ src/
 | 7 | Production Brief PDF (Arabic + English), download/preview, expiring share links | done |
 | 8 | Notification bell + inbox, deadline/overdue/publishing reminders, email digest | done |
 | 9 | Templates (built-in + custom, template-specific fields), campaign pages with progress | done |
-| 10 | Analytics | planned |
+| 10 | Analytics: volume, time to publish, approval time, revision rate, team and campaign performance | done |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).

@@ -15,6 +15,7 @@ const NAV: NavItem[] = [
   { href: "/team", label: "Team", need: "user:manage" },
   { href: "/templates", label: "Templates" },
   { href: "/files", label: "Files" },
+  { href: "/analytics", label: "Analytics" },
   { href: "/notifications", label: "Notifications" },
 ];
 

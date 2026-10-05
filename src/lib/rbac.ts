@@ -18,6 +18,7 @@ export const PERMISSIONS = [
   "campaign:manage",
   "template:manage",
   "activity:view:all",
+  "analytics:view:all", // org-wide analytics; everyone else sees only their own numbers
   "approval:internal",
   "approval:final",
   "publish:manage",
@@ -31,11 +32,11 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: PERMISSIONS,
   MARKETING_MANAGER: [
     "task:create", "task:view:all", "task:edit:any", "task:assign", "task:delete", "task:comment",
-    "campaign:manage", "template:manage", "activity:view:all", "approval:internal", "calendar:view:all",
+    "campaign:manage", "template:manage", "activity:view:all", "analytics:view:all", "approval:internal", "calendar:view:all",
   ],
   SOCIAL_MEDIA_MANAGER: [
     "task:create", "task:view:all", "task:edit:own", "task:assign", "task:comment",
-    "campaign:manage", "template:manage", "approval:internal", "approval:final", "publish:manage", "calendar:view:all",
+    "campaign:manage", "template:manage", "analytics:view:all", "approval:internal", "approval:final", "publish:manage", "calendar:view:all",
   ],
   VIDEOGRAPHER: PRODUCTION,
   PHOTOGRAPHER: PRODUCTION,
