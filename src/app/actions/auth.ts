@@ -10,6 +10,8 @@ import { createSession, destroySession } from "@/lib/session";
 import { rateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/activity";
 import { hashToken } from "@/lib/tokens";
+import { requestPasswordReset, resetPassword } from "@/lib/password-reset";
+import { sendMail } from "@/lib/mailer";
 import { formToObject, zodErrors, type FormState } from "@/lib/form";
 
 const password = z.string().min(10, "Password must be at least 10 characters").max(200);
@@ -35,7 +37,7 @@ export async function loginAction(_: FormState, fd: FormData): Promise<FormState
   if (!(await verifyPassword(pw, user.passwordHash)) || user.status !== "ACTIVE") {
     return { error: "Invalid email or password." };
   }
-  await createSession(user.id);
+  await createSession(user.id, user.sessionVersion);
   redirect("/dashboard");
 }
 
@@ -59,7 +61,7 @@ export async function registerAction(_: FormState, fd: FormData): Promise<FormSt
     await logActivity(tx, { organizationId: org.id, actorId: u.id, action: "org.created", meta: { name: org.name } });
     return u;
   });
-  await createSession(user.id);
+  await createSession(user.id, user.sessionVersion);
   redirect("/dashboard");
 }
 
@@ -89,6 +91,28 @@ export async function acceptInviteAction(_: FormState, fd: FormData): Promise<Fo
     return u;
   }).catch(() => null);
   if (!user) return { error: "This invitation has already been used." };
-  await createSession(user.id);
+  await createSession(user.id, user.sessionVersion);
   redirect("/dashboard");
+}
+
+export async function forgotPasswordAction(_: FormState, fd: FormData): Promise<FormState> {
+  const parsed = z.object({ email }).safeParse(formToObject(fd));
+  if (!parsed.success) return { error: "Enter a valid email." };
+  if (!rateLimit(`forgot:${await clientKey()}:${parsed.data.email}`, 3, 15 * 60_000)) return { error: "Too many requests. Try again in a few minutes." };
+  try {
+    await requestPasswordReset(parsed.data.email, { send: sendMail, appUrl: env.appUrl });
+  } catch (e) {
+    console.error("[forgot-password]", e); // never reveal whether the account exists or mail failed
+  }
+  return { ok: true };
+}
+
+export async function resetPasswordAction(_: FormState, fd: FormData): Promise<FormState> {
+  const parsed = z.object({ token: z.string().min(20), password, confirm: z.string() }).safeParse(formToObject(fd));
+  if (!parsed.success) return zodErrors(parsed.error);
+  if (parsed.data.password !== parsed.data.confirm) return { error: "The two passwords do not match." };
+  if (!rateLimit(`reset:${await clientKey()}`, 10, 15 * 60_000)) return { error: "Too many attempts. Try again later." };
+  const r = await resetPassword(parsed.data.token, parsed.data.password);
+  if (r !== "ok") return { error: "This reset link is invalid or has expired. Request a new one." };
+  redirect("/login?reset=1");
 }

@@ -20,3 +20,9 @@ npm run typecheck && npm test && npm run build
 
 ## Config
 `DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `APP_TIMEZONE` (default `Asia/Riyadh`), `ALLOW_SIGNUP` (`false` to disable new-org sign-up), `SMTP_URL`, `MAIL_FROM`.
+
+## Production checklist
+- Set a strong `SESSION_SECRET`, `APP_URL`, `SMTP_URL` (invitations, password reset, notification emails) and `CRON_SECRET`; schedule `POST /api/cron/reminders` (or `npm run reminders`) every ~5 minutes.
+- Uploads go to local disk (`STORAGE_DIR`). Use a persistent volume, or implement the S3 driver behind `src/lib/storage.ts` before deploying to ephemeral hosts.
+- Set `ALLOW_SIGNUP=false` once your organization exists.
+- CI runs on every push/PR (`.github/workflows/ci.yml`).

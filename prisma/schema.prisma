@@ -125,21 +125,23 @@ model Organization {
 }
 
 model User {
-  id                 String       @id @default(cuid())
+  id                 String          @id @default(cuid())
   organizationId     String
-  organization       Organization @relation(fields: [organizationId], references: [id])
+  organization       Organization    @relation(fields: [organizationId], references: [id])
   name               String
-  email              String       @unique
+  email              String          @unique
   passwordHash       String
   avatarUrl          String?
   role               Role
   department         String?
-  emailNotifications Boolean      @default(true)
-  status             UserStatus   @default(ACTIVE)
+  emailNotifications Boolean         @default(true)
+  sessionVersion     Int             @default(0) // bumped on password reset: invalidates every existing session cookie
+  passwordResets     PasswordReset[]
+  status             UserStatus      @default(ACTIVE)
   teamId             String?
-  team               Team?        @relation(fields: [teamId], references: [id])
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  team               Team?           @relation(fields: [teamId], references: [id])
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
   deletedAt          DateTime?
 
   createdTasks    Task[]           @relation("TaskCreator")
@@ -464,4 +466,16 @@ model ActivityLog {
 
   @@index([organizationId, createdAt])
   @@index([taskId, createdAt])
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique // sha256 of the emailed token; the raw token is never stored
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

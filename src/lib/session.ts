@@ -12,8 +12,8 @@ const COOKIE = "basma_session";
 const MAX_AGE = 60 * 60 * 24 * 7;
 const key = () => new TextEncoder().encode(env.sessionSecret);
 
-export async function createSession(userId: string) {
-  const token = await new SignJWT({ uid: userId })
+export async function createSession(userId: string, sessionVersion = 0) {
+  const token = await new SignJWT({ uid: userId, sv: sessionVersion })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE}s`)
@@ -39,7 +39,8 @@ export const getCurrentUser = cache(async (): Promise<SessionUser | null> => {
       where: { id: String(payload.uid), status: "ACTIVE", deletedAt: null },
       include: { organization: true },
     });
-    return user;
+    // A password reset bumps sessionVersion, which invalidates every cookie issued before it.
+    return user && user.sessionVersion === Number(payload.sv ?? 0) ? user : null;
   } catch {
     return null;
   }

@@ -149,6 +149,11 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - **Charts** follow the data-viz method: a validated two-series palette (blue/orange: adjacent ΔE 33.6 normal / 24.7 protan, ≥ 3:1 contrast), 24 px max columns with a 2 px gap and 4 px rounded data-ends, hairline grid, a legend for the two series, per-band hover **and** keyboard-focus tooltips (value first, line keys), clean 1/2/5 axis ticks, a "View as table" for every chart, and meters whose track is a lighter step of the fill hue. The app has no dark theme yet, so only light chart tokens exist (`.viz-root` in `globals.css`).
 - **Scale note**: figures are aggregated in memory from a few narrow selects, which is fine for a marketing department; move to SQL aggregates before volumes reach the hundreds of thousands of rows. No CSV export yet.
 
+### Hardening (Phase 11, partial)
+- **Password reset**: `/forgot-password` → emailed single-use link (1 h, SHA-256 hashed at rest, only the newest link works) → `/reset-password/[token]`. The request form answers identically for unknown, disabled and real emails (no account discovery) and is rate-limited; the reset claims the token atomically (concurrent use of one link: exactly one wins, tested), enforces the 10-character minimum, and bumps `User.sessionVersion`, which is embedded in the session cookie — so **every device is signed out** on reset. Disabled accounts cannot use an old link. Activity-logged.
+- **CI** (`.github/workflows/ci.yml`): Postgres 16 service, `prisma migrate deploy` from scratch, typecheck, lint, tests, build. The same sequence was reproduced locally on an empty database with no `.env`.
+- **Not done yet**: an S3-compatible storage driver (the interface exists; local disk is still the only driver, so production on ephemeral disks would lose uploads), Playwright browser tests in CI (the flows were exercised with throw-away scripts, not committed tests), password change while signed in, 2FA, and audit-log viewing UI.
+
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
@@ -181,6 +186,7 @@ src/
 | 7 | Production Brief PDF (Arabic + English), download/preview, expiring share links | done |
 | 8 | Notification bell + inbox, deadline/overdue/publishing reminders, email digest | done |
 | 9 | Templates (built-in + custom, template-specific fields), campaign pages with progress | done |
+| 11 (hardening, partial) | Password reset with session revocation, CI workflow | done — S3 driver and browser tests in CI still open |
 | 10 | Analytics: volume, time to publish, approval time, revision rate, team and campaign performance | done |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).
