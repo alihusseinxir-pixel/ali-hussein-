@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { uploadTaskFile } from "@/lib/upload-client";
 
 export interface FileRow {
   id: string; fileName: string; fileType: string; kind: string; version: number; sizeBytes: number;
@@ -21,9 +22,8 @@ export function FilesPanel({ taskId, files, canUpload, maxMb }: { taskId: string
     if (!list?.length) return;
     setBusy(true); setError(null);
     for (const f of Array.from(list)) {
-      const fd = new FormData(); fd.set("file", f); fd.set("kind", kind);
-      const res = await fetch(`/api/tasks/${taskId}/files`, { method: "POST", body: fd });
-      if (!res.ok) { setError(`${f.name}: ${(await res.json().catch(() => ({}))).error ?? "Upload failed"}`); break; }
+      try { await uploadTaskFile(taskId, f, kind); }
+      catch (e) { setError(`${f.name}: ${e instanceof Error ? e.message : "Upload failed"}`); break; }
     }
     setBusy(false); if (input.current) input.current.value = ""; router.refresh();
   }

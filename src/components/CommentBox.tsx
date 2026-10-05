@@ -2,6 +2,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { addCommentAction } from "@/app/actions/tasks";
+import { uploadTaskFile } from "@/lib/upload-client";
 
 export function CommentBox({ taskId, people }: { taskId: string; people: { id: string; name: string }[] }) {
   const router = useRouter();
@@ -26,9 +27,8 @@ export function CommentBox({ taskId, people }: { taskId: string; people: { id: s
       const res = await addCommentAction(taskId, undefined, fd);
       if (!res?.ok || !res.data) { setError(res?.error ?? "Could not post comment."); return; }
       for (const f of files) {
-        const up = new FormData(); up.set("file", f); up.set("kind", "OTHER"); up.set("commentId", res.data);
-        const r = await fetch(`/api/tasks/${taskId}/files`, { method: "POST", body: up });
-        if (!r.ok) { setError(`Comment posted, but ${f.name} failed: ${(await r.json().catch(() => ({}))).error ?? "upload error"}`); break; }
+        try { await uploadTaskFile(taskId, f, "OTHER", res.data); }
+        catch (e) { setError(`Comment posted, but ${f.name} failed: ${e instanceof Error ? e.message : "upload error"}`); break; }
       }
       if (text.current) text.current.value = "";
       if (file.current) file.current.value = "";

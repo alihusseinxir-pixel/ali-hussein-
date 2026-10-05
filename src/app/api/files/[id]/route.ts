@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/session";
 import { deleteFile, getFileForUser } from "@/lib/files";
 import { FILE_TYPES, extensionOf } from "@/lib/file-types";
-import { storage } from "@/lib/storage";
+import { PRESIGN_TTL_SECONDS, storage } from "@/lib/storage";
 import { ForbiddenError } from "@/lib/rbac";
 import { TaskError } from "@/lib/tasks";
 import { json, sameOrigin } from "@/lib/api-guard";
@@ -20,6 +20,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const download = req.nextUrl.searchParams.get("download") === "1" || !type?.inline;
   const size = await storage.size(file.fileUrl).catch(() => null);
   if (size === null) return json({ error: "File is missing from storage." }, 410);
+
+  // Direct storage (S3): permissions were checked above; hand the browser a short-lived signed URL so the bytes
+  // (incl. video range requests) flow straight from the bucket. Type and disposition come from OUR whitelist, not from the object.
+  if (storage.direct && type) {
+    const url = await storage.direct.presignDownload(file.fileUrl, { contentType: type.mime, fileName: file.fileName, inline: !download, expiresSeconds: PRESIGN_TTL_SECONDS });
+    return new NextResponse(null, { status: 302, headers: { Location: url, "Cache-Control": "private, no-store", "Referrer-Policy": "no-referrer" } });
+  }
 
   const headers = new Headers({
     "Content-Type": type?.mime ?? "application/octet-stream",

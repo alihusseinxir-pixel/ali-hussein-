@@ -12,7 +12,8 @@ export function middleware(req: NextRequest) {
   const res = NextResponse.next();
   res.headers.set("X-Frame-Options", "DENY");
   res.headers.set("X-Content-Type-Options", "nosniff");
-  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  // Routes that hand out signed/secret links set their own stricter policy (no-referrer); do not override it.
+  if (!pathname.startsWith("/api/files/") && !pathname.startsWith("/share/")) res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   return res;
 }
 

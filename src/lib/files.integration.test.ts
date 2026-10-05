@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { db } from "./db";
 import { createTask, type Actor } from "./tasks";
-import { deleteFile, getFileForUser, listFiles, uploadFile } from "./files";
+import { deleteFile, getFileForUser, listFiles, planUpload, uploadFile } from "./files";
 import { storage } from "./storage";
 import { taskInputSchema } from "./task-schema";
 import { ForbiddenError } from "./rbac";
@@ -53,6 +53,12 @@ describe("files (integration)", () => {
     const ok = await uploadFile(video, taskId, file(PDF, "script.pdf"), "DOCUMENT");
     expect(ok.fileType).toBe("application/pdf");
     expect(await storage.size(ok.fileUrl)).toBe(PDF.length);
+  });
+
+  it("local storage has no direct access, so uploads use the proxy path", async () => {
+    expect(storage.direct).toBeUndefined();
+    expect(await planUpload(video, taskId, { fileName: "a.png", size: 10, kind: "RAW" })).toEqual({ mode: "proxy" });
+    await expect(planUpload(video, taskId, { fileName: "a.exe", size: 10, kind: "RAW" })).rejects.toThrow(/Unsupported/); // validated before choosing a path
   });
 
   it("sanitises names (no path traversal, keeps Arabic)", async () => {

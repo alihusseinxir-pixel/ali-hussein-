@@ -1,7 +1,11 @@
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Upload } from "@aws-sdk/lib-storage";
 import { Readable } from "node:stream";
 import type { Storage } from "./storage";
+
+/** RFC 5987 encoding so Arabic / special-character file names survive Content-Disposition. */
+const disposition = (inline: boolean, name: string) => `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(name).replace(/['()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`)}`;
 
 export interface S3Config {
   bucket: string;
@@ -48,17 +52,47 @@ export function createS3Storage(c: S3Config): Storage {
     async remove(key) {
       await client.send(new DeleteObjectCommand({ Bucket: c.bucket, Key: full(key) })); // S3 delete is already idempotent
     },
+    direct: {
+      async presignUpload(key, o) {
+        // Type and exact length are part of the signature, so the URL cannot be used to upload anything else.
+        const headers = { "Content-Type": o.contentType, "Content-Length": String(o.contentLength) };
+        const url = await getSignedUrl(client, new PutObjectCommand({ Bucket: c.bucket, Key: full(key), ContentType: o.contentType, ContentLength: o.contentLength }), {
+          expiresIn: o.expiresSeconds, signableHeaders: new Set(["content-type", "content-length"]),
+        });
+        return { url, headers };
+      },
+      async presignDownload(key, o) {
+        return getSignedUrl(client, new GetObjectCommand({
+          Bucket: c.bucket, Key: full(key), ResponseContentType: o.contentType, ResponseContentDisposition: disposition(o.inline, o.fileName), ResponseCacheControl: "private, no-store",
+        }), { expiresIn: o.expiresSeconds });
+      },
+      async move(from, to) {
+        // CopySource must be URL-encoded "bucket/key"; keys here are generated ASCII, encoded defensively.
+        await client.send(new CopyObjectCommand({ Bucket: c.bucket, Key: full(to), CopySource: `${c.bucket}/${full(from).split("/").map(encodeURIComponent).join("/")}` }));
+        await client.send(new DeleteObjectCommand({ Bucket: c.bucket, Key: full(from) }));
+      },
+    },
   };
 }
 
+/**
+ * Credentials and location come from the environment only (never from code):
+ *   AWS_S3_BUCKET, AWS_REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+ * Optional, for S3-compatible providers (Cloudflare R2, MinIO…): S3_ENDPOINT, S3_FORCE_PATH_STYLE; and S3_PREFIX for a folder in the bucket.
+ * The older S3_BUCKET / S3_REGION / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY names still work as fallbacks.
+ * Without keys the AWS SDK falls back to its default chain (IAM role / instance profile).
+ */
 export function s3ConfigFromEnv(env: NodeJS.ProcessEnv = process.env): S3Config {
-  if (!env.S3_BUCKET) throw new Error("STORAGE_DRIVER=s3 requires S3_BUCKET");
+  const bucket = env.AWS_S3_BUCKET || env.S3_BUCKET;
+  if (!bucket) throw new Error("S3 storage requires AWS_S3_BUCKET");
+  const accessKeyId = env.AWS_ACCESS_KEY_ID || env.S3_ACCESS_KEY_ID || undefined;
+  const secretAccessKey = env.AWS_SECRET_ACCESS_KEY || env.S3_SECRET_ACCESS_KEY || undefined;
+  if (!!accessKeyId !== !!secretAccessKey) throw new Error("Set both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (or neither, to use an IAM role)");
   return {
-    bucket: env.S3_BUCKET,
-    region: env.S3_REGION || "us-east-1",
+    bucket,
+    region: env.AWS_REGION || env.S3_REGION || "us-east-1",
     endpoint: env.S3_ENDPOINT || undefined,
-    accessKeyId: env.S3_ACCESS_KEY_ID || undefined,
-    secretAccessKey: env.S3_SECRET_ACCESS_KEY || undefined,
+    accessKeyId, secretAccessKey,
     forcePathStyle: env.S3_FORCE_PATH_STYLE === "true",
     prefix: env.S3_PREFIX || undefined,
   };
