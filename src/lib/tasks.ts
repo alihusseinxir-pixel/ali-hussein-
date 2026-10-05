@@ -5,6 +5,7 @@ import { env } from "./env";
 import { parseLocalDateTime } from "./datetime";
 import { logActivity } from "./activity";
 import { ForbiddenError, assertCan, can } from "./rbac";
+import { clearTaskCalendar, syncTaskCalendar } from "./calendar-sync";
 import { contextSnapshot } from "./task-context";
 import { firstAssigneeRoles, initialStage, isReassignable } from "./workflow";
 import type { TaskInput } from "./task-schema";
@@ -202,6 +203,7 @@ export async function createTask(actor: Actor, input: TaskInput) {
       });
       await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: task.id, action: "task.assigned", meta: { toUserId: input.assigneeId } });
     }
+    await syncTaskCalendar(tx, task.id);
     return task;
   });
 }
@@ -233,6 +235,7 @@ export async function updateTask(actor: Actor, id: string, input: TaskInput) {
         meta: { from: existing.deadline?.toISOString() ?? null, to: data.deadline?.toISOString() ?? null } });
     }
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: id, action: "task.updated", meta: { changed } });
+    await syncTaskCalendar(tx, id);
     return task;
   });
 }
@@ -262,6 +265,7 @@ export async function assignTask(actor: Actor, id: string, assigneeId: string) {
     });
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: id, action: "task.assigned",
       meta: { fromUserId: task.currentAssigneeId, toUserId: assigneeId } });
+    await syncTaskCalendar(tx, id);
     return updated;
   });
 }
@@ -270,5 +274,6 @@ export async function deleteTask(actor: Actor, id: string) {
   assertCan(actor.role, "task:delete");
   const res = await db.task.updateMany({ where: { id, organizationId: actor.organizationId, deletedAt: null }, data: { deletedAt: new Date() } });
   if (res.count === 0) throw new TaskError("Task not found.");
+  await clearTaskCalendar(id);
   await logActivity(db, { organizationId: actor.organizationId, actorId: actor.id, taskId: id, action: "task.deleted" });
 }

@@ -107,6 +107,13 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - Comments: plain text, `@Full Name` mentions (picked from a menu or typed), avatars (initials), timestamps, file attachments bound to the comment, soft delete (author or Admin). Only people who can see the task can be mentioned, so a mention never leaks a task. Mentions notify (`MENTION`); other comments notify the owner and creator (`COMMENT`); nobody is notified twice or about their own comment. Comment attachments never count toward a handover's RAW/FINAL requirement.
 - `/approvals` lists tasks waiting for you and (for roles that see all tasks) tasks waiting on others.
 
+### Calendar (Phase 6)
+- **Events are derived, never hand-entered.** `eventsForTask()` (pure, `src/lib/calendar.ts`) turns task state into events: shooting/photo shoot (`shootingAt`, 2h block, owned by the production assignee), publishing (`publishAt`), and one "Due" event for the current stage's deadline typed by stage (production → Shooting/Photography, editing → Editing or Design, review/approval → Review). Scheduled/published/completed tasks keep only their publishing event.
+- `syncTaskCalendar()` deletes and rebuilds a task's events inside the same transaction as every change (create, edit, assign, handover, request changes, confirm assignment); deleting a task clears them. Because it is a rebuild, events cannot drift or duplicate (tested). Consequence: once a stage is finished its due-event disappears — the calendar shows what is current; history lives in the activity log. Run `npm run db:backfill-calendar` once to build events for tasks created before Phase 6.
+- Visibility: roles with `calendar:view:all` see every event of tasks they can see (with a "mine only" toggle); everyone else sees only events assigned to them. Always organization-scoped.
+- Views are server-rendered (`/calendar?view=month|week|day&date=YYYY-MM-DD&types=…&mine=1`) with custom components instead of FullCalendar: no client bundle, no hydration, fully linkable, and day arithmetic is done in the org timezone (`WEEK_START` sets the first weekday, default Sunday). Trade-off: no drag-and-drop rescheduling; dates are edited on the task.
+- Every chip links to its task. The dashboard shows "Today" for the signed-in user.
+
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
@@ -135,6 +142,7 @@ src/
 | 3 | Workflow engine + handovers (confirm, forward handover, revision loop) | done |
 | 4 | Files: upload, preview, download, versions, handover file gates | done |
 | 5 | Comments (@mentions, attachments), approval records, review card, Approvals page | done |
-| 6–10 | Calendar, PDF, notifications UI, templates, analytics | planned |
+| 6 | Calendar (month/week/day), automatic events, dashboard "Today" | done |
+| 7–10 | PDF, notifications UI, templates, analytics | planned |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).

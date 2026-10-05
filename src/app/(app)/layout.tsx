@@ -9,7 +9,7 @@ const NAV: NavItem[] = [
   { href: "/tasks?mine=1", label: "My Tasks" },
   { href: "/tasks", label: "Tasks" },
   { href: "/campaigns", label: "Campaigns" },
-  { href: "/calendar", label: "Calendar", soon: "Phase 6" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/approvals", label: "Approvals", need: "approval:internal" },
   { href: "/team", label: "Team", need: "user:manage" },
   { href: "/templates", label: "Templates", soon: "Phase 9" },

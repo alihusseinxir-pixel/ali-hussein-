@@ -7,6 +7,7 @@ import { logActivity } from "./activity";
 import { ForbiddenError, can } from "./rbac";
 import { exitPermission, handoverRules, isHandoverStage, nextStage, revisionTarget, stageOwnerRoles, STAGE_LABELS } from "./workflow";
 import { TaskError, type Actor } from "./tasks";
+import { syncTaskCalendar } from "./calendar-sync";
 import { filesSinceLastHandover } from "./files";
 import { contextSnapshot } from "./task-context";
 import type { HandoverInput } from "./handover-schema";
@@ -64,6 +65,7 @@ async function moveTask(
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: task.id, action: "task.deadline_changed",
       meta: { from: task.deadline?.toISOString() ?? null, to: m.deadline.toISOString() } });
   }
+  await syncTaskCalendar(tx, task.id);
   return handoff;
 }
 
@@ -164,6 +166,7 @@ export async function acceptHandover(actor: Actor, handoffId: string) {
         if (r.count) {
           await tx.taskAssignment.updateMany({ where: { taskId: t.id, releasedAt: null }, data: { stage: to } });
           await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: t.id, action: "stage.changed", meta: { from: "ASSIGNED", to } });
+          await syncTaskCalendar(tx, t.id);
         }
       }
     }
