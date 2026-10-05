@@ -46,7 +46,7 @@ Policy (replace the bucket name). **Object permissions only** — no list, no bu
 {
   "Version": "2012-10-17",
   "Statement": [
-    { "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject"], "Resource": "arn:aws:s3:::YOUR_BUCKET/*" }
+    { "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject", "s3:DeleteObject", "s3:AbortMultipartUpload"], "Resource": "arn:aws:s3:::YOUR_BUCKET/*" }
   ]
 }
 ```
@@ -55,6 +55,8 @@ Create an access key for this user and put it in your local `.env`. On EC2/ECS/L
 ## 4. Apply the rest of the hardening, then verify
 
 These two scripts run **locally with your own `.env`**; they print results, never credential values.
+The `npm run storage:*` shortcuts do **not** load `.env` by themselves: export the variables first, or run the script as
+`npx tsx --env-file=.env --conditions=react-server scripts/setup-bucket.ts` (and `verify-storage.ts`, `migrate-storage.ts`).
 
 ```bash
 npm run storage:setup -- --check   # read-only report
