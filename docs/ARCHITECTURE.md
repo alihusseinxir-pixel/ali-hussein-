@@ -114,10 +114,16 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - Views are server-rendered (`/calendar?view=month|week|day&date=YYYY-MM-DD&types=…&mine=1`) with custom components instead of FullCalendar: no client bundle, no hydration, fully linkable, and day arithmetic is done in the org timezone (`WEEK_START` sets the first weekday, default Sunday). Trade-off: no drag-and-drop rescheduling; dates are edited on the task.
 - Every chip links to its task. The dashboard shows "Today" for the signed-in user.
 
+### Production Brief PDF (Phase 7)
+- `GET /api/tasks/:id/brief` (`?download=1` to force download) renders the **current** task with `@react-pdf/renderer` (no headless browser needed on the server). Sections follow the PRD: header, task/brand/campaign/type/platform/priority, dates, objective, audience, brief, insight, key message, CTA, caption, hashtags, **script split into scenes**, models, location, props, product, references, notes, assigned team (creator, current owner, everyone who held it), page footer with task code and page numbers. Empty optional sections are omitted. Visibility rules are the same as the task page.
+- Scenes are parsed from `SCENE 01 – …`, `Scene 2:`, `Shot 3` or `مشهد ٣` headings (Arabic-Indic digits understood); text without headings becomes one SCRIPT block.
+- **Arabic**: a bundled IBM Plex Sans Arabic (OFL, `assets/fonts/`, covers Latin and Arabic) is embedded; each line gets its own base direction from its first letter, so Arabic lines are shaped and right-aligned while English lines stay left-to-right. Emoji are removed from the PDF because the font has no emoji glyphs. Verified visually on rendered pages.
+- **Share PDF** = signed, expiring (1–30 days), revocable link `/share/brief/<token>` that works without login: `HMAC-SHA256(payload{task, version, expiry})`, key derived from `SESSION_SECRET`. "Revoke all links" bumps `Task.briefShareVersion`, instantly invalidating every outstanding link; deleting the task also kills them. Only the creator or a manager can create/revoke; both are logged in the activity log. The public route is rate-limited, `noindex`, `no-store`, `no-referrer`, and always renders the *current* task (so it is not a frozen copy). Anyone holding a valid link can read the brief — the UI says so before copying.
+
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
-- `components/`: `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
+- `components/`: `BriefPanel`, `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
 - Planned: `WorkflowTimeline`, `HandoverModal`, `FileList`, `CommentThread`, `ReviewPanel`, `CalendarView` (FullCalendar), `NotificationBell`.
 
 ## 7. Folder structure
@@ -143,6 +149,7 @@ src/
 | 4 | Files: upload, preview, download, versions, handover file gates | done |
 | 5 | Comments (@mentions, attachments), approval records, review card, Approvals page | done |
 | 6 | Calendar (month/week/day), automatic events, dashboard "Today" | done |
-| 7–10 | PDF, notifications UI, templates, analytics | planned |
+| 7 | Production Brief PDF (Arabic + English), download/preview, expiring share links | done |
+| 8–10 | Notifications UI, templates, analytics | planned |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).

@@ -275,12 +275,13 @@ model Task {
   product         String?
   specialNotes    String?
 
-  shootingAt DateTime?
-  publishAt  DateTime?
-  startDate  DateTime?
-  deadline   DateTime?
-  priority   Priority  @default(MEDIUM)
-  stage      TaskStage @default(BRIEF)
+  shootingAt        DateTime?
+  publishAt         DateTime?
+  startDate         DateTime?
+  deadline          DateTime?
+  priority          Priority  @default(MEDIUM)
+  stage             TaskStage @default(BRIEF)
+  briefShareVersion Int       @default(0) // bump to revoke every outstanding share link
 
   createdById       String
   createdBy         User    @relation("TaskCreator", fields: [createdById], references: [id])

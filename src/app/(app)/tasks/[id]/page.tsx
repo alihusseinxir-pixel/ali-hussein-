@@ -14,6 +14,7 @@ import { CommentBox } from "@/components/CommentBox";
 import { CommentThread } from "@/components/CommentThread";
 import { ReviewCard } from "@/components/ReviewCard";
 import { listComments, taskParticipants } from "@/lib/comments";
+import { BriefPanel } from "@/components/BriefPanel";
 import { FilesPanel } from "@/components/FilesPanel";
 import { MAX_UPLOAD_BYTES, listFiles } from "@/lib/files";
 import { HandoverPanel } from "@/components/HandoverPanel";
@@ -21,7 +22,7 @@ import { acceptHandoverAction, deleteTaskAction } from "@/app/actions/tasks";
 
 const ACTION_LABELS: Record<string, string> = {
   "task.created": "created the task", "task.updated": "updated the task", "task.assigned": "assigned the task",
-  "task.deadline_changed": "changed the deadline", "handover.created": "handed the task over", "handover.accepted": "confirmed the handover", "file.uploaded": "uploaded a file", "file.replaced": "uploaded a new file version", "file.deleted": "removed a file", "comment.added": "commented", "comment.deleted": "deleted a comment", "task.approved": "approved the task", "stage.changed": "moved the task to the next stage", "revision.requested": "requested changes", "task.deleted": "deleted the task",
+  "task.deadline_changed": "changed the deadline", "handover.created": "handed the task over", "handover.accepted": "confirmed the handover", "file.uploaded": "uploaded a file", "file.replaced": "uploaded a new file version", "file.deleted": "removed a file", "comment.added": "commented", "brief.shared": "created a share link for the brief", "brief.share_revoked": "revoked the brief share links", "comment.deleted": "deleted a comment", "task.approved": "approved the task", "stage.changed": "moved the task to the next stage", "revision.requested": "requested changes", "task.deleted": "deleted the task",
 };
 
 const Section = ({ title, value }: { title: string; value: string | null }) =>
@@ -121,6 +122,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
         )}
       </section>
 
+      <BriefPanel taskId={id} canShare={canEdit} />
+
       <FilesPanel taskId={id} files={fileRows} canUpload={canUpload} maxMb={MAX_UPLOAD_BYTES / 1024 / 1024} />
 
       {pendingForMe && (
@@ -201,7 +204,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             ))}
           </ol>
         </section>
-      <p className="text-xs text-slate-400">Calendar, PDF brief and notifications arrive in Phases 6–8.</p>
+      <p className="text-xs text-slate-400">Notifications UI, templates and analytics arrive in Phases 8–10.</p>
     </div>
   );
 }
