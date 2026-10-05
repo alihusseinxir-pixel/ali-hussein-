@@ -23,6 +23,6 @@ npm run typecheck && npm test && npm run build
 
 ## Production checklist
 - Set a strong `SESSION_SECRET`, `APP_URL`, `SMTP_URL` (invitations, password reset, notification emails) and `CRON_SECRET`; schedule `POST /api/cron/reminders` (or `npm run reminders`) every ~5 minutes.
-- Uploads go to local disk (`STORAGE_DIR`). Use a persistent volume, or implement the S3 driver behind `src/lib/storage.ts` before deploying to ephemeral hosts.
+- Uploads: local disk by default (`STORAGE_DIR`; needs a persistent volume). For ephemeral hosts set `STORAGE_DRIVER=s3` plus the `S3_*` variables from `.env.example` (AWS S3, Cloudflare R2, MinIO…), keep the bucket private, and move existing files once with `npm run storage:migrate`.
 - Set `ALLOW_SIGNUP=false` once your organization exists.
 - CI runs on every push/PR (`.github/workflows/ci.yml`).

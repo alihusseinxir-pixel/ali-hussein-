@@ -96,7 +96,7 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
   - Files gate (Phase 4): leaving PRODUCTION needs a `RAW` file, leaving EDITING a `FINAL` file, uploaded **since the previous handover** — so a revision needs a new version. The list of files delivered is frozen in the handover (`payload.files`).
 
 ### Files (Phase 4)
-- `src/lib/storage.ts` is a small driver interface (`put/get/size/remove`); the local-disk driver (`STORAGE_DIR`, default `./uploads`) is the only one implemented. An S3-compatible driver is a drop-in replacement and is **not built yet**.
+- `src/lib/storage.ts` is a small driver interface (`put/get/size/remove`) selected by `STORAGE_DRIVER`: `local` (default; `STORAGE_DIR`) or `s3` (any S3-compatible service: AWS S3, Cloudflare R2, MinIO…; `S3_BUCKET`, `S3_REGION`, `S3_ENDPOINT`, keys or an IAM role, `S3_FORCE_PATH_STYLE`, `S3_PREFIX`). The S3 driver streams uploads as multipart (no whole-file buffering on its side), reads byte ranges, uses HEAD for size and an idempotent delete. **The bucket stays private**: every download is streamed through `/api/files/:id`, which re-checks task visibility, so there are no public or presigned URLs to leak (trade-off: file bytes pass through the app server). One behavioural contract test runs against both drivers. `npm run storage:migrate` copies existing local files into the bucket (idempotent, `-- --dry-run` available, never deletes local files).
 - Blobs are stored under random keys (`org/task/uuid.ext`); `TaskAttachment.fileUrl` holds that key, never a public URL. Every download goes through `GET /api/files/:id`, which re-checks task visibility, so files cannot be reached by guessing paths or from another organization.
 - Uploads accept PDF/JPG/PNG/MP4/MOV/DOCX/XLSX only; extension **and** magic bytes must agree and the client MIME type is ignored. Names are sanitised (Arabic kept). Limit `MAX_UPLOAD_MB` (default 100). Responses send `nosniff`; only PDF/image/video render inline, Office files always download; inline images/video are served with a sandbox CSP. Single-range requests are supported so video can seek.
 - Same name + kind on a task = next version (V1, V2…), race-safe via a unique index and retry. Deleting is soft: the row and blob stay so history and handover snapshots remain valid.
@@ -152,7 +152,8 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 ### Hardening (Phase 11, partial)
 - **Password reset**: `/forgot-password` → emailed single-use link (1 h, SHA-256 hashed at rest, only the newest link works) → `/reset-password/[token]`. The request form answers identically for unknown, disabled and real emails (no account discovery) and is rate-limited; the reset claims the token atomically (concurrent use of one link: exactly one wins, tested), enforces the 10-character minimum, and bumps `User.sessionVersion`, which is embedded in the session cookie — so **every device is signed out** on reset. Disabled accounts cannot use an old link. Activity-logged.
 - **CI** (`.github/workflows/ci.yml`): Postgres 16 service, `prisma migrate deploy` from scratch, typecheck, lint, tests, build. The same sequence was reproduced locally on an empty database with no `.env`.
-- **Not done yet**: an S3-compatible storage driver (the interface exists; local disk is still the only driver, so production on ephemeral disks would lose uploads), Playwright browser tests in CI (the flows were exercised with throw-away scripts, not committed tests), password change while signed in, 2FA, and audit-log viewing UI.
+- **S3 storage** (see Files above) — verified against an S3-compatible server with the driver contract tests and a full browser run (upload, versions, preview, download, range, permissions, migrated legacy file). **Not verified against real AWS/R2**; set the variables in `.env.example` and run once on your provider.
+- **Not done yet**: Playwright browser tests in CI (the flows were exercised with throw-away scripts, not committed tests), password change while signed in, 2FA, and audit-log viewing UI.
 
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
@@ -186,7 +187,7 @@ src/
 | 7 | Production Brief PDF (Arabic + English), download/preview, expiring share links | done |
 | 8 | Notification bell + inbox, deadline/overdue/publishing reminders, email digest | done |
 | 9 | Templates (built-in + custom, template-specific fields), campaign pages with progress | done |
-| 11 (hardening, partial) | Password reset with session revocation, CI workflow | done — S3 driver and browser tests in CI still open |
+| 11 (hardening, partial) | Password reset with session revocation, CI workflow, S3-compatible file storage | done — browser tests in CI still open |
 | 10 | Analytics: volume, time to publish, approval time, revision rate, team and campaign performance | done |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).
