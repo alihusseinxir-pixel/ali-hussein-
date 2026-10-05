@@ -125,21 +125,22 @@ model Organization {
 }
 
 model User {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  name           String
-  email          String       @unique
-  passwordHash   String
-  avatarUrl      String?
-  role           Role
-  department     String?
-  status         UserStatus   @default(ACTIVE)
-  teamId         String?
-  team           Team?        @relation(fields: [teamId], references: [id])
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
+  id                 String       @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id])
+  name               String
+  email              String       @unique
+  passwordHash       String
+  avatarUrl          String?
+  role               Role
+  department         String?
+  emailNotifications Boolean      @default(true)
+  status             UserStatus   @default(ACTIVE)
+  teamId             String?
+  team               Team?        @relation(fields: [teamId], references: [id])
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  deletedAt          DateTime?
 
   createdTasks    Task[]           @relation("TaskCreator")
   ownedTasks      Task[]           @relation("TaskAssignee")
@@ -437,9 +438,13 @@ model Notification {
   type           NotificationType
   message        String
   readAt         DateTime?
+  emailedAt      DateTime?
+  dedupeKey      String? // reminders use this so a task/deadline notifies a person only once
   createdAt      DateTime         @default(now())
 
+  @@unique([userId, dedupeKey])
   @@index([userId, readAt])
+  @@index([emailedAt, createdAt])
 }
 
 // Append-only audit trail.

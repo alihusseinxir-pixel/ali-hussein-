@@ -12,7 +12,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "db:backfill-calendar": "tsx scripts/backfill-calendar.ts"
+    "db:backfill-calendar": "tsx scripts/backfill-calendar.ts",
+    "reminders": "tsx --conditions=react-server scripts/run-reminders.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

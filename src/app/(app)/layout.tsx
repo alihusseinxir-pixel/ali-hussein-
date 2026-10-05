@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/session";
 import { can, ROLE_LABELS, type Permission } from "@/lib/rbac";
+import { NotificationBell } from "@/components/NotificationBell";
 import { logoutAction } from "@/app/actions/auth";
 
 interface NavItem { href: string; label: string; need?: Permission; soon?: string }
@@ -14,6 +15,7 @@ const NAV: NavItem[] = [
   { href: "/team", label: "Team", need: "user:manage" },
   { href: "/templates", label: "Templates", soon: "Phase 9" },
   { href: "/files", label: "Files" },
+  { href: "/notifications", label: "Notifications" },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -40,9 +42,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
       <div className="flex-1 overflow-x-auto">
-        <header className="flex items-center justify-between border-b bg-white px-4 py-3 md:hidden">
-          <span className="font-bold text-brand-900">BASMA MARKETING</span>
-          <nav className="flex gap-3 text-sm"><Link href="/dashboard">Home</Link><Link href="/tasks">Tasks</Link></nav>
+        <header className="flex items-center justify-between border-b bg-white px-4 py-2">
+          <span className="font-bold text-brand-900 md:invisible">BASMA MARKETING</span>
+          <div className="flex items-center gap-3">
+            <nav className="flex gap-3 text-sm md:hidden"><Link href="/dashboard">Home</Link><Link href="/tasks">Tasks</Link><Link href="/calendar">Calendar</Link></nav>
+            <NotificationBell />
+          </div>
         </header>
         <main className="mx-auto max-w-6xl p-4 md:p-8">{children}</main>
       </div>

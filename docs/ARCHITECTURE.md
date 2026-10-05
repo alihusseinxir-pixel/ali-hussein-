@@ -120,10 +120,18 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - **Arabic**: a bundled IBM Plex Sans Arabic (OFL, `assets/fonts/`, covers Latin and Arabic) is embedded; each line gets its own base direction from its first letter, so Arabic lines are shaped and right-aligned while English lines stay left-to-right. Emoji are removed from the PDF because the font has no emoji glyphs. Verified visually on rendered pages.
 - **Share PDF** = signed, expiring (1–30 days), revocable link `/share/brief/<token>` that works without login: `HMAC-SHA256(payload{task, version, expiry})`, key derived from `SESSION_SECRET`. "Revoke all links" bumps `Task.briefShareVersion`, instantly invalidating every outstanding link; deleting the task also kills them. Only the creator or a manager can create/revoke; both are logged in the activity log. The public route is rate-limited, `noindex`, `no-store`, `no-referrer`, and always renders the *current* task (so it is not a frozen copy). Anyone holding a valid link can read the brief — the UI says so before copying.
 
+### Notifications (Phase 8)
+- **Inbox**: bell in the top bar (unread badge, latest 8, mark read / mark all read, click-through to the task) and a full `/notifications` page (unread filter, pagination, email opt-out). A person only ever reads their own rows; notifications of deleted tasks are hidden. "Realtime" is polling every 30 s while the tab is visible plus a refresh on tab focus — simple, proxy-friendly, no sockets to operate. SSE/WebSocket can replace the poll without touching the API shape.
+- **Event notifications** are written in the same transaction as the change that causes them: new assignment, handover, revision requested, approved, mention, comment.
+- **Time-based reminders** (`src/lib/reminders.ts`): deadline approaching (default 24 h, `DEADLINE_REMINDER_HOURS`), overdue (to owner and creator), scheduled content due (default 2 h before, plus a second "publish now" once the time has passed; `PUBLISH_REMINDER_HOURS`). Unassigned tasks notify their creator. Closed (published/completed), scheduled-for-deadline and deleted tasks are skipped, and deadlines that lapsed more than 30 days ago are ignored so a first run cannot flood people. Each notification carries a `dedupeKey` with a unique index per user, so the job is **idempotent** (run it as often as you like) and changing a deadline/publish date earns a fresh reminder.
+- **Running the job**: `POST /api/cron/reminders` with `Authorization: Bearer $CRON_SECRET` (any scheduler, ~every 5 min), or `npm run reminders` from system cron. The endpoint is disabled (503) unless `CRON_SECRET` (16+ chars) is set; comparison is constant-time.
+- **Email** is an optional digest sent by the same job: one email per person with their new, still-unread notifications from the last 24 h, only when `SMTP_URL` is set and the user has not opted out. Failures leave `emailedAt` empty and are retried on the next run. Latency therefore equals the cron interval.
+- `TASK_REJECTED` exists in the enum but is not emitted: "request changes" is modelled as `REVISION_REQUESTED`.
+
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
-- `components/`: `BriefPanel`, `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
+- `components/`: `NotificationBell`, `BriefPanel`, `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
 - Planned: `WorkflowTimeline`, `HandoverModal`, `FileList`, `CommentThread`, `ReviewPanel`, `CalendarView` (FullCalendar), `NotificationBell`.
 
 ## 7. Folder structure
@@ -150,6 +158,7 @@ src/
 | 5 | Comments (@mentions, attachments), approval records, review card, Approvals page | done |
 | 6 | Calendar (month/week/day), automatic events, dashboard "Today" | done |
 | 7 | Production Brief PDF (Arabic + English), download/preview, expiring share links | done |
-| 8–10 | Notifications UI, templates, analytics | planned |
+| 8 | Notification bell + inbox, deadline/overdue/publishing reminders, email digest | done |
+| 9–10 | Templates, analytics | planned |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).
