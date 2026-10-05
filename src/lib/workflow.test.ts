@@ -56,3 +56,11 @@ describe("handover rules", () => {
     expect(isHandoverStage("PRODUCTION")).toBe(true);
   });
 });
+
+describe("file requirements", () => {
+  it("needs raw files leaving production and final files leaving editing", () => {
+    expect(handoverRules("PRODUCTION", "PRODUCTION_REVIEW").requiredFileKind).toBe("RAW");
+    expect(handoverRules("EDITING", "EDITING_REVIEW").requiredFileKind).toBe("FINAL");
+    expect(handoverRules("EDITING_REVIEW", "INTERNAL_APPROVAL").requiredFileKind).toBeNull();
+  });
+});

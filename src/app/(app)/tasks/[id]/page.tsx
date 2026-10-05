@@ -10,12 +10,14 @@ import { STAGE_LABELS, exitPermission, firstAssigneeRoles, isHandoverStage, isRe
 import { TASK_FIELD_LABELS } from "@/lib/task-schema";
 import { PriorityBadge, StageBadge } from "@/components/Badges";
 import { AssignForm } from "@/components/AssignForm";
+import { FilesPanel } from "@/components/FilesPanel";
+import { MAX_UPLOAD_BYTES, listFiles } from "@/lib/files";
 import { HandoverPanel } from "@/components/HandoverPanel";
 import { acceptHandoverAction, deleteTaskAction } from "@/app/actions/tasks";
 
 const ACTION_LABELS: Record<string, string> = {
   "task.created": "created the task", "task.updated": "updated the task", "task.assigned": "assigned the task",
-  "task.deadline_changed": "changed the deadline", "handover.created": "handed the task over", "handover.accepted": "confirmed the handover", "stage.changed": "moved the task to the next stage", "revision.requested": "requested changes", "task.deleted": "deleted the task",
+  "task.deadline_changed": "changed the deadline", "handover.created": "handed the task over", "handover.accepted": "confirmed the handover", "file.uploaded": "uploaded a file", "file.replaced": "uploaded a new file version", "file.deleted": "removed a file", "stage.changed": "moved the task to the next stage", "revision.requested": "requested changes", "task.deleted": "deleted the task",
 };
 
 const Section = ({ title, value }: { title: string; value: string | null }) =>
@@ -48,6 +50,13 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     ? await db.user.findMany({ where: { organizationId: user.organizationId, status: "ACTIVE", deletedAt: null, role: { in: stageOwnerRoles(next) } }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true } })
     : [];
   const revertTo = canHandOver ? revisionTarget(task.contentType, task.stage) : null;
+  const files = await listFiles(user, id);
+  const canUpload = !["PUBLISHED", "COMPLETED"].includes(task.stage) && (isOwner || task.createdById === user.id || can(user.role, "task:edit:any"));
+  const fileRows = files.map((f) => ({
+    id: f.id, fileName: f.fileName, fileType: f.fileType, kind: f.kind, version: f.version, sizeBytes: f.sizeBytes,
+    uploadedBy: f.uploadedBy.name, createdAt: f.createdAt.toISOString(),
+    canDelete: canUpload && (f.uploadedById === user.id || can(user.role, "task:edit:any")),
+  }));
   const overdue = task.deadline && task.deadline < new Date() && !["PUBLISHED", "COMPLETED"].includes(task.stage);
   const wide = (["brief", "script"] as const);
 
@@ -104,6 +113,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
         )}
       </section>
 
+      <FilesPanel taskId={id} files={fileRows} canUpload={canUpload} maxMb={MAX_UPLOAD_BYTES / 1024 / 1024} />
+
       {pendingForMe && (
         <section className="card border-brand-500 bg-brand-50">
           <h2 className="font-medium">Handover waiting for your confirmation</h2>
@@ -125,7 +136,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
         {task.handoffs.length === 0 ? <p className="text-sm text-slate-500">No handovers yet.</p> : (
           <ol className="space-y-4">
             {task.handoffs.map((h) => {
-              const p = h.payload as { deliverables?: string | null } | null;
+              const p = h.payload as { deliverables?: string | null; files?: { fileName: string; version: number; kind: string }[] } | null;
               return (
                 <li key={h.id} className="rounded-md border p-3 text-sm">
                   <div className="flex flex-wrap justify-between gap-2">
@@ -136,6 +147,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
                   {h.instructions && <p className="mt-2 whitespace-pre-wrap"><span className="label !inline">Instructions </span>{h.instructions}</p>}
                   {h.requiredOutput && <p><span className="label !inline">Expected output </span>{h.requiredOutput}</p>}
                   {p?.deliverables && <p className="whitespace-pre-wrap"><span className="label !inline">Delivered </span>{p.deliverables}</p>}
+                  {p?.files && p.files.length > 0 && <p><span className="label !inline">Files </span>{p.files.map((f) => `${f.fileName} (V${f.version})`).join(", ")}</p>}
                   {h.reason && h.reason !== h.instructions && <p className="whitespace-pre-wrap"><span className="label !inline">Why </span>{h.reason}</p>}
                 </li>
               );
@@ -155,7 +167,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             ))}
           </ol>
         </section>
-      <p className="text-xs text-slate-400">Files, comments and approvals arrive in Phases 4–5.</p>
+      <p className="text-xs text-slate-400">Comments and approvals arrive in Phase 5.</p>
     </div>
   );
 }

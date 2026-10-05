@@ -366,13 +366,15 @@ model TaskAttachment {
   uploadedById String
   uploadedBy   User     @relation(fields: [uploadedById], references: [id])
   fileName     String
-  fileUrl      String
+  fileUrl      String // storage key (not a public URL); files are served through /api/files/:id
   fileType     String
-  kind         String? // RAW, FINAL, REFERENCE, THUMBNAIL ...
+  kind         String   @default("OTHER") // RAW | FINAL | REFERENCE | THUMBNAIL | DOCUMENT | OTHER
+  sizeBytes    Int      @default(0)
   version      Int      @default(1)
   createdAt    DateTime @default(now())
   deletedAt    DateTime?
 
+  @@unique([taskId, kind, fileName, version])
   @@index([taskId])
 }
 

@@ -91,12 +91,20 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
   - Concurrency: the stage change is a compare-and-set on (stage, owner); of two simultaneous submissions exactly one wins (tested).
   - Each handover freezes a snapshot of brief/script/models/location/references (`payload.context`) alongside what was delivered.
   - Handing to yourself (e.g. Social Media scheduling their own content) is auto-confirmed.
-  - File-presence guard is added in Phase 4 once uploads exist; until then "what you are delivering" is a required text field.
+  - Files gate (Phase 4): leaving PRODUCTION needs a `RAW` file, leaving EDITING a `FINAL` file, uploaded **since the previous handover** — so a revision needs a new version. The list of files delivered is frozen in the handover (`payload.files`).
+
+### Files (Phase 4)
+- `src/lib/storage.ts` is a small driver interface (`put/get/size/remove`); the local-disk driver (`STORAGE_DIR`, default `./uploads`) is the only one implemented. An S3-compatible driver is a drop-in replacement and is **not built yet**.
+- Blobs are stored under random keys (`org/task/uuid.ext`); `TaskAttachment.fileUrl` holds that key, never a public URL. Every download goes through `GET /api/files/:id`, which re-checks task visibility, so files cannot be reached by guessing paths or from another organization.
+- Uploads accept PDF/JPG/PNG/MP4/MOV/DOCX/XLSX only; extension **and** magic bytes must agree and the client MIME type is ignored. Names are sanitised (Arabic kept). Limit `MAX_UPLOAD_MB` (default 100). Responses send `nosniff`; only PDF/image/video render inline, Office files always download; inline images/video are served with a sandbox CSP. Single-range requests are supported so video can seek.
+- Same name + kind on a task = next version (V1, V2…), race-safe via a unique index and retry. Deleting is soft: the row and blob stay so history and handover snapshots remain valid.
+- Upload/delete: current owner, task creator, or `task:edit:any`; read: anyone who can see the task. Cross-site POST/DELETE are rejected (Origin check on top of SameSite=Lax).
+- Upload bodies are buffered by the runtime before streaming to disk; run behind a proxy that enforces the same size limit.
 
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
-- `components/`: `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
+- `components/`: `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
 - Planned: `WorkflowTimeline`, `HandoverModal`, `FileList`, `CommentThread`, `ReviewPanel`, `CalendarView` (FullCalendar), `NotificationBell`.
 
 ## 7. Folder structure
@@ -119,6 +127,7 @@ src/
 | 1 | Auth, organization, invitations, RBAC | done |
 | 2 | Tasks (create/edit/assign/list/filter/detail/activity/soft-delete); minimal brands & campaigns | done |
 | 3 | Workflow engine + handovers (confirm, forward handover, revision loop) | done |
-| 4–10 | Files, review/approval, calendar, PDF, notifications, templates, analytics | planned |
+| 4 | Files: upload, preview, download, versions, handover file gates | done |
+| 5–10 | Review/approval records, calendar, PDF, notifications, templates, analytics | planned |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).

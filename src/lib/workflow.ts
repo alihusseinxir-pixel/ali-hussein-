@@ -128,6 +128,7 @@ export function exitPermission(from: TaskStage): Permission | null {
 export interface HandoverRules {
   needsDeadline: boolean; // a deadline for the next stage
   needsDeliverables: boolean; // the sender must describe what they delivered
+  requiredFileKind: "RAW" | "FINAL" | null; // at least one such file uploaded since the last handover
   needsPublishAt: boolean; // task must have a publishing date/time
 }
 
@@ -135,6 +136,7 @@ export function handoverRules(from: TaskStage, to: TaskStage): HandoverRules {
   return {
     needsDeadline: !["SCHEDULED", "PUBLISHED", "COMPLETED"].includes(to),
     needsDeliverables: from === "PRODUCTION" || from === "EDITING",
+    requiredFileKind: from === "PRODUCTION" ? "RAW" : from === "EDITING" ? "FINAL" : null,
     needsPublishAt: to === "SCHEDULED",
   };
 }

@@ -7,6 +7,7 @@ import { logActivity } from "./activity";
 import { ForbiddenError, can } from "./rbac";
 import { exitPermission, handoverRules, isHandoverStage, nextStage, revisionTarget, stageOwnerRoles, STAGE_LABELS } from "./workflow";
 import { TaskError, type Actor } from "./tasks";
+import { filesSinceLastHandover } from "./files";
 import { contextSnapshot } from "./task-context";
 import type { HandoverInput } from "./handover-schema";
 
@@ -91,13 +92,17 @@ export async function submitHandover(actor: Actor, taskId: string, input: Handov
       deadline = parseLocalDateTime(input.deadline, env.timezone);
       if (!deadline) throw new TaskError("Invalid deadline.");
     }
+    const files = await filesSinceLastHandover(tx, taskId);
+    if (rules.requiredFileKind && !files.some((f) => f.kind === rules.requiredFileKind)) {
+      throw new TaskError(rules.requiredFileKind === "RAW" ? "Upload the raw footage/photos (kind: Raw) before handing over." : "Upload the final output (kind: Final) before handing over.");
+    }
     if (rules.needsDeadline && !deadline) throw new TaskError(`Set a deadline for ${STAGE_LABELS[to]}.`);
     if (rules.needsPublishAt && !task.publishAt) throw new TaskError("Set a publishing date/time on the task before scheduling it.");
 
     return moveTask(tx, actor, task, {
       toStage: to, toUserId: receiver.id, instructions: input.instructions, requiredOutput: input.requiredOutput, deadline,
       reason: input.comments, notification: "HANDOVER", action: "handover.created",
-      payload: { deliverables: input.deliverables, context: contextSnapshot(task) },
+      payload: { deliverables: input.deliverables, files, context: contextSnapshot(task) },
     });
   });
 }

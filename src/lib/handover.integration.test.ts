@@ -5,6 +5,10 @@ import { acceptHandover, requestChanges, submitHandover } from "./handover";
 import { taskInputSchema } from "./task-schema";
 import { handoverSchema } from "./handover-schema";
 import { ForbiddenError } from "./rbac";
+import { uploadFile } from "./files";
+
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0, 0, 0, 0];
+const up = (a: Actor, taskId: string, kind: string, name: string) => uploadFile(a, taskId, new File([new Uint8Array(PNG)], name, { type: "image/png" }), kind);
 
 const tag = `h${Date.now()}`;
 let org: string;
@@ -50,6 +54,9 @@ describe("handover workflow (integration)", () => {
     // guards
     await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id }))).rejects.toThrow(ForbiddenError); // not owner
     await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/delivering/); // no deliverables
+    await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deliverables: "raw", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/raw footage/i); // no files yet
+    await up(video, t.id, "RAW", "Raw_01.png");
+    await up(video, t.id, "REFERENCE", "ref.png"); // wrong kind alone is not enough, RAW above satisfies it
     await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deliverables: "raw" }))).rejects.toThrow(/deadline/i);
     await expect(submitHandover(video, t.id, ho({ toUserId: editor.id, instructions: "x", deliverables: "raw", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/handled by/); // wrong role for PRODUCTION_REVIEW
     expect(await stage(t.id)).toBe("PRODUCTION");
@@ -63,6 +70,8 @@ describe("handover workflow (integration)", () => {
     expect(await stage(t.id)).toBe("EDITING");
 
     await acceptHandover(editor, await pending(editor, t.id));
+    await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T18:00" }))).rejects.toThrow(/final output/i);
+    await up(editor, t.id, "FINAL", "Final.png");
     await submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "review V1", deliverables: "Final_V1", deadline: "2026-10-09T18:00" }));
     await acceptHandover(mm, await pending(mm, t.id));
 
@@ -74,6 +83,9 @@ describe("handover workflow (integration)", () => {
     expect(full?.currentAssigneeId).toBe(editor.id);
     expect(full?.revisions).toHaveLength(1);
     await acceptHandover(editor, await pending(editor, t.id));
+    // a revision needs a NEW version: the old final does not count
+    await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T20:00" }))).rejects.toThrow(/final output/i);
+    expect((await up(editor, t.id, "FINAL", "Final.png")).version).toBe(2);
     await submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "review V2", deliverables: "Final_V2", deadline: "2026-10-09T20:00" }));
     await acceptHandover(mm, await pending(mm, t.id));
 
@@ -99,6 +111,8 @@ describe("handover workflow (integration)", () => {
     expect(full!.assignments.filter((a) => !a.releasedAt)).toHaveLength(1);
     expect(full!.handoffs.length).toBeGreaterThan(8);
     expect(full!.activityLogs.map((l) => l.action)).toEqual(expect.arrayContaining(["handover.created", "handover.accepted", "stage.changed", "revision.requested"]));
+    const prod = full!.handoffs.find((h) => h.fromStage === "PRODUCTION")!;
+    expect((prod.payload as { files: { fileName: string }[] }).files.map((f) => f.fileName)).toContain("Raw_01.png");
     expect(await db.notification.count({ where: { userId: editor.id, type: "REVISION_REQUESTED" } })).toBe(1);
   });
 
@@ -106,6 +120,7 @@ describe("handover workflow (integration)", () => {
     const t = await createTask(sm, taskInputSchema.parse({ title: "No date", contentType: "CAROUSEL", assigneeId: designer.id }));
     await acceptHandover(designer, await pending(designer, t.id));
     expect(await stage(t.id)).toBe("EDITING"); // static content skips production
+    await up(designer, t.id, "FINAL", "post.png");
     await submitHandover(designer, t.id, ho({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T12:00" }));
     await acceptHandover(mm, await pending(mm, t.id));
     await submitHandover(mm, t.id, ho({ toUserId: mm.id, deadline: "2026-10-09T13:00" }));
@@ -119,6 +134,7 @@ describe("handover workflow (integration)", () => {
   it("two simultaneous handovers: exactly one wins", async () => {
     const t = await createTask(sm, taskInputSchema.parse({ title: "Race", contentType: "REEL", assigneeId: video.id }));
     await acceptHandover(video, await pending(video, t.id));
+    await up(video, t.id, "RAW", "r.png");
     const args = ho({ toUserId: mm.id, instructions: "go", deliverables: "d", deadline: "2026-10-08T12:00" });
     const res = await Promise.allSettled([submitHandover(video, t.id, args), submitHandover(video, t.id, args)]);
     expect(res.filter((r) => r.status === "fulfilled")).toHaveLength(1);
