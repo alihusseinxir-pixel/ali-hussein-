@@ -1,0 +1,117 @@
+# BASMA MARKETING — Architecture
+
+Marketing Workflow & Content Management System. This is the design baseline (the "before coding" deliverables).
+Phases 1–2 are implemented; the rest is designed here and built in order.
+
+## 1. System architecture
+
+```
+Browser ── Next.js 15 (App Router, React 19, Tailwind)
+              │  Server Components read via src/lib/*  (always tenant-scoped)
+              │  Server Actions mutate (src/app/actions/*): zod validation → RBAC → service
+              ▼
+        src/lib services ── Prisma ── PostgreSQL
+              ├─ session.ts   signed (HS256) httpOnly cookie; user re-read from DB on every request
+              ├─ rbac.ts      permission matrix (single source of truth for UI + server)
+              ├─ workflow.ts  pure state machine (no I/O)
+              ├─ tasks.ts     task commands/queries, ALL through visibleTasksWhere(actor)
+              └─ mailer.ts    SMTP via nodemailer; console fallback in dev
+   Later: S3-compatible storage (files), Puppeteer/React-PDF (brief PDF), SSE/WebSocket (realtime), cron (deadline notifications)
+```
+
+Principles
+- **Tenancy first**: every query includes `organizationId`; foreign ids (brand, campaign, assignee) are verified to belong to the actor's org before use.
+- **Authorization in the service layer**, not only the UI. Pages hide buttons; services enforce.
+- **History is append-only**: assignments, handoffs, approvals, revisions, activity logs are never overwritten. Tasks/users/brands soft-delete (`deletedAt`).
+- **No arbitrary stage changes**: stage only changes through the workflow engine (Phase 3), never via the edit form.
+
+Deliberate deviations from the suggested stack
+- Auth is in-house (bcrypt + signed JWT cookie via `jose`) instead of Auth.js v5 (still beta): smaller surface, easy to swap later.
+- Roles are a Postgres enum + code-defined permission matrix instead of `roles`/`permissions` tables: roles are fixed by the PRD, and a typed matrix is testable. Tables can be added if per-org custom roles are ever needed.
+- UI uses Tailwind with a few hand-written components; shadcn/ui can be layered in without changing data flow.
+
+## 2. Database schema
+See `prisma/schema.prisma` (complete for all phases, migrated). Entities:
+`Organization, User, Invitation, Team, Brand, Campaign, ContentTemplate, TaskCounter, Task, TaskAssignment, TaskHandoff, TaskComment, TaskAttachment, TaskRevision, TaskApproval, CalendarEvent, Notification, ActivityLog`.
+
+- `Task.taskCode` = `BASMA-<year>-<5 digits>`, unique per org, from `TaskCounter` via an atomic `upsert … increment` inside the create transaction (concurrency-tested).
+- The "who" questions are answered from data: `createdById`, `currentAssigneeId`, `TaskAssignment` (previous owners, `assignedAt/releasedAt`), `TaskHandoff` (from/to/why/when/what), `TaskApproval` (who/when), `TaskRevision` (requested changes).
+- `Invitation.tokenHash` stores a SHA-256 of the emailed token, so a DB leak cannot be used to join an org.
+- Indexes on `(organizationId, stage)`, `(organizationId, currentAssigneeId)`, `(organizationId, deadline)`.
+
+## 3. API structure
+Server Actions (typed, CSRF-protected by Next) rather than a public REST API; a JSON layer can be added for integrations.
+
+| Area | Action / route | Permission |
+|---|---|---|
+| Auth | `loginAction`, `registerAction` (new org + Admin), `logoutAction`, `acceptInviteAction` | public / session |
+| Team | `inviteMemberAction`, `revokeInvitationAction`, `updateMemberAction` (role/status; last-admin guard) | `user:manage` |
+| Brands/Campaigns | `createBrandAction`, `createCampaignAction` | `campaign:manage` |
+| Tasks (P2) | `createTaskAction`, `updateTaskAction`, `assignTaskAction`, `deleteTaskAction` (soft) | `task:create`, `task:edit:any/own`, `task:assign`, `task:delete` |
+| Workflow (P3) | `submitHandoverAction`, `acceptHandoverAction` | stage-owner roles |
+| Files (P4) | `POST /api/tasks/:id/files` (multipart → S3), `GET /api/files/:id` (signed URL) | task visibility |
+| Review (P5) | `approveAction`, `requestChangesAction` (note required) | `approval:internal` / `approval:final` |
+| Calendar (P6) | `GET /api/calendar?from&to` | own, or `calendar:view:all` |
+| PDF (P7) | `GET /api/tasks/:id/brief.pdf` | task visibility |
+| Notifications (P8) | `markReadAction`, SSE `/api/notifications/stream` | own |
+
+Pages: `/login /register /invite/[token] /dashboard /tasks /tasks/new /tasks/[id] /tasks/[id]/edit /team /campaigns`.
+
+## 4. Permission matrix (`src/lib/rbac.ts`)
+
+| Permission | Admin | Mkt Mgr | Social Media | Videog. | Photog. | Editor | Designer |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| user:manage, org:settings | ✔ | | | | | | |
+| task:create | ✔ | ✔ | ✔ | | | | |
+| task:view:all | ✔ | ✔ | ✔ | | | | |
+| task:edit:any | ✔ | ✔ | | | | | |
+| task:edit:own (creator) | | | ✔ | | | | |
+| task:assign | ✔ | ✔ | ✔ | | | | |
+| task:delete (soft) | ✔ | ✔ | | | | | |
+| task:comment | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ | ✔ |
+| campaign:manage | ✔ | ✔ | ✔ | | | | |
+| approval:internal | ✔ | ✔ | ✔ | | | | |
+| approval:final, publish:manage | ✔ | | ✔ | | | | |
+| activity:view:all | ✔ | ✔ | | | | | |
+| calendar:view:all | ✔ | ✔ | ✔ | | | | |
+
+Visibility for roles without `task:view:all`: tasks they **created**, **currently own**, or **owned before** (read access is kept so history stays meaningful). Everything is additionally scoped to the organization.
+
+## 5. Workflow state machine (`src/lib/workflow.ts`)
+
+`IDEA → BRIEF → ASSIGNED → PRODUCTION → PRODUCTION_REVIEW → EDITING → EDITING_REVIEW → INTERNAL_APPROVAL → SOCIAL_APPROVAL → SCHEDULED → PUBLISHED → COMPLETED`
+
+- The path depends on content type: video/photo content uses the full path; `STATIC_POST / CAROUSEL / STORY` skip PRODUCTION and PRODUCTION_REVIEW (`ASSIGNED → EDITING`).
+- A transition is valid only if it is the **next stage on the path** or a **revision loop** (`PRODUCTION_REVIEW→PRODUCTION`; `EDITING_REVIEW | INTERNAL_APPROVAL | SOCIAL_APPROVAL → EDITING`). Nothing else.
+- Tasks are created in `BRIEF`, or `ASSIGNED` when an eligible assignee is chosen. The first assignee's role is checked against the content type (Reel → Videographer, Product photography → Photographer, Static/Carousel/Story → Designer).
+- **Phase 3 transition guards** (every transition creates a `TaskHandoff`): files uploaded, notes written, next owner chosen with the right role, deadline set, actor is the current owner (or Admin). "Request changes" requires a revision note and writes a `TaskRevision`.
+
+## 6. Component structure
+- `app/(auth)` — login, register, invite acceptance.
+- `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
+- `components/`: `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
+- Planned: `WorkflowTimeline`, `HandoverModal`, `FileList`, `CommentThread`, `ReviewPanel`, `CalendarView` (FullCalendar), `NotificationBell`.
+
+## 7. Folder structure
+```
+prisma/            schema.prisma, migrations/, seed.ts
+docs/              ARCHITECTURE.md
+src/
+  app/
+    (auth)/        login, register, invite/[token]
+    (app)/         dashboard, tasks, tasks/new, tasks/[id](/edit), team, campaigns
+    actions/       auth.ts team.ts tasks.ts campaigns.ts   ("use server")
+  components/
+  lib/             db env session rbac workflow tasks task-schema datetime mailer activity rate-limit tokens
+  middleware.ts    cookie gate + security headers
+```
+
+## Phase status
+| Phase | Scope | Status |
+|---|---|---|
+| 1 | Auth, organization, invitations, RBAC | done |
+| 2 | Tasks (create/edit/assign/list/filter/detail/activity/soft-delete); minimal brands & campaigns | done |
+| 3 | Workflow engine + handovers | next |
+| 4–10 | Files, review/approval, calendar, PDF, notifications, templates, analytics | planned |
+
+Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).

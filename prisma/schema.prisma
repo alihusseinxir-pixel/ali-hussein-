@@ -1,0 +1,453 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────── Enums ─────────────
+
+enum Role {
+  ADMIN
+  MARKETING_MANAGER
+  SOCIAL_MEDIA_MANAGER
+  VIDEOGRAPHER
+  PHOTOGRAPHER
+  VIDEO_EDITOR
+  DESIGNER
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum ContentType {
+  REEL
+  STATIC_POST
+  CAROUSEL
+  STORY
+  TIKTOK
+  UGC
+  CAMPAIGN_VIDEO
+  PRODUCT_PHOTOGRAPHY
+  PRODUCT_SHOOT
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+  FACEBOOK
+  SNAPCHAT
+  YOUTUBE
+  X
+  LINKEDIN
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// Workflow stages (see docs/ARCHITECTURE.md §5 and src/lib/workflow.ts)
+enum TaskStage {
+  IDEA
+  BRIEF
+  ASSIGNED
+  PRODUCTION
+  PRODUCTION_REVIEW
+  EDITING
+  EDITING_REVIEW
+  INTERNAL_APPROVAL
+  SOCIAL_APPROVAL
+  SCHEDULED
+  PUBLISHED
+  COMPLETED
+}
+
+enum HandoffStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ApprovalStatus {
+  APPROVED
+  CHANGES_REQUESTED
+}
+
+enum CalendarEventType {
+  SHOOTING
+  PHOTOGRAPHY
+  EDITING
+  DESIGN
+  REVIEW
+  PUBLISHING
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  HANDOVER
+  DEADLINE_APPROACHING
+  TASK_OVERDUE
+  REVISION_REQUESTED
+  TASK_APPROVED
+  TASK_REJECTED
+  PUBLISHING_REMINDER
+  MENTION
+}
+
+// ───────────── Organization / identity ─────────────
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users         User[]
+  invitations   Invitation[]
+  teams         Team[]
+  brands        Brand[]
+  campaigns     Campaign[]
+  tasks         Task[]
+  templates     ContentTemplate[]
+  activityLogs  ActivityLog[]
+  counters      TaskCounter[]
+  calendarEvents CalendarEvent[]
+  notifications Notification[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  email          String       @unique
+  passwordHash   String
+  avatarUrl      String?
+  role           Role
+  department     String?
+  status         UserStatus   @default(ACTIVE)
+  teamId         String?
+  team           Team?        @relation(fields: [teamId], references: [id])
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  createdTasks   Task[]          @relation("TaskCreator")
+  ownedTasks     Task[]          @relation("TaskAssignee")
+  comments       TaskComment[]
+  attachments    TaskAttachment[]
+  approvals      TaskApproval[]
+  notifications  Notification[]
+  activityLogs   ActivityLog[]
+  handoffsFrom   TaskHandoff[]   @relation("HandoffFrom")
+  handoffsTo     TaskHandoff[]   @relation("HandoffTo")
+  assignments    TaskAssignment[]
+  invitationsSent Invitation[]
+
+  @@index([organizationId, role])
+}
+
+model Invitation {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  email          String
+  name           String
+  role           Role
+  department     String?
+  tokenHash      String       @unique // sha256 of the emailed token; raw token is never stored
+  invitedById    String
+  invitedBy      User         @relation(fields: [invitedById], references: [id])
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, email])
+}
+
+model Team {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  members        User[]
+  createdAt      DateTime     @default(now())
+
+  @@unique([organizationId, name])
+}
+
+// ───────────── Brand → Campaign → Task ─────────────
+
+model Brand {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  guidelinesUrl  String?
+  createdAt      DateTime     @default(now())
+  deletedAt      DateTime?
+
+  campaigns Campaign[]
+  tasks     Task[]
+
+  @@unique([organizationId, name])
+}
+
+model Campaign {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  brandId        String
+  brand          Brand        @relation(fields: [brandId], references: [id])
+  name           String
+  description    String?
+  startDate      DateTime?
+  endDate        DateTime?
+  createdById    String?
+  createdAt      DateTime     @default(now())
+  deletedAt      DateTime?
+
+  tasks Task[]
+
+  @@unique([organizationId, brandId, name])
+  @@index([organizationId])
+}
+
+model ContentTemplate {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  contentType    ContentType
+  fields         Json // field definitions generated per content type
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId])
+}
+
+// ───────────── Tasks ─────────────
+
+model TaskCounter {
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  year           Int
+  lastValue      Int          @default(0)
+
+  @@id([organizationId, year])
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  taskCode       String // BASMA-2026-00001
+  title          String
+
+  brandId        String?
+  brand          Brand?       @relation(fields: [brandId], references: [id])
+  campaignId     String?
+  campaign       Campaign?    @relation(fields: [campaignId], references: [id])
+
+  contentType    ContentType
+  platform       Platform?
+  objective      String?
+  targetAudience String?
+  consumerInsight String?
+  keyMessage     String?
+  cta            String?
+  caption        String?
+  hashtags       String?
+  brief          String?
+  script         String?
+  references     String?
+  models         String?
+  location       String?
+  props          String?
+  product        String?
+  specialNotes   String?
+
+  shootingAt     DateTime?
+  publishAt      DateTime?
+  startDate      DateTime?
+  deadline       DateTime?
+  priority       Priority     @default(MEDIUM)
+  stage          TaskStage    @default(BRIEF)
+
+  createdById    String
+  createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id])
+  currentAssigneeId String?
+  currentAssignee User?       @relation("TaskAssignee", fields: [currentAssigneeId], references: [id])
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  assignments    TaskAssignment[]
+  handoffs       TaskHandoff[]
+  comments       TaskComment[]
+  attachments    TaskAttachment[]
+  revisions      TaskRevision[]
+  approvals      TaskApproval[]
+  calendarEvents CalendarEvent[]
+  activityLogs   ActivityLog[]
+  notifications  Notification[]
+
+  @@unique([organizationId, taskCode])
+  @@index([organizationId, stage])
+  @@index([organizationId, currentAssigneeId])
+  @@index([organizationId, deadline])
+  @@index([campaignId])
+}
+
+// Who owned the task and when — never overwritten, only appended.
+model TaskAssignment {
+  id         String    @id @default(cuid())
+  taskId     String
+  task       Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  stage      TaskStage
+  assignedAt DateTime  @default(now())
+  releasedAt DateTime?
+
+  @@index([taskId])
+  @@index([userId])
+}
+
+// Formal handover record (Phase 3)
+model TaskHandoff {
+  id             String        @id @default(cuid())
+  taskId         String
+  task           Task          @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  fromUserId     String
+  fromUser       User          @relation("HandoffFrom", fields: [fromUserId], references: [id])
+  toUserId       String
+  toUser         User          @relation("HandoffTo", fields: [toUserId], references: [id])
+  fromStage      TaskStage
+  toStage        TaskStage
+  instructions   String
+  requiredOutput String?
+  deadline       DateTime?
+  reason         String?
+  payload        Json? // snapshot of what was delivered
+  status         HandoffStatus @default(PENDING)
+  createdAt      DateTime      @default(now())
+  acceptedAt     DateTime?
+
+  @@index([taskId])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  mentions  String[]
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  @@index([taskId])
+}
+
+model TaskAttachment {
+  id           String   @id @default(cuid())
+  taskId       String
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  fileName     String
+  fileUrl      String
+  fileType     String
+  kind         String? // RAW, FINAL, REFERENCE, THUMBNAIL ...
+  version      Int      @default(1)
+  createdAt    DateTime @default(now())
+  deletedAt    DateTime?
+
+  @@index([taskId])
+}
+
+model TaskRevision {
+  id          String   @id @default(cuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  stage       TaskStage
+  requestedBy String
+  notes       String
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model TaskApproval {
+  id         String         @id @default(cuid())
+  taskId     String
+  task       Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  approverId String
+  approver   User           @relation(fields: [approverId], references: [id])
+  stage      TaskStage
+  status     ApprovalStatus
+  comments   String?
+  createdAt  DateTime       @default(now())
+
+  @@index([taskId])
+}
+
+model CalendarEvent {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  taskId         String?
+  task           Task?             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  type           CalendarEventType
+  title          String
+  startsAt       DateTime
+  endsAt         DateTime?
+  userId         String?
+  createdAt      DateTime          @default(now())
+
+  @@index([organizationId, startsAt])
+}
+
+model Notification {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  userId         String
+  user           User             @relation(fields: [userId], references: [id])
+  taskId         String?
+  task           Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  message        String
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
+
+// Append-only audit trail.
+model ActivityLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  taskId         String?
+  task           Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actorId        String?
+  actor          User?        @relation(fields: [actorId], references: [id])
+  action         String // task.created, task.updated, task.assigned, user.invited ...
+  meta           Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([taskId, createdAt])
+}
