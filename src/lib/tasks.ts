@@ -90,6 +90,7 @@ export async function getTask(actor: Actor, id: string) {
       assignments: { include: { user: { select: { id: true, name: true, role: true } } }, orderBy: { assignedAt: "asc" } },
       handoffs: { include: { fromUser: { select: { name: true, role: true } }, toUser: { select: { id: true, name: true, role: true } } }, orderBy: { createdAt: "desc" } },
       revisions: { orderBy: { createdAt: "desc" } },
+      approvals: { include: { approver: { select: { name: true, role: true } } }, orderBy: { createdAt: "desc" } },
       activityLogs: { include: { actor: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
     },
   });

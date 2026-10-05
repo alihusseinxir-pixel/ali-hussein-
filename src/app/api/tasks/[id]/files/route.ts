@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const file = form?.get("file");
   if (!(file instanceof File)) return json({ error: "No file provided." }, 400);
   try {
-    const row = await uploadFile(user, id, file, String(form?.get("kind") ?? "OTHER"));
+    const row = await uploadFile(user, id, file, String(form?.get("kind") ?? "OTHER"), (form?.get("commentId") as string | null) || null);
     return json({ id: row.id, fileName: row.fileName, version: row.version }, 201);
   } catch (e) {
     if (e instanceof ForbiddenError) return json({ error: e.message }, 403);

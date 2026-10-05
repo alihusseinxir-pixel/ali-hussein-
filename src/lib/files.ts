@@ -19,10 +19,14 @@ async function visibleTask(actor: Actor, taskId: string) {
   return db.task.findFirst({ where: { AND: [visibleTasksWhere(actor), { id: taskId }] } });
 }
 
-export async function uploadFile(actor: Actor, taskId: string, file: File, kind: string) {
+export async function uploadFile(actor: Actor, taskId: string, file: File, kind: string, commentId?: string | null) {
   const task = await visibleTask(actor, taskId);
   if (!task) throw new TaskError("Task not found.");
-  if (!canUpload(actor, task)) throw new ForbiddenError("You cannot add files to this task right now.");
+  if (commentId) {
+    // Commenters may attach files to their own comment even if they do not own the task.
+    const c = await db.taskComment.findFirst({ where: { id: commentId, taskId, authorId: actor.id, deletedAt: null } });
+    if (!c) throw new ForbiddenError("You can only attach files to your own comment.");
+  } else if (!canUpload(actor, task)) throw new ForbiddenError("You cannot add files to this task right now.");
   if (!(FILE_KINDS as readonly string[]).includes(kind)) throw new TaskError("Unknown file kind.");
   if (file.size === 0) throw new TaskError("The file is empty.");
   if (file.size > MAX_UPLOAD_BYTES) throw new TaskError(`File is larger than ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`);
@@ -41,7 +45,7 @@ export async function uploadFile(actor: Actor, taskId: string, file: File, kind:
           const last = await tx.taskAttachment.aggregate({ where: { taskId, kind, fileName }, _max: { version: true } });
           const version = (last._max.version ?? 0) + 1;
           const row = await tx.taskAttachment.create({
-            data: { taskId, uploadedById: actor.id, fileName, fileUrl: key, fileType: type.mime, kind, sizeBytes: file.size, version },
+            data: { taskId, commentId: commentId ?? null, uploadedById: actor.id, fileName, fileUrl: key, fileType: type.mime, kind, sizeBytes: file.size, version },
           });
           await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId, action: version > 1 ? "file.replaced" : "file.uploaded", meta: { fileName, kind, version } });
           return row;
@@ -85,7 +89,7 @@ export async function deleteFile(actor: Actor, id: string) {
 export async function filesSinceLastHandover(tx: Prisma.TransactionClient, taskId: string) {
   const last = await tx.taskHandoff.findFirst({ where: { taskId }, orderBy: { createdAt: "desc" }, select: { createdAt: true } });
   return tx.taskAttachment.findMany({
-    where: { taskId, deletedAt: null, ...(last && { createdAt: { gt: last.createdAt } }) },
+    where: { taskId, deletedAt: null, commentId: null, ...(last && { createdAt: { gt: last.createdAt } }) },
     select: { id: true, fileName: true, kind: true, version: true },
     orderBy: { createdAt: "asc" },
   });

@@ -6,6 +6,7 @@ import { ForbiddenError } from "@/lib/rbac";
 import { formToObject, zodErrors, type FormState } from "@/lib/form";
 import { taskInputSchema } from "@/lib/task-schema";
 import { handoverSchema, revisionSchema } from "@/lib/handover-schema";
+import { addComment, deleteComment } from "@/lib/comments";
 import { acceptHandover, requestChanges, submitHandover } from "@/lib/handover";
 import { TaskError, assignTask, createTask, deleteTask, updateTask } from "@/lib/tasks";
 
@@ -67,5 +68,20 @@ export async function requestChangesAction(taskId: string, _: FormState, fd: For
 export async function acceptHandoverAction(taskId: string, fd: FormData) {
   const actor = await requireUser();
   try { await acceptHandover(actor, String(fd.get("handoffId"))); } catch (e) { if (!(e instanceof TaskError)) throw e; }
+  revalidatePath(`/tasks/${taskId}`);
+}
+
+export async function addCommentAction(taskId: string, _: FormState, fd: FormData): Promise<FormState> {
+  const actor = await requireUser();
+  try {
+    const c = await addComment(actor, taskId, String(fd.get("body") ?? ""));
+    revalidatePath(`/tasks/${taskId}`);
+    return { ok: true, data: c.id };
+  } catch (e) { return toState(e); }
+}
+
+export async function deleteCommentAction(taskId: string, fd: FormData) {
+  const actor = await requireUser();
+  try { await deleteComment(actor, String(fd.get("commentId"))); } catch (e) { if (!(e instanceof TaskError || e instanceof ForbiddenError)) throw e; }
   revalidatePath(`/tasks/${taskId}`);
 }

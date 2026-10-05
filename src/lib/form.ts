@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export type FormState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean } | undefined;
+export type FormState = { error?: string; fieldErrors?: Record<string, string>; ok?: boolean; data?: string } | undefined;
 
 /** FormData -> plain object; blank strings preserved so zod `.optional()` handles them. */
 export function formToObject(fd: FormData): Record<string, string> {

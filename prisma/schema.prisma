@@ -99,6 +99,7 @@ enum NotificationType {
   TASK_REJECTED
   PUBLISHING_REMINDER
   MENTION
+  COMMENT
 }
 
 // ───────────── Organization / identity ─────────────
@@ -110,17 +111,17 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  users         User[]
-  invitations   Invitation[]
-  teams         Team[]
-  brands        Brand[]
-  campaigns     Campaign[]
-  tasks         Task[]
-  templates     ContentTemplate[]
-  activityLogs  ActivityLog[]
-  counters      TaskCounter[]
+  users          User[]
+  invitations    Invitation[]
+  teams          Team[]
+  brands         Brand[]
+  campaigns      Campaign[]
+  tasks          Task[]
+  templates      ContentTemplate[]
+  activityLogs   ActivityLog[]
+  counters       TaskCounter[]
   calendarEvents CalendarEvent[]
-  notifications Notification[]
+  notifications  Notification[]
 }
 
 model User {
@@ -140,16 +141,16 @@ model User {
   updatedAt      DateTime     @updatedAt
   deletedAt      DateTime?
 
-  createdTasks   Task[]          @relation("TaskCreator")
-  ownedTasks     Task[]          @relation("TaskAssignee")
-  comments       TaskComment[]
-  attachments    TaskAttachment[]
-  approvals      TaskApproval[]
-  notifications  Notification[]
-  activityLogs   ActivityLog[]
-  handoffsFrom   TaskHandoff[]   @relation("HandoffFrom")
-  handoffsTo     TaskHandoff[]   @relation("HandoffTo")
-  assignments    TaskAssignment[]
+  createdTasks    Task[]           @relation("TaskCreator")
+  ownedTasks      Task[]           @relation("TaskAssignee")
+  comments        TaskComment[]
+  attachments     TaskAttachment[]
+  approvals       TaskApproval[]
+  notifications   Notification[]
+  activityLogs    ActivityLog[]
+  handoffsFrom    TaskHandoff[]    @relation("HandoffFrom")
+  handoffsTo      TaskHandoff[]    @relation("HandoffTo")
+  assignments     TaskAssignment[]
   invitationsSent Invitation[]
 
   @@index([organizationId, role])
@@ -251,44 +252,44 @@ model Task {
   taskCode       String // BASMA-2026-00001
   title          String
 
-  brandId        String?
-  brand          Brand?       @relation(fields: [brandId], references: [id])
-  campaignId     String?
-  campaign       Campaign?    @relation(fields: [campaignId], references: [id])
+  brandId    String?
+  brand      Brand?    @relation(fields: [brandId], references: [id])
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id])
 
-  contentType    ContentType
-  platform       Platform?
-  objective      String?
-  targetAudience String?
+  contentType     ContentType
+  platform        Platform?
+  objective       String?
+  targetAudience  String?
   consumerInsight String?
-  keyMessage     String?
-  cta            String?
-  caption        String?
-  hashtags       String?
-  brief          String?
-  script         String?
-  references     String?
-  models         String?
-  location       String?
-  props          String?
-  product        String?
-  specialNotes   String?
+  keyMessage      String?
+  cta             String?
+  caption         String?
+  hashtags        String?
+  brief           String?
+  script          String?
+  references      String?
+  models          String?
+  location        String?
+  props           String?
+  product         String?
+  specialNotes    String?
 
-  shootingAt     DateTime?
-  publishAt      DateTime?
-  startDate      DateTime?
-  deadline       DateTime?
-  priority       Priority     @default(MEDIUM)
-  stage          TaskStage    @default(BRIEF)
+  shootingAt DateTime?
+  publishAt  DateTime?
+  startDate  DateTime?
+  deadline   DateTime?
+  priority   Priority  @default(MEDIUM)
+  stage      TaskStage @default(BRIEF)
 
-  createdById    String
-  createdBy      User         @relation("TaskCreator", fields: [createdById], references: [id])
+  createdById       String
+  createdBy         User    @relation("TaskCreator", fields: [createdById], references: [id])
   currentAssigneeId String?
-  currentAssignee User?       @relation("TaskAssignee", fields: [currentAssigneeId], references: [id])
+  currentAssignee   User?   @relation("TaskAssignee", fields: [currentAssigneeId], references: [id])
 
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  deletedAt      DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 
   assignments    TaskAssignment[]
   handoffs       TaskHandoff[]
@@ -346,32 +347,35 @@ model TaskHandoff {
 }
 
 model TaskComment {
-  id        String   @id @default(cuid())
-  taskId    String
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
-  body      String
-  mentions  String[]
-  createdAt DateTime @default(now())
-  deletedAt DateTime?
+  id          String           @id @default(cuid())
+  taskId      String
+  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User             @relation(fields: [authorId], references: [id])
+  body        String
+  mentions    String[] // user ids
+  attachments TaskAttachment[]
+  createdAt   DateTime         @default(now())
+  deletedAt   DateTime?
 
   @@index([taskId])
 }
 
 model TaskAttachment {
-  id           String   @id @default(cuid())
+  id           String       @id @default(cuid())
   taskId       String
-  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
   uploadedById String
-  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  uploadedBy   User         @relation(fields: [uploadedById], references: [id])
   fileName     String
   fileUrl      String // storage key (not a public URL); files are served through /api/files/:id
   fileType     String
-  kind         String   @default("OTHER") // RAW | FINAL | REFERENCE | THUMBNAIL | DOCUMENT | OTHER
-  sizeBytes    Int      @default(0)
-  version      Int      @default(1)
-  createdAt    DateTime @default(now())
+  commentId    String?
+  comment      TaskComment? @relation(fields: [commentId], references: [id])
+  kind         String       @default("OTHER") // RAW | FINAL | REFERENCE | THUMBNAIL | DOCUMENT | OTHER
+  sizeBytes    Int          @default(0)
+  version      Int          @default(1)
+  createdAt    DateTime     @default(now())
   deletedAt    DateTime?
 
   @@unique([taskId, kind, fileName, version])
@@ -379,14 +383,14 @@ model TaskAttachment {
 }
 
 model TaskRevision {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   taskId      String
-  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   stage       TaskStage
   requestedBy String
   notes       String
   resolvedAt  DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   @@index([taskId])
 }

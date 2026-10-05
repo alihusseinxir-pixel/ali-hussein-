@@ -6,9 +6,9 @@ import { ROLE_LABELS } from "@/lib/rbac";
 import { STAGE_LABELS, handoverRules } from "@/lib/workflow";
 
 export function HandoverPanel({
-  taskId, from, to, candidates, revertTo, tz,
+  taskId, from, to, candidates, revertTo, tz, submitLabel = "Confirm handover",
 }: {
-  taskId: string; from: TaskStage; to: TaskStage; tz: string;
+  taskId: string; submitLabel?: string; from: TaskStage; to: TaskStage; tz: string;
   candidates: { id: string; name: string; role: Role }[];
   revertTo: TaskStage | null;
 }) {
@@ -18,7 +18,7 @@ export function HandoverPanel({
       <div>
         <h2 className="font-medium">Handover → {STAGE_LABELS[to]}</h2>
         <p className="mb-4 text-sm text-slate-500">Passing the task on records who, what, when and why. Nothing is overwritten.</p>
-        <ActionForm action={submitHandoverAction.bind(null, taskId)} submitLabel="Confirm handover" className="grid gap-4 md:grid-cols-2" successMessage="Handed over.">
+        <ActionForm action={submitHandoverAction.bind(null, taskId)} submitLabel={submitLabel} className="grid gap-4 md:grid-cols-2" successMessage="Handed over.">
           <Field label="To" name="toUserId">
             <select id="toUserId" name="toUserId" className="input" defaultValue="" required>
               <option value="" disabled>Choose…</option>

@@ -101,10 +101,16 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - Upload/delete: current owner, task creator, or `task:edit:any`; read: anyone who can see the task. Cross-site POST/DELETE are rejected (Origin check on top of SameSite=Lax).
 - Upload bodies are buffered by the runtime before streaming to disk; run behind a proxy that enforces the same size limit.
 
+### Comments & approvals (Phase 5)
+- **Approval = moving forward out of a review/approval stage.** The handover that does it also writes a `TaskApproval` (who, which stage, when, comment) and a `task.approved` activity, and notifies whoever submitted the work (and the task creator after final approval). **Request changes** writes a `TaskApproval(CHANGES_REQUESTED)` plus the `TaskRevision`; the revision is marked resolved when the worker next hands over new work. Nothing is overwritten, so "who approved it and when" is always answerable.
+- Reviewers see a review card with the latest deliverable (RAW for production review, FINAL after editing); at social approval it also shows thumbnail, caption, hashtags, platform and publish time. Button reads "Approve & hand over" / "Approve & Schedule".
+- Comments: plain text, `@Full Name` mentions (picked from a menu or typed), avatars (initials), timestamps, file attachments bound to the comment, soft delete (author or Admin). Only people who can see the task can be mentioned, so a mention never leaks a task. Mentions notify (`MENTION`); other comments notify the owner and creator (`COMMENT`); nobody is notified twice or about their own comment. Comment attachments never count toward a handover's RAW/FINAL requirement.
+- `/approvals` lists tasks waiting for you and (for roles that see all tasks) tasks waiting on others.
+
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
 - `app/(app)` — authenticated shell (sidebar with role-filtered nav) + pages.
-- `components/`: `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
+- `components/`: `CommentBox`, `CommentThread`, `ReviewCard`, `MediaView`, `FilesPanel` (client: upload, versions, preview), `HandoverPanel`, `ActionForm` (client; `useActionState` → inline errors), `Field/Input`, `Badges`, `TaskForm` (create/edit), `AssignForm`.
 - Planned: `WorkflowTimeline`, `HandoverModal`, `FileList`, `CommentThread`, `ReviewPanel`, `CalendarView` (FullCalendar), `NotificationBell`.
 
 ## 7. Folder structure
@@ -128,6 +134,7 @@ src/
 | 2 | Tasks (create/edit/assign/list/filter/detail/activity/soft-delete); minimal brands & campaigns | done |
 | 3 | Workflow engine + handovers (confirm, forward handover, revision loop) | done |
 | 4 | Files: upload, preview, download, versions, handover file gates | done |
-| 5–10 | Review/approval records, calendar, PDF, notifications, templates, analytics | planned |
+| 5 | Comments (@mentions, attachments), approval records, review card, Approvals page | done |
+| 6–10 | Calendar, PDF, notifications UI, templates, analytics | planned |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).

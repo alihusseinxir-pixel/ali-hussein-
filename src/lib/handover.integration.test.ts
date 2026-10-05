@@ -111,6 +111,12 @@ describe("handover workflow (integration)", () => {
     expect(full!.assignments.filter((a) => !a.releasedAt)).toHaveLength(1);
     expect(full!.handoffs.length).toBeGreaterThan(8);
     expect(full!.activityLogs.map((l) => l.action)).toEqual(expect.arrayContaining(["handover.created", "handover.accepted", "stage.changed", "revision.requested"]));
+    const statuses = full!.approvals.map((a) => `${a.stage}:${a.status}`);
+    expect(statuses).toEqual(expect.arrayContaining(["EDITING_REVIEW:CHANGES_REQUESTED", "EDITING_REVIEW:APPROVED", "PRODUCTION_REVIEW:APPROVED", "INTERNAL_APPROVAL:APPROVED", "SOCIAL_APPROVAL:APPROVED"]));
+    expect(full!.approvals.find((a) => a.status === "CHANGES_REQUESTED")?.comments).toMatch(/music/);
+    expect(full!.revisions).toHaveLength(1);
+    expect(full!.revisions[0].resolvedAt).not.toBeNull(); // the editor's new version closed the request
+    expect(await db.notification.count({ where: { userId: video.id, type: "TASK_APPROVED" } })).toBeGreaterThan(0); // submitter told it was approved
     const prod = full!.handoffs.find((h) => h.fromStage === "PRODUCTION")!;
     expect((prod.payload as { files: { fileName: string }[] }).files.map((f) => f.fileName)).toContain("Raw_01.png");
     expect(await db.notification.count({ where: { userId: editor.id, type: "REVISION_REQUESTED" } })).toBe(1);

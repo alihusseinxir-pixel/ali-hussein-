@@ -10,6 +10,10 @@ import { STAGE_LABELS, exitPermission, firstAssigneeRoles, isHandoverStage, isRe
 import { TASK_FIELD_LABELS } from "@/lib/task-schema";
 import { PriorityBadge, StageBadge } from "@/components/Badges";
 import { AssignForm } from "@/components/AssignForm";
+import { CommentBox } from "@/components/CommentBox";
+import { CommentThread } from "@/components/CommentThread";
+import { ReviewCard } from "@/components/ReviewCard";
+import { listComments, taskParticipants } from "@/lib/comments";
 import { FilesPanel } from "@/components/FilesPanel";
 import { MAX_UPLOAD_BYTES, listFiles } from "@/lib/files";
 import { HandoverPanel } from "@/components/HandoverPanel";
@@ -17,7 +21,7 @@ import { acceptHandoverAction, deleteTaskAction } from "@/app/actions/tasks";
 
 const ACTION_LABELS: Record<string, string> = {
   "task.created": "created the task", "task.updated": "updated the task", "task.assigned": "assigned the task",
-  "task.deadline_changed": "changed the deadline", "handover.created": "handed the task over", "handover.accepted": "confirmed the handover", "file.uploaded": "uploaded a file", "file.replaced": "uploaded a new file version", "file.deleted": "removed a file", "stage.changed": "moved the task to the next stage", "revision.requested": "requested changes", "task.deleted": "deleted the task",
+  "task.deadline_changed": "changed the deadline", "handover.created": "handed the task over", "handover.accepted": "confirmed the handover", "file.uploaded": "uploaded a file", "file.replaced": "uploaded a new file version", "file.deleted": "removed a file", "comment.added": "commented", "comment.deleted": "deleted a comment", "task.approved": "approved the task", "stage.changed": "moved the task to the next stage", "revision.requested": "requested changes", "task.deleted": "deleted the task",
 };
 
 const Section = ({ title, value }: { title: string; value: string | null }) =>
@@ -57,6 +61,10 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     uploadedBy: f.uploadedBy.name, createdAt: f.createdAt.toISOString(),
     canDelete: canUpload && (f.uploadedById === user.id || can(user.role, "task:edit:any")),
   }));
+  const [comments, ctx] = await Promise.all([listComments(user, id), taskParticipants(user, id)]);
+  const people = ctx?.people ?? [];
+  const inReview = ["PRODUCTION_REVIEW", "EDITING_REVIEW", "INTERNAL_APPROVAL", "SOCIAL_APPROVAL"].includes(task.stage);
+  const submitLabel = task.stage === "SOCIAL_APPROVAL" ? "Approve & Schedule" : inReview ? "Approve & hand over" : "Confirm handover";
   const overdue = task.deadline && task.deadline < new Date() && !["PUBLISHED", "COMPLETED"].includes(task.stage);
   const wide = (["brief", "script"] as const);
 
@@ -123,7 +131,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             <button className="btn">{task.stage === "ASSIGNED" ? "Confirm & start work" : "Confirm handover"}</button></form>
         </section>
       )}
-      {canHandOver && next && <HandoverPanel taskId={id} from={task.stage} to={next} candidates={candidates} revertTo={revertTo} tz={tz} />}
+      {inReview && isOwner && <ReviewCard task={task} files={files} tz={tz} />}
+      {canHandOver && next && <HandoverPanel taskId={id} from={task.stage} to={next} candidates={candidates} revertTo={revertTo} tz={tz} submitLabel={submitLabel} />}
 
       <section className="card grid gap-5 md:grid-cols-2">
         <h2 className="font-medium md:col-span-2">Brief &amp; content</h2>
@@ -157,6 +166,31 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
       </section>
 
       <section className="card">
+        <h2 className="mb-3 font-medium">Approvals &amp; revisions</h2>
+        {task.approvals.length === 0 ? <p className="text-sm text-slate-500">No approvals or change requests yet.</p> : (
+          <ol className="space-y-3">
+            {task.approvals.map((a) => (
+              <li key={a.id} className="text-sm">
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.status === "APPROVED" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"}`}>{a.status === "APPROVED" ? "Approved" : "Changes requested"}</span>{" "}
+                <b>{a.approver.name}</b> <span className="text-slate-500">at {STAGE_LABELS[a.stage]} · {formatDateTime(a.createdAt, tz)}</span>
+                {a.comments && <p className="mt-1 whitespace-pre-wrap text-slate-700">{a.comments}</p>}
+                {a.status === "CHANGES_REQUESTED" && (() => {
+                  const r = task.revisions.find((x) => x.stage === a.stage && Math.abs(x.createdAt.getTime() - a.createdAt.getTime()) < 5000);
+                  return r ? <p className="text-xs text-slate-400">{r.resolvedAt ? `Resolved ${formatDateTime(r.resolvedAt, tz)}` : "Open — waiting for a new version"}</p> : null;
+                })()}
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
+
+      <section className="card space-y-4">
+        <h2 className="font-medium">Comments</h2>
+        <CommentThread taskId={id} comments={comments} people={people} meId={user.id} isAdmin={user.role === "ADMIN"} tz={tz} />
+        {can(user.role, "task:comment") && <CommentBox taskId={id} people={people.filter((p) => p.id !== user.id)} />}
+      </section>
+
+      <section className="card">
           <h2 className="mb-3 font-medium">Activity log</h2>
           <ol className="space-y-3 border-l pl-4">
             {task.activityLogs.map((a) => (
@@ -167,7 +201,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             ))}
           </ol>
         </section>
-      <p className="text-xs text-slate-400">Comments and approvals arrive in Phase 5.</p>
+      <p className="text-xs text-slate-400">Calendar, PDF brief and notifications arrive in Phases 6–8.</p>
     </div>
   );
 }

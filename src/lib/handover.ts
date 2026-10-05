@@ -68,6 +68,8 @@ async function moveTask(
 }
 
 /** Forward handover: current owner → next stage / next owner. */
+const APPROVAL_STAGES: TaskStage[] = ["PRODUCTION_REVIEW", "EDITING_REVIEW", "INTERNAL_APPROVAL", "SOCIAL_APPROVAL"];
+
 export async function submitHandover(actor: Actor, taskId: string, input: HandoverInput) {
   return db.$transaction(async (tx) => {
     const task = await loadTask(tx, actor, taskId);
@@ -99,11 +101,29 @@ export async function submitHandover(actor: Actor, taskId: string, input: Handov
     if (rules.needsDeadline && !deadline) throw new TaskError(`Set a deadline for ${STAGE_LABELS[to]}.`);
     if (rules.needsPublishAt && !task.publishAt) throw new TaskError("Set a publishing date/time on the task before scheduling it.");
 
-    return moveTask(tx, actor, task, {
+    const submitter = APPROVAL_STAGES.includes(task.stage)
+      ? await tx.taskHandoff.findFirst({ where: { taskId, toStage: task.stage }, orderBy: { createdAt: "desc" }, select: { fromUserId: true } })
+      : null;
+    const handoff = await moveTask(tx, actor, task, {
       toStage: to, toUserId: receiver.id, instructions: input.instructions, requiredOutput: input.requiredOutput, deadline,
       reason: input.comments, notification: "HANDOVER", action: "handover.created",
       payload: { deliverables: input.deliverables, files, context: contextSnapshot(task) },
     });
+    // Moving forward out of a review/approval stage IS the approval: record who approved, when, and why.
+    if (APPROVAL_STAGES.includes(task.stage)) {
+      await tx.taskApproval.create({ data: { taskId, approverId: actor.id, stage: task.stage, status: "APPROVED", comments: input.comments ?? input.instructions } });
+      await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId, action: "task.approved", meta: { stage: task.stage } });
+      for (const uid of new Set([submitter?.fromUserId, task.stage === "SOCIAL_APPROVAL" ? task.createdById : null])) {
+        if (uid && uid !== actor.id) {
+          await tx.notification.create({ data: { organizationId: actor.organizationId, userId: uid, taskId, type: "TASK_APPROVED", message: `${STAGE_LABELS[task.stage]} approved: ${task.taskCode} ${task.title}` } });
+        }
+      }
+    }
+    // Delivering new work answers any open revision requests.
+    if (task.stage === "PRODUCTION" || task.stage === "EDITING") {
+      await tx.taskRevision.updateMany({ where: { taskId, resolvedAt: null }, data: { resolvedAt: new Date() } });
+    }
+    return handoff;
   });
 }
 
@@ -121,6 +141,7 @@ export async function requestChanges(actor: Actor, taskId: string, notes: string
     const user = await tx.user.findFirst({ where: { id: last.userId, organizationId: actor.organizationId, status: "ACTIVE", deletedAt: null } });
     if (!user) throw new TaskError("The previous owner is no longer active; ask a manager to reassign.");
     await tx.taskRevision.create({ data: { taskId, stage: task.stage, requestedBy: actor.id, notes } });
+    await tx.taskApproval.create({ data: { taskId, approverId: actor.id, stage: task.stage, status: "CHANGES_REQUESTED", comments: notes } });
     return moveTask(tx, actor, task, {
       toStage: target, toUserId: user.id, instructions: notes, reason: notes, notification: "REVISION_REQUESTED", action: "revision.requested",
       payload: { context: contextSnapshot(task) },

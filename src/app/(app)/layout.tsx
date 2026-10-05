@@ -10,7 +10,7 @@ const NAV: NavItem[] = [
   { href: "/tasks", label: "Tasks" },
   { href: "/campaigns", label: "Campaigns" },
   { href: "/calendar", label: "Calendar", soon: "Phase 6" },
-  { href: "/approvals", label: "Approvals", soon: "Phase 5" },
+  { href: "/approvals", label: "Approvals", need: "approval:internal" },
   { href: "/team", label: "Team", need: "user:manage" },
   { href: "/templates", label: "Templates", soon: "Phase 9" },
   { href: "/files", label: "Files" },
