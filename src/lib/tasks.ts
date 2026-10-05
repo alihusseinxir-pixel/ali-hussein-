@@ -5,6 +5,7 @@ import { env } from "./env";
 import { parseLocalDateTime } from "./datetime";
 import { logActivity } from "./activity";
 import { ForbiddenError, assertCan, can } from "./rbac";
+import { contextSnapshot } from "./task-context";
 import { firstAssigneeRoles, initialStage, isReassignable } from "./workflow";
 import type { TaskInput } from "./task-schema";
 
@@ -87,6 +88,8 @@ export async function getTask(actor: Actor, id: string) {
       brand: true,
       campaign: true,
       assignments: { include: { user: { select: { id: true, name: true, role: true } } }, orderBy: { assignedAt: "asc" } },
+      handoffs: { include: { fromUser: { select: { name: true, role: true } }, toUser: { select: { id: true, name: true, role: true } } }, orderBy: { createdAt: "desc" } },
+      revisions: { orderBy: { createdAt: "desc" } },
       activityLogs: { include: { actor: { select: { name: true } } }, orderBy: { createdAt: "desc" } },
     },
   });
@@ -188,6 +191,8 @@ export async function createTask(actor: Actor, input: TaskInput) {
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: task.id, action: "task.created", meta: { taskCode, title: task.title } });
     if (input.assigneeId) {
       await tx.taskAssignment.create({ data: { taskId: task.id, userId: input.assigneeId, stage } });
+      await tx.taskHandoff.create({ data: { taskId: task.id, fromUserId: actor.id, toUserId: input.assigneeId, fromStage: "BRIEF", toStage: stage,
+        instructions: "Initial assignment", requiredOutput: null, deadline: task.deadline, payload: { context: contextSnapshot(task) } } });
       await tx.notification.create({
         data: {
           organizationId: actor.organizationId, userId: input.assigneeId, taskId: task.id,
@@ -247,6 +252,9 @@ export async function assignTask(actor: Actor, id: string, assigneeId: string) {
     await tx.taskAssignment.updateMany({ where: { taskId: id, releasedAt: null }, data: { releasedAt: new Date() } });
     await tx.taskAssignment.create({ data: { taskId: id, userId: assigneeId, stage } });
     const updated = await tx.task.update({ where: { id }, data: { currentAssigneeId: assigneeId, stage } });
+    await tx.taskHandoff.updateMany({ where: { taskId: id, status: "PENDING" }, data: { status: "REJECTED" } });
+    await tx.taskHandoff.create({ data: { taskId: id, fromUserId: actor.id, toUserId: assigneeId, fromStage: task.stage, toStage: stage,
+      instructions: "Reassigned", reason: "Reassigned by manager", deadline: task.deadline, payload: { context: contextSnapshot(updated) } } });
     await tx.notification.create({
       data: { organizationId: actor.organizationId, userId: assigneeId, taskId: id, type: "TASK_ASSIGNED",
         message: `You have been assigned ${task.taskCode}: ${task.title}` },

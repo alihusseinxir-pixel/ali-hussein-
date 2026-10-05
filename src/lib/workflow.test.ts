@@ -38,3 +38,21 @@ describe("workflow", () => {
     expect(initialStage(false)).toBe("BRIEF");
   });
 });
+
+import { exitPermission, handoverRules, isHandoverStage } from "./workflow";
+describe("handover rules", () => {
+  it("requires deliverables when leaving a work stage", () => {
+    expect(handoverRules("PRODUCTION", "PRODUCTION_REVIEW").needsDeliverables).toBe(true);
+    expect(handoverRules("PRODUCTION_REVIEW", "EDITING").needsDeliverables).toBe(false);
+  });
+  it("requires publishAt only for scheduling and no deadline for the tail", () => {
+    expect(handoverRules("SOCIAL_APPROVAL", "SCHEDULED")).toMatchObject({ needsPublishAt: true, needsDeadline: false });
+    expect(handoverRules("EDITING", "EDITING_REVIEW").needsDeadline).toBe(true);
+  });
+  it("gates exits by permission and excludes pre-work stages", () => {
+    expect(exitPermission("SOCIAL_APPROVAL")).toBe("approval:final");
+    expect(exitPermission("PRODUCTION")).toBeNull();
+    expect(isHandoverStage("ASSIGNED")).toBe(false);
+    expect(isHandoverStage("PRODUCTION")).toBe(true);
+  });
+});

@@ -103,3 +103,43 @@ export function initialStage(hasAssignee: boolean): TaskStage {
 export function isReassignable(stage: TaskStage): boolean {
   return ["IDEA", "BRIEF", "ASSIGNED", "PRODUCTION", "EDITING"].includes(stage);
 }
+
+// ───────── Phase 3: handover rules ─────────
+
+import type { Permission } from "./rbac";
+
+/** Permission needed to move a task OUT of a stage. */
+export function exitPermission(from: TaskStage): Permission | null {
+  switch (from) {
+    case "PRODUCTION_REVIEW":
+    case "EDITING_REVIEW":
+    case "INTERNAL_APPROVAL":
+      return "approval:internal";
+    case "SOCIAL_APPROVAL":
+      return "approval:final";
+    case "SCHEDULED":
+    case "PUBLISHED":
+      return "publish:manage";
+    default:
+      return null;
+  }
+}
+
+export interface HandoverRules {
+  needsDeadline: boolean; // a deadline for the next stage
+  needsDeliverables: boolean; // the sender must describe what they delivered
+  needsPublishAt: boolean; // task must have a publishing date/time
+}
+
+export function handoverRules(from: TaskStage, to: TaskStage): HandoverRules {
+  return {
+    needsDeadline: !["SCHEDULED", "PUBLISHED", "COMPLETED"].includes(to),
+    needsDeliverables: from === "PRODUCTION" || from === "EDITING",
+    needsPublishAt: to === "SCHEDULED",
+  };
+}
+
+/** ASSIGNED → next is entered by the assignee accepting, not by a handover. */
+export function isHandoverStage(from: TaskStage): boolean {
+  return !["IDEA", "BRIEF", "ASSIGNED", "COMPLETED"].includes(from);
+}

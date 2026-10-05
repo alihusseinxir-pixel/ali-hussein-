@@ -84,7 +84,14 @@ Visibility for roles without `task:view:all`: tasks they **created**, **currentl
 - The path depends on content type: video/photo content uses the full path; `STATIC_POST / CAROUSEL / STORY` skip PRODUCTION and PRODUCTION_REVIEW (`ASSIGNED → EDITING`).
 - A transition is valid only if it is the **next stage on the path** or a **revision loop** (`PRODUCTION_REVIEW→PRODUCTION`; `EDITING_REVIEW | INTERNAL_APPROVAL | SOCIAL_APPROVAL → EDITING`). Nothing else.
 - Tasks are created in `BRIEF`, or `ASSIGNED` when an eligible assignee is chosen. The first assignee's role is checked against the content type (Reel → Videographer, Product photography → Photographer, Static/Carousel/Story → Designer).
-- **Phase 3 transition guards** (every transition creates a `TaskHandoff`): files uploaded, notes written, next owner chosen with the right role, deadline set, actor is the current owner (or Admin). "Request changes" requires a revision note and writes a `TaskRevision`.
+- **Phase 3 (implemented in `src/lib/handover.ts`)**. Every move writes a `TaskHandoff` plus a new `TaskAssignment` (the previous one is released, never edited) and an activity entry, atomically.
+  - `ASSIGNED → next`: the assignee **confirms** the initial handover; that starts the work stage.
+  - Forward handover guards: actor is the current owner (or Admin); actor holds the stage's exit permission (`exitPermission`: review → `approval:internal`, social approval → `approval:final`, scheduled/published → `publish:manage`); the receiver's role fits the next stage (`stageOwnerRoles`); instructions (unless handing to yourself); deliverables when leaving PRODUCTION/EDITING; a deadline for the next stage; `publishAt` before SCHEDULED; the actor has confirmed any handover they received.
+  - Request changes (review stages only): note required; returns the task to whoever last did that work, writes a `TaskRevision`, notifies them.
+  - Concurrency: the stage change is a compare-and-set on (stage, owner); of two simultaneous submissions exactly one wins (tested).
+  - Each handover freezes a snapshot of brief/script/models/location/references (`payload.context`) alongside what was delivered.
+  - Handing to yourself (e.g. Social Media scheduling their own content) is auto-confirmed.
+  - File-presence guard is added in Phase 4 once uploads exist; until then "what you are delivering" is a required text field.
 
 ## 6. Component structure
 - `app/(auth)` — login, register, invite acceptance.
@@ -111,7 +118,7 @@ src/
 |---|---|---|
 | 1 | Auth, organization, invitations, RBAC | done |
 | 2 | Tasks (create/edit/assign/list/filter/detail/activity/soft-delete); minimal brands & campaigns | done |
-| 3 | Workflow engine + handovers | next |
+| 3 | Workflow engine + handovers (confirm, forward handover, revision loop) | done |
 | 4–10 | Files, review/approval, calendar, PDF, notifications, templates, analytics | planned |
 
 Known limits (later phases): rate limiter is in-memory per instance; one org-wide `APP_TIMEZONE`; notifications are stored but have no UI yet (Phase 8); no password reset yet; open sign-up creates a new organization (disable with `ALLOW_SIGNUP=false`).
