@@ -55,13 +55,13 @@ Variable details: [ENVIRONMENT.md](ENVIRONMENT.md). Step-by-step Render screens:
 ## 5. Go-live and operations
 - [ ] Custom domain + TLS in Render, then update `APP_URL` (web **and** cron) and re-run `setup-bucket.ts` so CORS allows the new origin.
 - [ ] Keep **one** web instance (login rate-limit is in-memory per instance).
-- [ ] Enable Render database backups and test a restore (no backup procedure is documented in the repo yet).
+- [ ] Enable Render database backups and test a restore: see [BACKUP-RESTORE.md](BACKUP-RESTORE.md).
 - [ ] Rotate the IAM key on a schedule; deactivate the setup user; consider CloudTrail.
 - [ ] Re-check `npm audit` after Next.js / Prisma major upgrades.
 
 ## Known limits (not blockers for a first internal launch)
-- Logout does not revoke a copied session cookie (stateless sessions; valid until 7-day expiry, password reset, or user disable).
-- No HSTS / CSP headers, no 2FA, no in-account password change.
+- Logout does not revoke a copied session cookie (stateless sessions). Changing the password (now available under Account) or disabling the user revokes it at once; otherwise it lasts 7 days.
+- HSTS is sent in production; there is no CSP and no 2FA.
 - Real AWS behaviour (signed-header enforcement, Block Public Access, lifecycle) is verified only against an emulator until you run step 1.
 
 ## Handy: check that every env var the code reads is documented

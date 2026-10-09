@@ -39,6 +39,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <div className="border-t border-white/10 pt-3 text-xs">
           <div className="truncate font-medium text-white">{user.name}</div>
           <div className="truncate text-slate-400">{ROLE_LABELS[user.role]} · {user.organization.name}</div>
+          <Link href="/account" className="mt-1 block text-slate-300 underline hover:text-white">Account</Link>
           <form action={logoutAction}><button className="mt-2 text-slate-300 underline hover:text-white">Sign out</button></form>
         </div>
       </aside>

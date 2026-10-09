@@ -7,7 +7,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { hashPassword, verifyPassword, dummyVerify } from "@/lib/password";
-import { createSession, destroySession } from "@/lib/session";
+import { createSession, destroySession, requireUser } from "@/lib/session";
+import { changePassword } from "@/lib/account";
 import { rateLimit } from "@/lib/rate-limit";
 import { logActivity } from "@/lib/activity";
 import { hashToken } from "@/lib/tokens";
@@ -116,4 +117,19 @@ export async function resetPasswordAction(_: FormState, fd: FormData): Promise<F
   const r = await resetPassword(parsed.data.token, parsed.data.password);
   if (r !== "ok") return { error: "This reset link is invalid or has expired. Request a new one." };
   redirect("/login?reset=1");
+}
+
+export async function changePasswordAction(_: FormState, fd: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const parsed = z.object({ current: z.string().min(1, "Enter your current password"), password, confirm: z.string() }).safeParse(formToObject(fd));
+  if (!parsed.success) return zodErrors(parsed.error);
+  if (parsed.data.password !== parsed.data.confirm) return { error: "The two passwords do not match." };
+  if (!rateLimit(`chpw:${user.id}`, 8, 15 * 60_000)) return { error: "Too many attempts. Try again in a few minutes." };
+  const r = await changePassword(user.id, parsed.data.current, parsed.data.password);
+  if (!r.ok) {
+    const msg = { wrong_password: "Your current password is incorrect.", weak: "Choose a password of at least 10 characters.", same: "The new password must be different.", unavailable: "This account is unavailable." }[r.reason];
+    return { error: msg };
+  }
+  await createSession(user.id, r.sessionVersion); // keep this device signed in; all others are signed out
+  return { ok: true };
 }
