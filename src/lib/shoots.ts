@@ -185,7 +185,8 @@ export async function getShoot(a: Actor, id: string) {
     ...missingInfo({ ...s, talentCount: s.talents.length, contentCount: s.contents.length }),
     ...(await findConflicts({ ...s, talentIds: s.talents.map((t) => t.talentId) })),
   ];
-  return { ...s, warnings, canManage: isManager(a), canCheck: isManager(a) || [s.photographerId, s.videographerId, s.directorId].includes(a.id) };
+  // the budget is financial information: crew on a shoot do not see it, only people who manage shoots
+  return { ...s, budget: isManager(a) ? s.budget : null, warnings, canManage: isManager(a), canCheck: isManager(a) || [s.photographerId, s.videographerId, s.directorId].includes(a.id) };
 }
 
 export async function listShoots(a: Actor, range: { from: Date; to: Date }, opts: { warnings?: boolean } = {}) {

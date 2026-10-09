@@ -99,6 +99,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
               <StageBadge s={task.stage} /><PriorityBadge p={task.priority} />
               <span>{task.contentType.replace(/_/g, " ").toLowerCase()}{task.platform && ` · ${task.platform.toLowerCase()}`}</span>
               {task.brand && <span>· {task.brand.name}{task.campaign && ` / ${task.campaign.name}`}</span>}
+              {task.brand?.guidelinesUrl && /^https?:\/\//i.test(task.brand.guidelinesUrl) && <a href={task.brand.guidelinesUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 underline">إرشادات البراند</a>}
               {template && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">{template.name}</span>}
             </div>
           </div>

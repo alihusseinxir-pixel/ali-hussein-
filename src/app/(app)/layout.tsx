@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/session";
 import { can, type Permission } from "@/lib/rbac";
 import { AR_NAV as T, AR_ROLE } from "@/lib/i18n/ar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { MobileMenu } from "@/components/MobileMenu";
 import { logoutAction } from "@/app/actions/auth";
 
 interface NavItem { href: string; label: string; need?: Permission; soon?: string }
@@ -50,7 +51,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <header className="flex items-center justify-between border-b bg-white px-4 py-2">
           <span className="font-bold text-brand-900 md:invisible">BASMA MARKETING</span>
           <div className="flex items-center gap-3">
-            <nav className="flex gap-3 text-sm md:hidden"><Link href="/dashboard">{T.home}</Link><Link href="/tasks">{T.tasks}</Link><Link href="/calendar">{T.calendar}</Link></nav>
+            <MobileMenu items={NAV.filter((n) => !n.need || can(user.role, n.need)).map(({ href, label }) => ({ href, label }))} userLine={`${user.name} · ${AR_ROLE[user.role]}`}
+              signOut={logoutAction} accountLabel={T.account} signOutLabel={T.signOut} menuLabel="القائمة" />
             <NotificationBell />
           </div>
         </header>

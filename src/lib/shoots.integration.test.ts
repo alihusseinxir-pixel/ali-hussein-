@@ -57,6 +57,10 @@ describe("shoot planning (integration)", () => {
     expect(g.talents).toHaveLength(1); expect(g.contents).toHaveLength(1); expect(Number(g.budget)).toBe(1500.5);
     expect(await db.notification.count({ where: { userId: photo.id } })).toBe(1);
   });
+  it("hides the budget from crew; managers see it", async () => {
+    expect(Number((await getShoot(sm, shootId))!.budget)).toBe(1500.5);
+    expect((await getShoot(photo, shootId))!.budget).toBeNull();
+  });
   it("warns about missing info", async () => {
     const g = (await getShoot(sm, shootId))!;
     const codes = g.warnings.map((w) => w.code);
