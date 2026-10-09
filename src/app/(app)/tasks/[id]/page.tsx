@@ -22,6 +22,9 @@ import { FilesPanel } from "@/components/FilesPanel";
 import { MAX_UPLOAD_BYTES, listFiles } from "@/lib/files";
 import { HandoverPanel } from "@/components/HandoverPanel";
 import { TaskTeamPanel } from "@/components/TaskTeamPanel";
+import { visibleShootsWhere } from "@/lib/shoots";
+import { SCRIPT_CLEARED } from "@/lib/blockers";
+import { AR_SHOOT_STATUS } from "@/lib/i18n/ar";
 import { listCollaborators, listTaskChecklist } from "@/lib/task-team";
 import { acceptHandoverAction, deleteTaskAction } from "@/app/actions/tasks";
 
@@ -71,6 +74,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   }));
   const [comments, ctx, collabs, checklist] = await Promise.all([listComments(user, id), taskParticipants(user, id), listCollaborators(user, id), listTaskChecklist(user, id)]);
   const closed = ["PUBLISHED", "COMPLETED"].includes(task.stage);
+  const shoots = await db.shootSession.findMany({ where: { AND: [visibleShootsWhere(user), { contents: { some: { taskId: id } } }] }, orderBy: { startsAt: "asc" }, select: { id: true, title: true, startsAt: true, status: true } });
+  const scriptBlocked = !SCRIPT_CLEARED.includes(task.scriptStatus) && shoots.some((s) => s.status === "PLANNED");
   const canManageTeam = can(user.role, "task:edit:any") || can(user.role, "task:assign") || canEdit;
   const canWorkList = canManageTeam || task.currentAssigneeId === user.id || collabs.some((c) => c.userId === user.id);
   const collabCandidates = canManageTeam && !closed
@@ -113,6 +118,16 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           <div><dt className="label">Current owner</dt><dd>{task.currentAssignee ? `${task.currentAssignee.name} (${ROLE_LABELS[task.currentAssignee.role]})` : "Unassigned"}</dd></div>
         </dl>
       </header>
+
+      {(shoots.length > 0 || scriptBlocked) && (
+        <section className="card space-y-2">
+          <h2 className="font-medium">جلسات التصوير</h2>
+          {scriptBlocked && <p role="status" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">⚠ لهذا المحتوى جلسة تصوير مخططة لكن السكريبت غير معتمد بعد (الحالة: {AR_SCRIPT_STATUS[task.scriptStatus]}). <Link className="underline" href={`/tasks/${id}/script`}>فتح السكريبت</Link></p>}
+          <ul className="divide-y text-sm">
+            {shoots.map((s) => <li key={s.id} className="py-1.5"><Link href={`/shoots/${s.id}`} className="text-brand-600 underline">{s.title}</Link> <span className="text-slate-500">· <bdi dir="ltr">{formatDateTime(s.startsAt, tz)}</bdi> · {AR_SHOOT_STATUS[s.status]}</span></li>)}
+          </ul>
+        </section>
+      )}
 
       <TaskTeamPanel taskId={id} collaborators={collabs.map((c) => c.user)} candidates={collabCandidates} checklist={checklist}
         nameOf={doneByNames} userId={user.id} canManage={canManageTeam} canWork={canWorkList} readOnly={closed} />

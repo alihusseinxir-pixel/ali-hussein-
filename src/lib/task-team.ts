@@ -17,7 +17,7 @@ type T = Awaited<ReturnType<typeof loadTask>>;
 const canManageTeam = (a: Actor, t: T) =>
   can(a.role, "task:edit:any") || can(a.role, "task:assign") || (can(a.role, "task:edit:own") && t.createdById === a.id);
 /** May work the checklist: the owner, collaborators and team managers. */
-const canWorkChecklist = (a: Actor, t: T) => canManageTeam(a, t) || t.currentAssigneeId === a.id || t.collaborators.some((c) => c.userId === a.id);
+export const canWorkChecklist = (a: Actor, t: T) => canManageTeam(a, t) || t.currentAssigneeId === a.id || t.collaborators.some((c) => c.userId === a.id);
 const assertOpen = (t: T) => { if (CLOSED.includes(t.stage)) throw new TaskError("المهمة المنشورة أو المكتملة للقراءة فقط."); };
 
 // ───────── collaborators ─────────
@@ -50,7 +50,7 @@ export async function listCollaborators(a: Actor, taskId: string) {
 }
 
 // ───────── checklist ─────────
-export async function addTaskChecklistItem(a: Actor, taskId: string, label: string) {
+export async function addTaskChecklistItem(a: Actor, taskId: string, label: string, sourceSceneNumber: number | null = null) {
   const t = await loadTask(a, taskId);
   if (!canWorkChecklist(a, t)) throw new ForbiddenError("ليست لديك صلاحية تعديل القائمة.");
   assertOpen(t);
@@ -58,7 +58,7 @@ export async function addTaskChecklistItem(a: Actor, taskId: string, label: stri
   if (!clean || clean.length > 300) throw new TaskError("نص العنصر مطلوب (300 حرف كحد أقصى).");
   if ((await db.taskChecklistItem.count({ where: { taskId } })) >= 100) throw new TaskError("الحد الأقصى 100 عنصر.");
   const last = await db.taskChecklistItem.findFirst({ where: { taskId }, orderBy: { position: "desc" } });
-  await db.taskChecklistItem.create({ data: { taskId, label: clean, position: (last?.position ?? -1) + 1 } });
+  await db.taskChecklistItem.create({ data: { taskId, label: clean, position: (last?.position ?? -1) + 1, sourceSceneNumber } });
 }
 
 async function itemTask(a: Actor, itemId: string) {

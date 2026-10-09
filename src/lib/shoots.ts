@@ -144,7 +144,7 @@ const FULL = {
   location: true,
   photographer: { select: { id: true, name: true } }, videographer: { select: { id: true, name: true } }, director: { select: { id: true, name: true } },
   talents: { include: { talent: true } },
-  contents: { include: { task: { select: { id: true, taskCode: true, title: true, contentType: true } } } },
+  contents: { include: { task: { select: { id: true, taskCode: true, title: true, contentType: true, scriptStatus: true } } } },
 } satisfies Prisma.ShootSessionInclude;
 
 /** Other live sessions that overlap this one and share a crew member, a model or the location. */
@@ -188,15 +188,16 @@ export async function getShoot(a: Actor, id: string) {
   return { ...s, warnings, canManage: isManager(a), canCheck: isManager(a) || [s.photographerId, s.videographerId, s.directorId].includes(a.id) };
 }
 
-export async function listShoots(a: Actor, range: { from: Date; to: Date }) {
+export async function listShoots(a: Actor, range: { from: Date; to: Date }, opts: { warnings?: boolean } = {}) {
   const rows = await db.shootSession.findMany({
     where: { AND: [visibleShootsWhere(a), { startsAt: { gte: range.from, lt: range.to } }] },
     include: { ...FULL, checklist: { select: { done: true } } },
     orderBy: { startsAt: "asc" },
   });
+  const withWarnings = opts.warnings !== false;
   return Promise.all(rows.map(async (s) => ({
     ...s,
-    warnings: s.status === "CANCELLED" ? [] : [
+    warnings: !withWarnings || s.status === "CANCELLED" ? [] : [
       ...missingInfo({ ...s, talentCount: s.talents.length, contentCount: s.contents.length }),
       ...(await findConflicts({ ...s, talentIds: s.talents.map((t) => t.talentId) })),
     ],

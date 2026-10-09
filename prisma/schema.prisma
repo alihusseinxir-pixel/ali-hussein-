@@ -372,6 +372,7 @@ model TaskChecklistItem {
   done     Boolean   @default(false)
   doneById String?
   doneAt   DateTime?
+  sourceSceneNumber Int? // created from this script scene (its number when created; scenes are renumbered on reorder)
 
   @@index([taskId, position])
 }

@@ -32,7 +32,7 @@ export default async function ScriptPage({ params }: { params: Promise<{ id: str
           <pre className="mt-2 whitespace-pre-wrap text-sm">{s.task.script}</pre></details>
       )}
       <ScriptEditor taskId={id} initial={initial} initialVersion={s.version} status={s.task.scriptStatus} editable={editable}
-        perms={s.perms} revisions={s.revisions.map((r) => ({ id: r.id, version: r.version, action: r.action, note: r.note, actorName: r.actorName, when: formatDateTime(r.createdAt, env.timezone) }))} />
+        perms={s.perms} linked={s.linked} revisions={s.revisions.map((r) => ({ id: r.id, version: r.version, action: r.action, note: r.note, actorName: r.actorName, when: formatDateTime(r.createdAt, env.timezone) }))} />
     </div>
   );
 }

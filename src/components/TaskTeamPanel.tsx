@@ -9,7 +9,7 @@ interface Person { id: string; name: string; role: Role }
 /** Collaborators + task checklist. `readOnly` is true once the task is published/completed. */
 export function TaskTeamPanel({ taskId, collaborators, candidates, checklist, nameOf, userId, canManage, canWork, readOnly }: {
   taskId: string; collaborators: Person[]; candidates: Person[];
-  checklist: { id: string; label: string; done: boolean; doneById: string | null }[];
+  checklist: { id: string; label: string; done: boolean; doneById: string | null; sourceSceneNumber: number | null }[];
   nameOf: Record<string, string>; userId: string; canManage: boolean; canWork: boolean; readOnly: boolean;
 }) {
   const done = checklist.filter((c) => c.done).length;
@@ -36,11 +36,11 @@ export function TaskTeamPanel({ taskId, collaborators, candidates, checklist, na
           </ActionForm>
         )}
       </section>
-      <section className="card">
+      <section className="card" id="checklist">
         <h2 className="mb-2 font-medium">قائمة المهام الفرعية <span className="text-xs text-slate-400">{done}/{checklist.length}</span></h2>
         {checklist.length === 0 && <p className="text-sm text-slate-500">لا توجد عناصر بعد.</p>}
         <ul className="divide-y">
-          {checklist.map((c) => <TaskChecklistItem key={c.id} taskId={taskId} id={c.id} label={c.label} done={c.done} doneBy={c.doneById ? nameOf[c.doneById] : null} canEdit={canWork && !readOnly} />)}
+          {checklist.map((c) => <TaskChecklistItem key={c.id} taskId={taskId} id={c.id} label={c.label} done={c.done} doneBy={c.doneById ? nameOf[c.doneById] : null} sceneNumber={c.sourceSceneNumber} canEdit={canWork && !readOnly} />)}
         </ul>
         {!readOnly && canWork && (
           <ActionForm action={addTaskChecklistItemAction.bind(null, taskId)} submitLabel="إضافة" className="mt-3 flex items-start gap-2">

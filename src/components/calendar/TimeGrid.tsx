@@ -1,3 +1,4 @@
+import { AR_EVENT } from "@/lib/i18n/ar";
 import Link from "next/link";
 import { EVENT_COLORS, dayKey, layoutLanes, minutesOfDay, timeLabel } from "@/lib/calendar";
 import { GridScroller } from "./GridScroller";
@@ -33,8 +34,8 @@ export function TimeGrid({ days, today, events, tz, hrefFor }: { days: string[];
                 {hours.map((h) => <div key={h} className="border-b" style={{ height: HOUR_PX }} />)}
                 {items.map(({ e, start, end, lane, lanes }) => (
                   <Link
-                    key={e.id} href={`/tasks/${e.task.id}`}
-                    title={`${EVENT_COLORS[e.type].label} · ${e.task.taskCode}${e.userName ? ` · ${e.userName}` : ""}\n${e.title}`}
+                    key={e.id} href={e.href}
+                    title={`${AR_EVENT[e.type]} · ${e.ref}${e.userName ? ` · ${e.userName}` : ""}\n${e.title}`}
                     className={`absolute overflow-hidden rounded border px-1 py-0.5 text-[11px] leading-tight hover:z-10 hover:brightness-95 ${EVENT_COLORS[e.type].cls}`}
                     style={{ top: (start / 60) * HOUR_PX, height: Math.max(22, ((end - start) / 60) * HOUR_PX - 2), left: `${(lane / lanes) * 100}%`, width: `calc(${100 / lanes}% - 2px)` }}
                   >

@@ -4,7 +4,7 @@ import type { ScriptStatus } from "@prisma/client";
 import { requireUser } from "@/lib/session";
 import { ForbiddenError } from "@/lib/rbac";
 import { TaskError } from "@/lib/tasks";
-import { changeScriptStatus, saveScenes, type SceneInput } from "@/lib/script";
+import { changeScriptStatus, createTaskFromScene, saveScenes, type SceneInput } from "@/lib/script";
 
 export type ScriptResult = { ok?: boolean; error?: string; version?: number; status?: ScriptStatus };
 
@@ -29,5 +29,15 @@ export async function changeScriptStatusAction(taskId: string, to: ScriptStatus,
     revalidatePath(`/tasks/${taskId}/script`);
     revalidatePath(`/tasks/${taskId}`);
     return { ok: true, version: r.version, status: r.status };
+  } catch (e) { return fail(e); }
+}
+
+export async function createSceneTaskAction(taskId: string, sceneNumber: number): Promise<ScriptResult> {
+  const actor = await requireUser();
+  try {
+    await createTaskFromScene(actor, taskId, sceneNumber);
+    revalidatePath(`/tasks/${taskId}/script`);
+    revalidatePath(`/tasks/${taskId}`);
+    return { ok: true };
   } catch (e) { return fail(e); }
 }

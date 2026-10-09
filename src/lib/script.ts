@@ -6,6 +6,7 @@ import { logActivity } from "./activity";
 import { ForbiddenError, can } from "./rbac";
 import { TaskError, visibleTasksWhere, type Actor } from "./tasks";
 import { EDITABLE, findTransition } from "./script-workflow";
+import { addTaskChecklistItem, canWorkChecklist } from "./task-team";
 
 export const MAX_SCENES = 100;
 const opt = (max: number) => z.string().trim().max(max, `الحد الأقصى ${max} حرفاً`).optional().transform((v) => (v ? v : null));
@@ -34,12 +35,17 @@ export async function getScript(actor: Actor, taskId: string) {
     db.scriptScene.findMany({ where: { taskId }, orderBy: { position: "asc" } }),
     db.scriptRevision.findMany({ where: { taskId }, orderBy: { version: "desc" }, take: 30 }),
   ]);
+  const linked = await db.taskChecklistItem.findMany({ where: { taskId, sourceSceneNumber: { not: null } }, select: { sourceSceneNumber: true, done: true } });
   const names = await db.user.findMany({ where: { id: { in: [...new Set(revisions.map((r) => r.actorId))] } }, select: { id: true, name: true } });
   const nameOf = new Map(names.map((u) => [u.id, u.name]));
   return {
     task, scenes, version: revisions[0]?.version ?? 0,
+    linked: linked.map((l) => ({ scene: l.sourceSceneNumber as number, done: l.done })),
     revisions: revisions.map((r) => ({ ...r, actorName: nameOf.get(r.actorId) ?? "—" })),
-    perms: { editor: canEditTask(actor, task.createdById), reviewer: can(actor.role, "approval:internal") },
+    perms: {
+      editor: canEditTask(actor, task.createdById), reviewer: can(actor.role, "approval:internal"),
+      tasks: canWorkChecklist(actor, await db.task.findUniqueOrThrow({ where: { id: taskId }, include: { collaborators: { select: { userId: true } } } })),
+    },
   };
 }
 
@@ -109,4 +115,15 @@ export async function changeScriptStatus(actor: Actor, taskId: string, to: Scrip
     if (conflict(e)) throw new TaskError(CONFLICT_MSG);
     throw e;
   }
+}
+
+/** Turn a saved scene into a sub-task (checklist item) on its content item, linked back to the scene. One per scene. */
+export async function createTaskFromScene(actor: Actor, taskId: string, sceneNumber: number) {
+  await loadTask(actor, taskId);
+  const scene = await db.scriptScene.findFirst({ where: { taskId, position: sceneNumber - 1 } });
+  if (!Number.isInteger(sceneNumber) || !scene) throw new TaskError("المشهد غير موجود. احفظ السكريبت أولاً.");
+  if (await db.taskChecklistItem.findFirst({ where: { taskId, sourceSceneNumber: sceneNumber } })) throw new TaskError("تم إنشاء مهمة لهذا المشهد بالفعل.");
+  const shot = scene.shotDescription.length > 120 ? `${scene.shotDescription.slice(0, 117)}…` : scene.shotDescription;
+  await addTaskChecklistItem(actor, taskId, `المشهد ${sceneNumber}: ${shot}`, sceneNumber);
+  await logActivity(db, { organizationId: actor.organizationId, actorId: actor.id, taskId, action: "script.scene_task_created", meta: { scene: sceneNumber } });
 }

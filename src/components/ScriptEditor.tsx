@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { ScriptStatus } from "@prisma/client";
-import { saveScriptAction, changeScriptStatusAction } from "@/app/actions/script";
+import { saveScriptAction, changeScriptStatusAction, createSceneTaskAction } from "@/app/actions/script";
+import Link from "next/link";
 import { AR_SCRIPT_STATUS } from "@/lib/i18n/ar";
 import { allowedTransitions } from "@/lib/script-workflow";
 
@@ -33,9 +34,9 @@ function actionLabel(a: string) {
   return `تغيير الحالة إلى: ${AR_SCRIPT_STATUS[s] ?? s}`;
 }
 
-export function ScriptEditor({ taskId, initial, initialVersion, status, editable, perms, revisions }: {
+export function ScriptEditor({ taskId, initial, initialVersion, status, editable, perms, revisions, linked }: {
   taskId: string; initial: SceneRow[]; initialVersion: number; status: ScriptStatus; editable: boolean;
-  perms: { editor: boolean; reviewer: boolean }; revisions: Rev[];
+  perms: { editor: boolean; reviewer: boolean; tasks: boolean }; revisions: Rev[]; linked: { scene: number; done: boolean }[];
 }) {
   const router = useRouter();
   const [scenes, setScenes] = useState<Scene[]>(() => initial.map(withKey));
@@ -75,6 +76,11 @@ export function ScriptEditor({ taskId, initial, initialVersion, status, editable
     setVersion(r.version!); setNote(""); setMsg({ type: "ok", text: `الحالة الآن: ${AR_SCRIPT_STATUS[r.status!]}` }); router.refresh();
   });
 
+  const makeTask = (n: number) => start(async () => {
+    const r = await createSceneTaskAction(taskId, n);
+    if (r.error) return setMsg({ type: "err", text: r.error });
+    setMsg({ type: "ok", text: `تم إنشاء مهمة فرعية للمشهد ${n}.` }); router.refresh();
+  });
   const actions = allowedTransitions(status, perms);
   const needsNote = actions.some((a) => a.needsNote);
 
@@ -96,9 +102,13 @@ export function ScriptEditor({ taskId, initial, initialVersion, status, editable
       {scenes.length === 0 && <p className="card text-center text-sm text-slate-500">لا توجد مشاهد بعد.{editable && " أضف أول مشهد للبدء."}</p>}
 
       {scenes.map((s, i) => (
-        <section key={s.key} className="card space-y-4" aria-label={`المشهد ${i + 1}`}>
+        <section key={s.key} id={`scene-${i + 1}`} className="card space-y-4" aria-label={`المشهد ${i + 1}`}>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-medium">المشهد {i + 1}</h2>
+            <h2 className="font-medium">المشهد {i + 1}
+              {linked.find((l) => l.scene === i + 1) && <Link href={`/tasks/${taskId}#checklist`} className="ms-2 rounded-full bg-green-50 px-2 py-0.5 text-xs font-normal text-green-700">{linked.find((l) => l.scene === i + 1)!.done ? "✓ مهمة منجزة" : "مرتبط بمهمة فرعية"}</Link>}
+              {perms.tasks && !dirty && i < initial.length && !linked.some((l) => l.scene === i + 1) && (
+                <button type="button" disabled={pending} onClick={() => makeTask(i + 1)} className="ms-2 text-xs font-normal text-brand-600 underline">إنشاء مهمة فرعية</button>)}
+            </h2>
             {editable && (
               <div className="flex gap-1 text-sm">
                 <button type="button" className="btn-secondary !px-2 !py-1" onClick={() => move(i, -1)} disabled={i === 0} aria-label="تحريك للأعلى">↑</button>
