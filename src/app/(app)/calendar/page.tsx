@@ -50,14 +50,14 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         <Link href={href({ date: step.prev })} className="btn-secondary !px-3" aria-label="Previous">‹</Link>
         <Link href={href({ date: today })} className="btn-secondary">Today</Link>
         <Link href={href({ date: step.next })} className="btn-secondary !px-3" aria-label="Next">›</Link>
-        <h2 className="ml-2 text-lg font-medium">{title}</h2>
+        <h2 className="ms-2 text-lg font-medium">{title}</h2>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-xs">
         {TYPES.map((t) => (
           <Link key={t} href={href({ types: toggle(t) })} className={`rounded-full border px-3 py-1 ${EVENT_COLORS[t].cls} ${active.length && !active.includes(t) ? "opacity-40" : ""}`}>{EVENT_COLORS[t].label}</Link>
         ))}
         {active.length > 0 && <Link href={href({ types: [] })} className="text-slate-500 underline">All types</Link>}
-        {viewsAll && <Link href={href({ mine: !mine })} className={`ml-auto rounded-full border px-3 py-1 ${mine ? "bg-slate-800 text-white" : "bg-white"}`}>{mine ? "Showing: mine only" : "Showing: everyone"}</Link>}
+        {viewsAll && <Link href={href({ mine: !mine })} className={`ms-auto rounded-full border px-3 py-1 ${mine ? "bg-slate-800 text-white" : "bg-white"}`}>{mine ? "Showing: mine only" : "Showing: everyone"}</Link>}
       </div>
       {view === "month"
         ? <MonthView days={days} anchor={anchor} today={today} events={events} tz={tz} weekStart={env.weekStart} hrefFor={(k) => href({ view: "day", date: k })} />

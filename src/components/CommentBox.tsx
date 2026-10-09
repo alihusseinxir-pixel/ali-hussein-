@@ -45,7 +45,7 @@ export function CommentBox({ taskId, people }: { taskId: string; people: { id: s
           {people.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
         </select>
         <input ref={file} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,.docx,.xlsx" className="text-sm" />
-        <button className="btn ml-auto" disabled={pending}>{pending ? "Posting…" : "Post comment"}</button>
+        <button className="btn ms-auto" disabled={pending}>{pending ? "Posting…" : "Post comment"}</button>
       </div>
       {error && <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
     </form>

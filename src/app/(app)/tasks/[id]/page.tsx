@@ -201,7 +201,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
       <section className="card">
           <h2 className="mb-3 font-medium">Activity log</h2>
-          <ol className="space-y-3 border-l pl-4">
+          <ol className="space-y-3 border-s ps-4">
             {task.activityLogs.map((a) => (
               <li key={a.id} className="text-sm">
                 <div className="text-xs text-slate-400">{formatDateTime(a.createdAt, tz)}</div>

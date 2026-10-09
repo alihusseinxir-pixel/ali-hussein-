@@ -21,7 +21,7 @@ export function TimeGrid({ days, today, events, tz, hrefFor }: { days: string[];
               {new Date(`${k}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
             </Link>
           ))}
-          <div>{hours.map((h) => <div key={h} className="border-b pr-1 text-right text-[10px] text-slate-400" style={{ height: HOUR_PX }}>{String(h).padStart(2, "0")}:00</div>)}</div>
+          <div>{hours.map((h) => <div key={h} className="border-b pe-1 text-end text-[10px] text-slate-400" style={{ height: HOUR_PX }}>{String(h).padStart(2, "0")}:00</div>)}</div>
           {days.map((k) => {
             const items = layoutLanes((byDay.get(k) ?? []).map((e) => {
               const start = minutesOfDay(e.startsAt, tz);
