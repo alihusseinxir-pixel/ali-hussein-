@@ -130,7 +130,7 @@ describe("email digest", () => {
     expect(sent).toHaveLength(2);
     expect(await db.notification.count({ where: { organizationId: orgA, emailedAt: { not: null } } })).toBe(3);
     const v = sent.find((s) => s.to.startsWith("video."))!;
-    expect(v.subject).toBe("2 new notifications on BASMA MARKETING");
+    expect(v.subject).toBe("إشعاران جديدان في BASMA MARKETING");
     expect(v.text).toContain("A"); expect(v.text).not.toContain("read already");
     expect(sent.some((s) => s.to.startsWith("mm."))).toBe(false);
     await sendPendingEmails({ send, enabled: true, appUrl: "http://x" });

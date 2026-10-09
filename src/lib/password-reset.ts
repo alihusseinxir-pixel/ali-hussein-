@@ -3,6 +3,7 @@ import { db } from "./db";
 import { hashPassword } from "./password";
 import { hashToken } from "./tokens";
 import { logActivity } from "./activity";
+import { passwordResetEmail } from "./email-templates";
 
 export const RESET_TTL_MS = 60 * 60_000; // 1 hour
 export const MIN_PASSWORD = 10;
@@ -21,8 +22,8 @@ export async function requestPasswordReset(email: string, o: { send: (to: string
     await tx.passwordReset.create({ data: { userId: user.id, tokenHash: hashToken(token), expiresAt: new Date(now.getTime() + RESET_TTL_MS) } });
     await logActivity(tx, { organizationId: user.organizationId, actorId: user.id, action: "user.password_reset_requested" });
   });
-  await o.send(user.email, "Reset your BASMA MARKETING password",
-    `Hi ${user.name},\n\nSomeone asked to reset the password for this account. If it was you, choose a new one here (valid for 1 hour, single use):\n${o.appUrl}/reset-password/${token}\n\nIf it wasn't you, ignore this email — your password has not changed.`);
+  const mail = passwordResetEmail({ name: user.name, link: `${o.appUrl}/reset-password/${token}` });
+  await o.send(user.email, mail.subject, mail.text);
 }
 
 export async function isResetTokenValid(token: string, now = new Date()) {

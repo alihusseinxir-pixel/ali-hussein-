@@ -5,8 +5,9 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
-import { assertCan, ForbiddenError, ROLE_LABELS } from "@/lib/rbac";
+import { assertCan, ForbiddenError } from "@/lib/rbac";
 import { sendMail } from "@/lib/mailer";
+import { inviteEmail } from "@/lib/email-templates";
 import { logActivity } from "@/lib/activity";
 import { formToObject, zodErrors, type FormState } from "@/lib/form";
 import { hashToken } from "@/lib/tokens";
@@ -37,8 +38,8 @@ export async function inviteMemberAction(_: FormState, fd: FormData): Promise<Fo
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "user.invited", meta: { email: d.email, role: d.role } });
   });
   const link = `${env.appUrl}/invite/${token}`;
-  await sendMail(d.email, `You're invited to ${actor.organization.name} on BASMA MARKETING`,
-    `Hi ${d.name},\n\n${actor.name} invited you to join ${actor.organization.name} as ${ROLE_LABELS[d.role]}.\n\nAccept the invitation (valid for 7 days):\n${link}\n`);
+  const mail = inviteEmail({ name: d.name, inviter: actor.name, organization: actor.organization.name, role: d.role, link });
+  await sendMail(d.email, mail.subject, mail.text);
   revalidatePath("/team");
   return { ok: true };
 }

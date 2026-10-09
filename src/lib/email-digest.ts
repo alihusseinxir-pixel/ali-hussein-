@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { logError } from "./log-safe";
+import { digestEmail } from "./email-templates";
 
 export interface DigestOptions {
   send: (to: string, subject: string, text: string) => Promise<void>;
@@ -24,10 +25,9 @@ export async function sendPendingEmails(o: DigestOptions): Promise<{ emails: num
   let emails = 0, notifications = 0;
   for (const list of byUser.values()) {
     const u = list[0].user;
-    const lines = list.map((n) => `• ${n.message}${n.taskId ? `\n  ${o.appUrl}/tasks/${n.taskId}` : ""}`);
-    const subject = list.length === 1 ? list[0].message.slice(0, 120) : `${list.length} new notifications on BASMA MARKETING`;
+    const mail = digestEmail({ name: u.name, appUrl: o.appUrl, items: list.map((n) => ({ message: n.message, url: n.taskId ? `${o.appUrl}/tasks/${n.taskId}` : null })) });
     try {
-      await o.send(u.email, subject, `Hi ${u.name},\n\n${lines.join("\n\n")}\n\nOpen BASMA MARKETING: ${o.appUrl}/notifications\n\nYou can turn these emails off on the Notifications page.`);
+      await o.send(u.email, mail.subject, mail.text);
     } catch (e) {
       logError("email-digest", e);
       continue; // leave emailedAt null: retried on the next run while still fresh

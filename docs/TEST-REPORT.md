@@ -54,7 +54,7 @@ All remaining pages were translated (sign-in, account, tasks, task detail, campa
 - **Roles are fixed.** Custom roles are intentionally out of version 1.
 - **Workflow rules are warnings, not gates:** an unapproved script does not stop a hand-over; it shows as a blocker on the dashboard and the task page.
 - **Duplicate-title check is not atomic**: two simultaneous creates can both pass it.
-- **Arabic coverage:** every page, form, server error message and in-app notification is Arabic (an automated scan of 30 pages found no English UI text; only data such as brand names, demo user names and task codes remains Latin). Still English: invitation / password-reset / digest **emails**, the browser's own file-picker text ("Choose Files"), and storage-configuration errors meant for administrators. "Tomorrow / in N days" wording uses UTC days.
+- **Arabic coverage:** every page, form, server error message and in-app notification is Arabic (an automated scan of 30 pages found no English UI text; only data such as brand names, demo user names and task codes remains Latin). Emails (invitation, password reset, notification digest) are Arabic too, built from one tested module (`src/lib/email-templates.ts`) and checked end to end in the running app. Still English: the browser's own file-picker text ("Choose Files"), and storage-configuration errors meant for administrators. "Tomorrow / in N days" wording uses UTC days.
 - **Calendar:** a task with `shootingAt` plus a linked shoot session can appear twice.
 - **Shoot attachments** are not implemented (files are attached to the linked content tasks).
 - **Not tested:** real SMTP delivery, S3 storage against a real bucket, Render deployment, and browsers other than Chromium.
