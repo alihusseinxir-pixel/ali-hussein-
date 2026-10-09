@@ -10,7 +10,7 @@ npx prisma migrate dev          # creates the schema
 npm run db:seed                 # optional demo org: admin@demo.test / basma-demo-123 (+ one account per role)
 npm run dev                     # http://localhost:3000
 ```
-Invitation emails are printed to the server console unless `SMTP_URL` is set.
+Without `SMTP_URL`, the Team page shows invitation and password-reset links to copy (in development the emails are also printed to the console).
 
 ## Checks
 ```bash
@@ -19,10 +19,10 @@ npm run typecheck && npm test && npm run build
 `npm test` includes integration tests that need the Postgres from `DATABASE_URL`.
 
 ## Config
-`DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `APP_TIMEZONE` (default `Asia/Riyadh`), `ALLOW_SIGNUP` (`false` to disable new-org sign-up), `SMTP_URL`, `MAIL_FROM`.
+`DATABASE_URL`, `SESSION_SECRET`, `APP_URL`, `APP_TIMEZONE` (default `Asia/Riyadh`), `ALLOW_SIGNUP` (`false` to disable new-org sign-up), `SMTP_URL`, `MAIL_FROM` (both optional: email is off without them).
 
 ## Production checklist
-- Set a strong `SESSION_SECRET`, `APP_URL`, `SMTP_URL` (invitations, password reset, notification emails) and `CRON_SECRET`; schedule `POST /api/cron/reminders` (or `npm run reminders`) every ~5 minutes.
+- Set a strong `SESSION_SECRET`, `APP_URL`, optionally `SMTP_URL` (automatic emails) and `CRON_SECRET`; schedule `POST /api/cron/reminders` (or `npm run reminders`) every ~5 minutes.
 - Uploads: set `S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (or an IAM role) to store files in S3 with presigned upload/download URLs; follow [docs/STORAGE.md](docs/STORAGE.md) (IAM policy, `npm run storage:setup`, `npm run storage:verify`). Credentials go only in your local `.env`. Without them, files go to local disk (`STORAGE_DIR`, needs a persistent volume).
 - Set `ALLOW_SIGNUP=false` once your organization exists.
 - Backups: [docs/BACKUP-RESTORE.md](docs/BACKUP-RESTORE.md).

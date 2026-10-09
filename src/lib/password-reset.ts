@@ -47,3 +47,13 @@ export async function resetPassword(token: string, newPassword: string, now = ne
     return "ok" as const;
   });
 }
+
+/** Creates a single-use reset link for `userId` (invalidating older ones) without sending any email. */
+export async function createResetLink(userId: string, appUrl: string, now = new Date()): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  await db.$transaction(async (tx) => {
+    await tx.passwordReset.updateMany({ where: { userId, usedAt: null }, data: { usedAt: now } });
+    await tx.passwordReset.create({ data: { userId, tokenHash: hashToken(token), expiresAt: new Date(now.getTime() + RESET_TTL_MS) } });
+  });
+  return `${appUrl}/reset-password/${token}`;
+}

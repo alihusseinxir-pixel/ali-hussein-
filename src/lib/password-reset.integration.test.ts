@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
-import { isResetTokenValid, requestPasswordReset, resetPassword, RESET_TTL_MS } from "./password-reset";
+import { createResetLink, isResetTokenValid, requestPasswordReset, resetPassword, RESET_TTL_MS } from "./password-reset";
 
 const tag = `pr${Date.now()}`;
 let orgId: string, userId: string, disabledId: string;
@@ -75,5 +75,17 @@ describe("password reset (integration)", () => {
     await db.user.update({ where: { id: userId }, data: { status: "DISABLED" } });
     expect(await resetPassword(t, "long-enough-pass-1")).toBe("invalid");
     await db.user.update({ where: { id: userId }, data: { status: "ACTIVE" } });
+  });
+
+  it("an admin-created link works once, replaces older links, and sends no email", async () => {
+    const before = sent.length;
+    const first = await createResetLink(userId, "http://app");
+    const second = await createResetLink(userId, "http://app");
+    expect(sent.length).toBe(before);
+    const t1 = first.split("/reset-password/")[1], t2 = second.split("/reset-password/")[1];
+    expect(await isResetTokenValid(t1)).toBe(false);
+    expect(await isResetTokenValid(t2)).toBe(true);
+    expect(await resetPassword(t2, "another-long-pass-9")).toBe("ok");
+    expect(await resetPassword(t2, "another-long-pass-9")).toBe("invalid");
   });
 });

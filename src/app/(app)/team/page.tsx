@@ -3,7 +3,7 @@ import { requirePermission } from "@/lib/session";
 import { ROLE_LABELS } from "@/lib/rbac";
 import { ActionForm } from "@/components/ActionForm";
 import { Field, Input } from "@/components/Field";
-import { inviteMemberAction, revokeInvitationAction, updateMemberAction } from "@/app/actions/team";
+import { createMemberResetLinkAction, inviteMemberAction, revokeInvitationAction, updateMemberAction } from "@/app/actions/team";
 import { formatDateTime } from "@/lib/datetime";
 import { env } from "@/lib/env";
 
@@ -19,11 +19,23 @@ export default async function TeamPage() {
       <h1 className="text-2xl font-semibold">Team</h1>
       <section className="card">
         <h2 className="mb-3 font-medium">Invite a member</h2>
-        <ActionForm action={inviteMemberAction} submitLabel="Send invitation" className="grid items-end gap-3 md:grid-cols-5" successMessage="Invitation sent.">
+        <ActionForm action={inviteMemberAction} submitLabel={process.env.SMTP_URL ? "Send invitation" : "Create invitation link"} className="grid items-end gap-3 md:grid-cols-5" successMessage={process.env.SMTP_URL ? "Invitation sent." : "Invitation created."}>
           <Field label="Name" name="name"><Input name="name" required /></Field>
           <Field label="Email" name="email"><Input name="email" type="email" required /></Field>
           <Field label="Role" name="role"><select id="role" name="role" className="input" defaultValue="VIDEOGRAPHER">{roles.map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></Field>
           <Field label="Department" name="department"><Input name="department" /></Field>
+        </ActionForm>
+      </section>
+      <section className="card">
+        <h2 className="mb-1 font-medium">Password reset link</h2>
+        <p className="mb-3 text-sm text-slate-500">For someone who forgot their password. Valid for 1 hour, single use. Send it to them yourself.</p>
+        <ActionForm action={createMemberResetLinkAction} submitLabel="Create reset link" className="grid items-end gap-3 md:grid-cols-3">
+          <Field label="Member" name="userId">
+            <select id="userId" name="userId" className="input" required defaultValue="">
+              <option value="" disabled>Choose…</option>
+              {members.filter((m) => m.status === "ACTIVE" && m.id !== user.id && m.role !== "ADMIN").map((m) => <option key={m.id} value={m.id}>{m.name} · {m.email}</option>)}
+            </select>
+          </Field>
         </ActionForm>
       </section>
       <section className="card overflow-x-auto !p-0">

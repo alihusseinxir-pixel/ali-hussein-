@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { requireUser } from "@/lib/session";
 import { assertCan, ForbiddenError, ROLE_LABELS } from "@/lib/rbac";
+import { createResetLink } from "@/lib/password-reset";
 import { sendMail } from "@/lib/mailer";
 import { logActivity } from "@/lib/activity";
 import { formToObject, zodErrors, type FormState } from "@/lib/form";
@@ -37,6 +38,10 @@ export async function inviteMemberAction(_: FormState, fd: FormData): Promise<Fo
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "user.invited", meta: { email: d.email, role: d.role } });
   });
   const link = `${env.appUrl}/invite/${token}`;
+  if (!process.env.SMTP_URL) { // no mail configured: hand the link to the admin to deliver themselves
+    revalidatePath("/team");
+    return { ok: true, data: link };
+  }
   await sendMail(d.email, `You're invited to ${actor.organization.name} on BASMA MARKETING`,
     `Hi ${d.name},\n\n${actor.name} invited you to join ${actor.organization.name} as ${ROLE_LABELS[d.role]}.\n\nAccept the invitation (valid for 7 days):\n${link}\n`);
   revalidatePath("/team");
@@ -68,4 +73,18 @@ export async function updateMemberAction(fd: FormData) {
   await db.user.update({ where: { id }, data: { ...(role && { role }), ...(status && { status }) } });
   await logActivity(db, { organizationId: actor.organizationId, actorId: actor.id, action: "user.updated", meta: { userId: id, role, status } });
   revalidatePath("/team");
+}
+
+/** Admin-generated reset link for a member, for setups without email. Never for another admin or yourself. */
+export async function createMemberResetLinkAction(_: FormState, fd: FormData): Promise<FormState> {
+  const actor = await requireUser();
+  try { assertCan(actor.role, "user:manage"); } catch (e) { if (e instanceof ForbiddenError) return { error: e.message }; throw e; }
+  const id = String(fd.get("userId") ?? "");
+  const target = await db.user.findFirst({ where: { id, organizationId: actor.organizationId, status: "ACTIVE", deletedAt: null } });
+  if (!target) return { error: "Choose a member." };
+  if (target.id === actor.id) return { error: "Use Account to change your own password." };
+  if (target.role === "ADMIN") return { error: "Administrators reset their own password." };
+  const link = await createResetLink(target.id, env.appUrl);
+  await logActivity(db, { organizationId: actor.organizationId, actorId: actor.id, action: "user.reset_link_created", meta: { userId: target.id } });
+  return { ok: true, data: link };
 }

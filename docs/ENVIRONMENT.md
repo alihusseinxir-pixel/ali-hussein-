@@ -25,8 +25,6 @@ Legend — **Where**: `web` = the web service, `cron` = the reminders cron job. 
 | Variable | Where | Secret | What to enter |
 |---|---|---|---|
 | `APP_URL` | web **and** cron | no | The exact public address, e.g. `https://basma-marketing.onrender.com` or your own domain. No trailing slash. Used in email links and as the S3 CORS origin. |
-| `SMTP_URL` ● | web **and** cron | **yes** | Your mail provider's SMTP URL, e.g. `smtps://USER:PASSWORD@smtp.provider.com:465`. **Required in production:** without it invitations, password resets and notification emails are not delivered (the app never prints emails in production). |
-| `MAIL_FROM` | web **and** cron | no | Sender shown to people, e.g. `BASMA MARKETING <no-reply@yourdomain.com>`. Must be an address/domain your SMTP provider has verified, or mail is rejected. |
 | `S3_BUCKET` | web | no | Your production bucket name. Setting it switches file storage to S3. |
 | `AWS_REGION` | web | no | The bucket's region code, exactly (e.g. `eu-central-1`). Not the city name. |
 | `AWS_ACCESS_KEY_ID` ● | web | **yes** | Access key of the *production* IAM user (object permissions only). Render is not AWS, so a role cannot be used here. |
@@ -36,6 +34,7 @@ Legend — **Where**: `web` = the web service, `cron` = the reminders cron job. 
 
 | Variable | When |
 |---|---|
+| `SMTP_URL` ● , `MAIL_FROM` | Turn on automatic email (invitations, password reset, notification digests): add them on the web service **and** the cron job. Without `SMTP_URL` the Team page shows invitation and reset links for you to send yourself, and notifications stay in the app. e.g. `smtps://USER:PASSWORD@smtp.provider.com:465`; the sender must be verified at your provider. |
 | `S3_ENDPOINT`, `S3_FORCE_PATH_STYLE`, `S3_PREFIX` | Cloudflare R2 / MinIO / another S3-compatible provider, or a folder inside the bucket. Not needed for AWS S3. |
 | `STORAGE_DRIVER` | Force `local` or `s3`. Normally derived from `S3_BUCKET`. Leave empty. |
 | `STORAGE_DIR` | Local-disk folder when the local driver is used (development only). |

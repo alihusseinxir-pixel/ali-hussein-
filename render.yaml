@@ -39,11 +39,8 @@ services:
         value: "true"          # keep true only until you have created your organization, then set it to "false"
       - key: WEEK_START
         value: "0"
-      # Email (invitations, password reset, notification digests). Required in production: nothing is printed to logs.
-      - key: SMTP_URL
-        sync: false
-      - key: MAIL_FROM
-        sync: false
+      # Email is OPTIONAL. Without SMTP_URL the Team page gives you invitation / password-reset links to send yourself,
+      # and notifications stay in the app. To enable email later, add SMTP_URL and MAIL_FROM here (and on the cron job).
       # File storage: AWS S3 (files are lost on Render's ephemeral disk otherwise). See docs/STORAGE.md.
       - key: S3_BUCKET
         sync: false
@@ -78,10 +75,7 @@ services:
         sync: false            # same value as the web app (links inside emails)
       - key: APP_TIMEZONE
         value: Asia/Baghdad
-      - key: SMTP_URL
-        sync: false            # same value as the web app
-      - key: MAIL_FROM
-        sync: false
+      # (add SMTP_URL / MAIL_FROM here too if you enable email on the web service)
       - key: DEADLINE_REMINDER_HOURS
         value: "24"
       - key: PUBLISH_REMINDER_HOURS

@@ -10,7 +10,7 @@ Variable details: [ENVIRONMENT.md](ENVIRONMENT.md). Step-by-step Render screens:
 - [ ] Public address: Render's `*.onrender.com` or your own domain → this is `APP_URL` (no trailing slash).
 - [ ] AWS region code (e.g. `eu-central-1` or `me-central-1`; "Kirkuk" is not a region).
 - [ ] Bucket name: lowercase letters, digits, hyphens, 3–63 chars, no spaces, avoid dots (e.g. `basma-marketing-prod-files`).
-- [ ] Mail provider with a verified sender domain (SMTP URL + `MAIL_FROM`). **Required**: without it nobody can be invited and password-reset mail never arrives.
+- [ ] Email is **optional**. Without `SMTP_URL`, the Team page shows invitation and password-reset links for you to send yourself (WhatsApp, etc.), and notifications stay inside the app. Add `SMTP_URL` + `MAIL_FROM` later if you want automatic emails.
 - [ ] Accept: web `starter`, database `basic-256mb`, cron `starter` (paid; plan names/prices not validated on Render from here, confirm in the dashboard).
 
 ## 1. AWS (you do this in the AWS console; see STORAGE.md)
@@ -29,12 +29,12 @@ Variable details: [ENVIRONMENT.md](ENVIRONMENT.md). Step-by-step Render screens:
 
 ## 2. Mail
 - [ ] Verify the sender domain at the provider (SPF/DKIM).
-- [ ] Have ready `SMTP_URL` (`smtps://USER:PASSWORD@host:465`) and `MAIL_FROM`.
+- [ ] Optional: only if you want automatic email, have ready `SMTP_URL` (`smtps://USER:PASSWORD@host:465`) and `MAIL_FROM`. Otherwise skip this section.
 
 ## 3. Render
 - [ ] Render → New → **Blueprint** → connect the repo/branch → it reads `render.yaml`.
-- [ ] Enter the prompted values (web): `APP_URL`, `SMTP_URL`, `MAIL_FROM`, `S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
-- [ ] Enter on the cron job: `APP_URL`, `SMTP_URL`, `MAIL_FROM` (same values).
+- [ ] Enter the prompted values (web): `APP_URL`, `S3_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`.
+- [ ] Enter on the cron job: `APP_URL` (same value).
 - [ ] Apply. First deploy runs `npm ci && npm run build`, then `prisma migrate deploy` at start. Wait until the health check is green.
 - [ ] Confirm `https://<APP_URL>/api/health` returns `{"status":"ok"}`.
 - [ ] Do **not** run the demo seed (it creates accounts with a known password).
@@ -43,8 +43,8 @@ Variable details: [ENVIRONMENT.md](ENVIRONMENT.md). Step-by-step Render screens:
 - [ ] Open `/register`, create **your** organization (this makes you Admin).
 - [ ] **Immediately** set `ALLOW_SIGNUP=false` in Render and redeploy; confirm `/register` refuses.
 - [ ] Log in, log out; wrong password shows the generic error.
-- [ ] Invite a test member (real email) → mail arrives → link works once → second visit says invalid.
-- [ ] Forgot-password mail arrives and works.
+- [ ] Team → invite a test member → copy the link shown (or the email, if SMTP is set) → it works once → a second visit says invalid.
+- [ ] Team → "Password reset link" for a test member → the link works once. (With SMTP set, the Forgot-password email also works.)
 - [ ] Create a brand, a campaign, a task; walk it through a handover.
 - [ ] Upload a file to a task: it goes straight to S3 (browser network tab shows a PUT to `s3.<region>.amazonaws.com`), then downloads via a redirect to a short-lived signed URL.
 - [ ] Open the object URL **without** the signature → `AccessDenied` (files are not public).
