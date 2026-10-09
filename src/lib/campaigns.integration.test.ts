@@ -9,7 +9,7 @@ const tag = `cm${Date.now()}`;
 let orgA: string, orgB: string;
 let sm: Actor, video: Actor, video2: Actor, outsider: Actor;
 let brandId: string, campA: string, campB: string;
-const input = (o: Record<string, unknown>) => taskInputSchema.parse({ title: "Content", contentType: "REEL", ...o });
+const input = (o: Record<string, unknown>) => taskInputSchema.parse({ title: "Content", contentType: "REEL", allowDuplicate: "1", ...o });
 
 async function user(org: string, role: Actor["role"], n: string): Promise<Actor> {
   const u = await db.user.create({ data: { organizationId: org, name: n, email: `${n}.${tag}@x.test`, passwordHash: "x", role } });

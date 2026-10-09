@@ -21,6 +21,8 @@ import { BriefPanel } from "@/components/BriefPanel";
 import { FilesPanel } from "@/components/FilesPanel";
 import { MAX_UPLOAD_BYTES, listFiles } from "@/lib/files";
 import { HandoverPanel } from "@/components/HandoverPanel";
+import { TaskTeamPanel } from "@/components/TaskTeamPanel";
+import { listCollaborators, listTaskChecklist } from "@/lib/task-team";
 import { acceptHandoverAction, deleteTaskAction } from "@/app/actions/tasks";
 
 const ACTION_LABELS: Record<string, string> = {
@@ -67,7 +69,14 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     uploadedBy: f.uploadedBy.name, createdAt: f.createdAt.toISOString(),
     canDelete: canUpload && (f.uploadedById === user.id || can(user.role, "task:edit:any")),
   }));
-  const [comments, ctx] = await Promise.all([listComments(user, id), taskParticipants(user, id)]);
+  const [comments, ctx, collabs, checklist] = await Promise.all([listComments(user, id), taskParticipants(user, id), listCollaborators(user, id), listTaskChecklist(user, id)]);
+  const closed = ["PUBLISHED", "COMPLETED"].includes(task.stage);
+  const canManageTeam = can(user.role, "task:edit:any") || can(user.role, "task:assign") || canEdit;
+  const canWorkList = canManageTeam || task.currentAssigneeId === user.id || collabs.some((c) => c.userId === user.id);
+  const collabCandidates = canManageTeam && !closed
+    ? await db.user.findMany({ where: { organizationId: user.organizationId, status: "ACTIVE", deletedAt: null, id: { notIn: [...collabs.map((c) => c.userId), ...(task.currentAssigneeId ? [task.currentAssigneeId] : [])] } }, orderBy: { name: "asc" }, select: { id: true, name: true, role: true } })
+    : [];
+  const doneByNames = Object.fromEntries((await db.user.findMany({ where: { id: { in: checklist.flatMap((c) => (c.doneById ? [c.doneById] : [])) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   const people = ctx?.people ?? [];
   const inReview = ["PRODUCTION_REVIEW", "EDITING_REVIEW", "INTERNAL_APPROVAL", "SOCIAL_APPROVAL"].includes(task.stage);
   const submitLabel = task.stage === "SOCIAL_APPROVAL" ? "Approve & Schedule" : inReview ? "Approve & hand over" : "Confirm handover";
@@ -104,6 +113,9 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           <div><dt className="label">Current owner</dt><dd>{task.currentAssignee ? `${task.currentAssignee.name} (${ROLE_LABELS[task.currentAssignee.role]})` : "Unassigned"}</dd></div>
         </dl>
       </header>
+
+      <TaskTeamPanel taskId={id} collaborators={collabs.map((c) => c.user)} candidates={collabCandidates} checklist={checklist}
+        nameOf={doneByNames} userId={user.id} canManage={canManageTeam} canWork={canWorkList} readOnly={closed} />
 
       <section className="card">
         <h2 className="mb-3 font-medium">Workflow</h2>

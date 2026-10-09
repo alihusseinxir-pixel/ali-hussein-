@@ -11,6 +11,8 @@ import { resolveTemplateRef } from "./templates-db";
 import { contextSnapshot } from "./task-context";
 import { firstAssigneeRoles, initialStage, isReassignable } from "./workflow";
 import type { TaskInput } from "./task-schema";
+import { addDays, dayKey, utcRange } from "./calendar";
+import { workStatusWhere, type DueFilter, type WorkStatus } from "./work-status";
 
 export class TaskError extends Error {}
 
@@ -29,6 +31,7 @@ export function visibleTasksWhere(actor: Actor): Prisma.TaskWhereInput {
     OR: [
       { currentAssigneeId: actor.id },
       { createdById: actor.id },
+      { collaborators: { some: { userId: actor.id } } },
       { assignments: { some: { userId: actor.id } } }, // previous owners keep read access
     ],
   };
@@ -42,11 +45,25 @@ export interface TaskFilters {
   campaignId?: string;
   mine?: boolean;
   overdue?: boolean;
+  workStatus?: WorkStatus;
+  due?: DueFilter;
+  all?: boolean; // board view: no pagination (capped at BOARD_LIMIT)
   sort?: "deadline" | "created" | "priority";
   page?: number;
 }
 export const PAGE_SIZE = 20;
+export const BOARD_LIMIT = 300;
 const CLOSED: TaskStage[] = ["PUBLISHED", "COMPLETED"];
+
+function dueWhere(due: DueFilter): Prisma.TaskWhereInput {
+  const now = new Date();
+  const open: Prisma.TaskWhereInput = { stage: { notIn: CLOSED } };
+  if (due === "overdue") return { AND: [open, { deadline: { lt: now } }] };
+  if (due === "none") return { deadline: null };
+  const today = dayKey(now, env.timezone);
+  const { from, to } = utcRange(due === "today" ? [today] : [today, addDays(today, 6)], env.timezone);
+  return { AND: [open, { deadline: { gte: from, lt: to } }] };
+}
 
 export async function listTasks(actor: Actor, f: TaskFilters = {}) {
   const and: Prisma.TaskWhereInput[] = [visibleTasksWhere(actor)];
@@ -60,7 +77,10 @@ export async function listTasks(actor: Actor, f: TaskFilters = {}) {
   if (f.priority) and.push({ priority: f.priority });
   if (f.assigneeId) and.push({ currentAssigneeId: f.assigneeId });
   if (f.campaignId) and.push({ campaignId: f.campaignId });
-  if (f.mine) and.push({ currentAssigneeId: actor.id });
+  // "mine" = tasks I am accountable for or collaborate on
+  if (f.mine) and.push({ OR: [{ currentAssigneeId: actor.id }, { collaborators: { some: { userId: actor.id } } }] });
+  if (f.workStatus) and.push(workStatusWhere(f.workStatus));
+  if (f.due) and.push(dueWhere(f.due));
   if (f.overdue) and.push({ deadline: { lt: new Date() }, stage: { notIn: CLOSED } });
   const where: Prisma.TaskWhereInput = { AND: and };
   const orderBy: Prisma.TaskOrderByWithRelationInput[] =
@@ -70,8 +90,11 @@ export async function listTasks(actor: Actor, f: TaskFilters = {}) {
   const page = Math.max(1, f.page ?? 1);
   const [items, total] = await Promise.all([
     db.task.findMany({
-      where, orderBy, skip: (page - 1) * PAGE_SIZE, take: PAGE_SIZE,
+      where, orderBy, skip: f.all ? 0 : (page - 1) * PAGE_SIZE, take: f.all ? BOARD_LIMIT : PAGE_SIZE,
       include: {
+        revisions: { where: { resolvedAt: null }, select: { id: true }, take: 1 },
+        _count: { select: { checklist: true, collaborators: true } },
+        checklist: { select: { done: true } },
         currentAssignee: { select: { id: true, name: true, role: true } },
         campaign: { select: { id: true, name: true } },
         brand: { select: { id: true, name: true } },
@@ -198,6 +221,13 @@ export async function createTask(actor: Actor, input: TaskInput) {
   const { extra } = applyTemplate(tpl, input);
   await resolveRefs(actor, input);
   const data = dataFrom(input);
+  if (!input.allowDuplicate) {
+    const dup = await db.task.findFirst({
+      where: { organizationId: actor.organizationId, deletedAt: null, stage: { notIn: CLOSED }, campaignId: input.campaignId ?? null, title: { equals: input.title.trim(), mode: "insensitive" } },
+      select: { taskCode: true, title: true },
+    });
+    if (dup) throw new TaskError(`توجد مهمة مفتوحة بنفس الاسم في نفس الحملة (${dup.taskCode}). فعّل "السماح بالتكرار" إذا كان ذلك مقصوداً.`);
+  }
   return db.$transaction(async (tx) => {
     const taskCode = await nextTaskCode(tx, actor.organizationId);
     const stage = initialStage(!!input.assigneeId);

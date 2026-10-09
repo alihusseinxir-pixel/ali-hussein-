@@ -179,6 +179,7 @@ model User {
   handoffsTo      TaskHandoff[]    @relation("HandoffTo")
   assignments     TaskAssignment[]
   invitationsSent Invitation[]
+  collaborations       TaskCollaborator[]
   shootsAsPhotographer ShootSession[] @relation("ShootPhotographer")
   shootsAsVideographer ShootSession[] @relation("ShootVideographer")
   shootsAsDirector     ShootSession[] @relation("ShootDirector")
@@ -338,6 +339,8 @@ model Task {
   notifications  Notification[]
   scenes         ScriptScene[]
   shootLinks     ShootContent[]
+  collaborators  TaskCollaborator[]
+  checklist      TaskChecklistItem[]
   scriptRevisions ScriptRevision[]
 
   @@unique([organizationId, taskCode])
@@ -345,6 +348,32 @@ model Task {
   @@index([organizationId, currentAssigneeId])
   @@index([organizationId, deadline])
   @@index([campaignId])
+}
+
+// Extra people on a task besides its single accountable owner (`currentAssigneeId`). They can see it, comment and tick the checklist.
+model TaskCollaborator {
+  taskId  String
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User     @relation(fields: [userId], references: [id])
+  addedBy String
+  addedAt DateTime @default(now())
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+model TaskChecklistItem {
+  id       String    @id @default(cuid())
+  taskId   String
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label    String
+  position Int
+  done     Boolean   @default(false)
+  doneById String?
+  doneAt   DateTime?
+
+  @@index([taskId, position])
 }
 
 // ───────────── Shoot planning ─────────────

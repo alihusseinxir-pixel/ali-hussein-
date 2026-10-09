@@ -8,7 +8,7 @@ import { ForbiddenError } from "./rbac";
 const tag = `t${Date.now()}`;
 let orgA: string, orgB: string;
 let sm: Actor, mm: Actor, video: Actor, outsider: Actor;
-const input = (o: Record<string, unknown>) => taskInputSchema.parse({ title: "From template", contentType: "REEL", ...o }); // the form always posts a content type (hidden when a template is used)
+const input = (o: Record<string, unknown>) => taskInputSchema.parse({ title: "From template", contentType: "REEL", allowDuplicate: "1", ...o }); // the form always posts a content type (hidden when a template is used)
 
 async function user(org: string, role: Actor["role"], n: string): Promise<Actor> {
   const u = await db.user.create({ data: { organizationId: org, name: n, email: `${n}.${tag}@x.test`, passwordHash: "x", role } });

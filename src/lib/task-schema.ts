@@ -41,6 +41,7 @@ export const taskInputSchema = z.object({
   startDate: when,
   deadline: when,
   templateRef: id,
+  allowDuplicate: z.string().optional().transform((v) => v === "1"),
   extra: z.record(z.string(), z.string()).optional(),
 });
 export type TaskInput = z.infer<typeof taskInputSchema>;

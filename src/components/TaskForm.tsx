@@ -109,6 +109,9 @@ export function TaskForm({
         {dateKeys.map(dateField)}
         <Field label="Deadline" name="deadline" hint={`Times are in ${tz}`}><Input name="deadline" type="datetime-local" defaultValue={dt(t.deadline)} /></Field>
       </section>
+      {!task && (
+        <label className="flex items-center gap-2 text-sm text-slate-600"><input type="checkbox" name="allowDuplicate" value="1" /> السماح بالتكرار (إنشاء مهمة بنفس اسم مهمة مفتوحة في نفس الحملة)</label>
+      )}
     </div>
   );
 }
