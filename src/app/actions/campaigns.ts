@@ -7,16 +7,16 @@ import { requireUser } from "@/lib/session";
 import { ForbiddenError, can } from "@/lib/rbac";
 import { TaskError } from "@/lib/tasks";
 import { archiveBrand, archiveCampaign, updateCampaign } from "@/lib/campaigns";
+import { createBrand } from "@/lib/settings";
 import { formToObject, zodErrors, type FormState } from "@/lib/form";
 
 export async function createBrandAction(_: FormState, fd: FormData): Promise<FormState> {
   const actor = await requireUser();
-  if (!can(actor.role, "campaign:manage")) return { error: "You do not have permission to do that." };
-  const p = z.object({ name: z.string().trim().min(2).max(100) }).safeParse(formToObject(fd));
-  if (!p.success) return zodErrors(p.error);
-  if (await db.brand.findFirst({ where: { organizationId: actor.organizationId, name: p.data.name } })) return { error: "Brand already exists." };
-  await db.brand.create({ data: { organizationId: actor.organizationId, name: p.data.name } });
-  revalidatePath("/campaigns");
+  try { await createBrand(actor, { name: formToObject(fd).name ?? "" }); } catch (e) {
+    if (e instanceof TaskError || e instanceof ForbiddenError) return { error: e.message };
+    throw e;
+  }
+  revalidatePath("/campaigns"); revalidatePath("/settings");
   return { ok: true };
 }
 

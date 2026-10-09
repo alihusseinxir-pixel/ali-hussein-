@@ -19,6 +19,7 @@ const NAV: NavItem[] = [
   { href: "/files", label: T.files },
   { href: "/analytics", label: T.analytics },
   { href: "/notifications", label: T.notifications },
+  { href: "/settings", label: "الإعدادات" },
 ];
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {

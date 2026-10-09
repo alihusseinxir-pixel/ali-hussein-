@@ -10,7 +10,7 @@ export function ActionForm({
   action, children, submitLabel, className, successMessage, danger,
 }: {
   action: (state: FormState, fd: FormData) => Promise<FormState>;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   submitLabel: string;
   className?: string;
   successMessage?: string;

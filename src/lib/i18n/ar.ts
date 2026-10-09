@@ -63,3 +63,25 @@ export const AR_SCRIPT_STATUS = {
 } as const;
 
 export const AR_SHOOT_STATUS = { PLANNED: "مخطط", COMPLETED: "تم التصوير", CANCELLED: "ملغاة" } as const;
+
+import type { Permission } from "./../rbac";
+export const AR_PERMISSION: Record<Permission, string> = {
+  "user:manage": "دعوة الأعضاء وتعطيلهم وتغيير أدوارهم",
+  "org:settings": "تعديل إعدادات المؤسسة",
+  "task:create": "إنشاء المهام",
+  "task:view:all": "عرض كل المهام",
+  "task:edit:any": "تعديل أي مهمة",
+  "task:edit:own": "تعديل المهام التي أنشأها",
+  "task:assign": "إسناد المهام وإدارة المتعاونين",
+  "task:delete": "حذف المهام",
+  "task:comment": "التعليق على المهام",
+  "campaign:manage": "إدارة البراندات والحملات",
+  "template:manage": "إدارة القوالب",
+  "activity:view:all": "عرض سجل الأنشطة الكامل",
+  "analytics:view:all": "عرض تحليلات المؤسسة كاملة",
+  "approval:internal": "الموافقة الداخلية واعتماد السكريبت",
+  "approval:final": "الموافقة النهائية",
+  "publish:manage": "جدولة المحتوى ونشره",
+  "calendar:view:all": "عرض تقويم الجميع",
+  "shoot:manage": "إدارة جلسات التصوير والمودلز واللوكيشنات",
+};
