@@ -1,0 +1,88 @@
+# Render Blueprint for BASMA MARKETING (https://render.com/docs/blueprint-spec).
+# Creates: a PostgreSQL database, the web app, and a 5-minute cron job for reminders + email digests.
+# Values marked `sync: false` are secrets or per-environment settings: Render asks for them in the dashboard
+# when you apply the Blueprint. NEVER put real values in this file. See docs/DEPLOY-RENDER.md.
+
+databases:
+  - name: basma-db
+    region: frankfurt
+    plan: basic-256mb          # paid. The free database expires after 30 days, so do not use it for real work.
+    databaseName: basma
+    user: basma
+    ipAllowList: []            # only your Render services (internal URL) may connect
+
+services:
+  # ───────────────────────── Web app ─────────────────────────
+  - type: web
+    name: basma-marketing
+    runtime: node
+    region: frankfurt
+    plan: starter              # a free web service sleeps after 15 min idle and has an ephemeral disk; use a paid one
+    buildCommand: npm ci --include=dev && npm run build
+    # Migrations run on every start (idempotent). The demo seed is deliberately NOT run: it creates accounts with a known password.
+    startCommand: npx prisma migrate deploy && npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: basma-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false            # e.g. https://basma-marketing.onrender.com (or your custom domain), no trailing slash
+      - key: APP_TIMEZONE
+        value: Asia/Baghdad
+      - key: ALLOW_SIGNUP
+        value: "true"          # keep true only until you have created your organization, then set it to "false"
+      - key: WEEK_START
+        value: "0"
+      # Email (invitations, password reset, notification digests). Required in production: nothing is printed to logs.
+      - key: SMTP_URL
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      # File storage: AWS S3 (files are lost on Render's ephemeral disk otherwise). See docs/STORAGE.md.
+      - key: S3_BUCKET
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: PRESIGN_TTL_SECONDS
+        value: "300"
+      - key: MAX_UPLOAD_MB
+        value: "100"
+
+  # ─────────────── Reminders + email digests every 5 minutes ───────────────
+  - type: cron
+    name: basma-reminders
+    runtime: node
+    region: frankfurt
+    plan: starter
+    schedule: "*/5 * * * *"
+    buildCommand: npm ci --include=dev && npx prisma generate
+    startCommand: npm run reminders
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        fromDatabase:
+          name: basma-db
+          property: connectionString
+      - key: APP_URL
+        sync: false            # same value as the web app (links inside emails)
+      - key: APP_TIMEZONE
+        value: Asia/Baghdad
+      - key: SMTP_URL
+        sync: false            # same value as the web app
+      - key: MAIL_FROM
+        sync: false
+      - key: DEADLINE_REMINDER_HOURS
+        value: "24"
+      - key: PUBLISH_REMINDER_HOURS
+        value: "2"

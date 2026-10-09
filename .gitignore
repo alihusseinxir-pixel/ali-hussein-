@@ -1,0 +1,11 @@
+node_modules
+.next
+# Secrets: never commit real environment files. Only .env.example (names, no values) is tracked.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.tsbuildinfo
+uploads
+.test-uploads
