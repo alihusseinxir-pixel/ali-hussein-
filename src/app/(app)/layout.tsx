@@ -12,6 +12,7 @@ const NAV: NavItem[] = [
   { href: "/tasks", label: T.tasks },
   { href: "/campaigns", label: T.campaigns },
   { href: "/calendar", label: T.calendar },
+  { href: "/shoots", label: "التصوير" },
   { href: "/approvals", label: T.approvals, need: "approval:internal" },
   { href: "/team", label: T.team, need: "user:manage" },
   { href: "/templates", label: T.templates },

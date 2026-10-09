@@ -61,3 +61,5 @@ export const AR_SCRIPT_STATUS = {
   APPROVED: "معتمد",
   READY_FOR_PRODUCTION: "جاهز للتصوير",
 } as const;
+
+export const AR_SHOOT_STATUS = { PLANNED: "مخطط", COMPLETED: "تم التصوير", CANCELLED: "ملغاة" } as const;

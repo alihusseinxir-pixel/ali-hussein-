@@ -89,6 +89,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
           <div className="flex gap-2">
+            {can(user.role, "shoot:manage") && <Link href={`/shoots/new?task=${id}`} className="btn-secondary">تخطيط تصوير</Link>}
             <Link href={`/tasks/${id}/script`} className="btn-secondary">السكريبت · {AR_SCRIPT_STATUS[task.scriptStatus]}</Link>
             {canEdit && !["PUBLISHED", "COMPLETED"].includes(task.stage) && <Link href={`/tasks/${id}/edit`} className="btn-secondary">Edit</Link>}
             {can(user.role, "task:delete") && (

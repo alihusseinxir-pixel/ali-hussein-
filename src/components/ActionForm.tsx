@@ -32,7 +32,7 @@ export function ActionForm({
       {children}
       {state?.error && <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
       {state?.ok && successMessage && <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700">{successMessage}</p>}
-      <button className={danger ? "inline-flex items-center justify-center rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60" : "btn"} disabled={pending}>{pending ? "Please wait…" : submitLabel}</button>
+      <button className={danger ? "inline-flex items-center justify-center rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-60" : "btn"} disabled={pending}>{pending ? "الرجاء الانتظار…" : submitLabel}</button>
     </form>
   );
 }

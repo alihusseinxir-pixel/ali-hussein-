@@ -23,6 +23,7 @@ export const PERMISSIONS = [
   "approval:final",
   "publish:manage",
   "calendar:view:all",
+  "shoot:manage", // create / edit shoot sessions, models and locations
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -32,11 +33,11 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: PERMISSIONS,
   MARKETING_MANAGER: [
     "task:create", "task:view:all", "task:edit:any", "task:assign", "task:delete", "task:comment",
-    "campaign:manage", "template:manage", "activity:view:all", "analytics:view:all", "approval:internal", "calendar:view:all",
+    "campaign:manage", "template:manage", "activity:view:all", "analytics:view:all", "approval:internal", "calendar:view:all", "shoot:manage",
   ],
   SOCIAL_MEDIA_MANAGER: [
     "task:create", "task:view:all", "task:edit:own", "task:assign", "task:comment",
-    "campaign:manage", "template:manage", "analytics:view:all", "approval:internal", "approval:final", "publish:manage", "calendar:view:all",
+    "campaign:manage", "template:manage", "analytics:view:all", "approval:internal", "approval:final", "publish:manage", "calendar:view:all", "shoot:manage",
   ],
   VIDEOGRAPHER: PRODUCTION,
   PHOTOGRAPHER: PRODUCTION,
