@@ -45,11 +45,11 @@ afterAll(async () => {
 
 describe("files (integration)", () => {
   it("accepts real files and rejects spoofed / unsupported ones", async () => {
-    await expect(uploadFile(video, taskId, file([0x4d, 0x5a, 0x90, 0], "evil.png"), "RAW")).rejects.toThrow(/Unsupported/); // exe bytes named .png
-    await expect(uploadFile(video, taskId, file(PNG, "run.exe"), "RAW")).rejects.toThrow(/Unsupported/);
-    await expect(uploadFile(video, taskId, file(PNG, "x.svg"), "RAW")).rejects.toThrow(/Unsupported/);
-    await expect(uploadFile(video, taskId, file([], "empty.png"), "RAW")).rejects.toThrow(/empty/);
-    await expect(uploadFile(video, taskId, file(PNG, "ok.png"), "BOGUS")).rejects.toThrow(/kind/);
+    await expect(uploadFile(video, taskId, file([0x4d, 0x5a, 0x90, 0], "evil.png"), "RAW")).rejects.toThrow(/غير مدعوم/); // exe bytes named .png
+    await expect(uploadFile(video, taskId, file(PNG, "run.exe"), "RAW")).rejects.toThrow(/غير مدعوم/);
+    await expect(uploadFile(video, taskId, file(PNG, "x.svg"), "RAW")).rejects.toThrow(/غير مدعوم/);
+    await expect(uploadFile(video, taskId, file([], "empty.png"), "RAW")).rejects.toThrow(/فارغ/);
+    await expect(uploadFile(video, taskId, file(PNG, "ok.png"), "BOGUS")).rejects.toThrow(/نوع الملف/);
     const ok = await uploadFile(video, taskId, file(PDF, "script.pdf"), "DOCUMENT");
     expect(ok.fileType).toBe("application/pdf");
     expect(await storage.size(ok.fileUrl)).toBe(PDF.length);
@@ -58,7 +58,7 @@ describe("files (integration)", () => {
   it("local storage has no direct access, so uploads use the proxy path", async () => {
     expect(storage.direct).toBeUndefined();
     expect(await planUpload(video, taskId, { fileName: "a.png", size: 10, kind: "RAW" })).toEqual({ mode: "proxy" });
-    await expect(planUpload(video, taskId, { fileName: "a.exe", size: 10, kind: "RAW" })).rejects.toThrow(/Unsupported/); // validated before choosing a path
+    await expect(planUpload(video, taskId, { fileName: "a.exe", size: 10, kind: "RAW" })).rejects.toThrow(/غير مدعوم/); // validated before choosing a path
   });
 
   it("sanitises names (no path traversal, keeps Arabic)", async () => {

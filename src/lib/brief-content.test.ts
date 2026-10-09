@@ -2,6 +2,11 @@ import { describe, expect, it } from "vitest";
 import { briefFileName, hasArabic, parseScenes, pdfSafe, textDirection } from "./brief-content";
 
 describe("parseScenes", () => {
+  it("splits the Arabic template headings (المشهد 01 – …) and plain مشهد 2", () => {
+    expect(parseScenes("المشهد 01 – لقطة قريبة\n\nمشهد 2: المودل")).toEqual([
+      { title: "SCENE 01", body: "لقطة قريبة" }, { title: "SCENE 02", body: "المودل" },
+    ]);
+  });
   it("splits SCENE headings and keeps text after the dash", () => {
     const s = parseScenes("SCENE 01 – Opening shot\nWide angle\n\nScene 2: Product close-up\nSlow zoom");
     expect(s).toEqual([

@@ -1,3 +1,4 @@
+import { AR_EVENT } from "@/lib/i18n/ar";
 import Link from "next/link";
 import { EVENT_COLORS, dayKey, layoutLanes, minutesOfDay, timeLabel } from "@/lib/calendar";
 import { GridScroller } from "./GridScroller";
@@ -18,10 +19,10 @@ export function TimeGrid({ days, today, events, tz, hrefFor }: { days: string[];
           <div className="sticky top-0 z-20 border-b bg-slate-50" />
           {days.map((k) => (
             <Link key={k} href={hrefFor(k)} className={`sticky top-0 z-20 border-b border-l bg-slate-50 p-2 text-center font-medium hover:bg-slate-100 ${k === today ? "text-brand-700" : "text-slate-600"}`}>
-              {new Date(`${k}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
+              {new Date(`${k}T00:00:00Z`).toLocaleDateString("ar", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
             </Link>
           ))}
-          <div>{hours.map((h) => <div key={h} className="border-b pr-1 text-right text-[10px] text-slate-400" style={{ height: HOUR_PX }}>{String(h).padStart(2, "0")}:00</div>)}</div>
+          <div>{hours.map((h) => <div key={h} className="border-b pe-1 text-end text-[10px] text-slate-400" style={{ height: HOUR_PX }}>{String(h).padStart(2, "0")}:00</div>)}</div>
           {days.map((k) => {
             const items = layoutLanes((byDay.get(k) ?? []).map((e) => {
               const start = minutesOfDay(e.startsAt, tz);
@@ -33,8 +34,8 @@ export function TimeGrid({ days, today, events, tz, hrefFor }: { days: string[];
                 {hours.map((h) => <div key={h} className="border-b" style={{ height: HOUR_PX }} />)}
                 {items.map(({ e, start, end, lane, lanes }) => (
                   <Link
-                    key={e.id} href={`/tasks/${e.task.id}`}
-                    title={`${EVENT_COLORS[e.type].label} · ${e.task.taskCode}${e.userName ? ` · ${e.userName}` : ""}\n${e.title}`}
+                    key={e.id} href={e.href}
+                    title={`${AR_EVENT[e.type]} · ${e.ref}${e.userName ? ` · ${e.userName}` : ""}\n${e.title}`}
                     className={`absolute overflow-hidden rounded border px-1 py-0.5 text-[11px] leading-tight hover:z-10 hover:brightness-95 ${EVENT_COLORS[e.type].cls}`}
                     style={{ top: (start / 60) * HOUR_PX, height: Math.max(22, ((end - start) / 60) * HOUR_PX - 2), left: `${(lane / lanes) * 100}%`, width: `calc(${100 / lanes}% - 2px)` }}
                   >

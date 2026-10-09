@@ -36,8 +36,8 @@ describe("template behaviour", () => {
     expect(visibleFields(photo, { script: "" })).not.toContain("script");
   });
   it("reports missing required fields with readable names", () => {
-    expect(missingRequired(reel, { objective: "x", script: "  " }, {})).toEqual(["Script"]);
-    expect(missingRequired(photo, { product: "p" }, {})).toEqual(["Shot list"]);
+    expect(missingRequired(reel, { objective: "x", script: "  " }, {})).toEqual(["السكريبت (نص)"]);
+    expect(missingRequired(photo, { product: "p" }, {})).toEqual(["قائمة اللقطات"]);
     expect(missingRequired(photo, { product: "p" }, { shotList: "1." })).toEqual([]);
   });
   it("sanitises extras: only defined keys, trimmed, blanks removed, existing kept", () => {
@@ -47,7 +47,7 @@ describe("template behaviour", () => {
     expect(sanitizeExtra(photo, { lighting: "x".repeat(9000) }).lighting).toHaveLength(5000);
   });
   it("labels extras for display", () => {
-    expect(extraEntries(photo, { lighting: "soft", legacy: "v" })).toEqual([{ label: "Lighting", value: "soft" }, { label: "legacy", value: "v" }]);
+    expect(extraEntries(photo, { lighting: "soft", legacy: "v" })).toEqual([{ label: "الإضاءة", value: "soft" }, { label: "legacy", value: "v" }]);
   });
 });
 
@@ -59,7 +59,7 @@ describe("custom templates", () => {
     expect(t.name).toBe("Tazaj Reel");
     expect(t.defaults.hashtags).toBe("#tazaj");
     expect(t.defaults.cta).toBeUndefined(); // blank defaults ignored
-    expect(t.defaults.script).toContain("SCENE 01"); // base defaults kept
+    expect(t.defaults.script).toContain("المشهد 01"); // base defaults kept
     expect(t.required).toEqual(resolveTemplate("instagram-reel")!.required);
   });
   it("resolves by ref and fails safe for unknown / broken rows", () => {

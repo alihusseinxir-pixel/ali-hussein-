@@ -23,7 +23,7 @@ export default async function ApprovalsPage() {
   const others = tasks.filter((t) => t.currentAssigneeId !== user.id);
   const Table = ({ rows, empty }: { rows: typeof tasks; empty: string }) => (
     <div className="card overflow-x-auto !p-0">
-      <table className="w-full text-left text-sm"><tbody className="divide-y">
+      <table className="w-full text-start text-sm"><tbody className="divide-y">
         {rows.length === 0 && <tr><td className="p-6 text-center text-slate-500">{empty}</td></tr>}
         {rows.map((t) => (
           <tr key={t.id} className="hover:bg-slate-50">
@@ -37,9 +37,9 @@ export default async function ApprovalsPage() {
   );
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-semibold">Approvals</h1>
-      <section className="space-y-2"><h2 className="font-medium">Waiting for you ({mine.length})</h2><Table rows={mine} empty="Nothing is waiting for your approval." /></section>
-      {can(user.role, "task:view:all") && <section className="space-y-2"><h2 className="font-medium">Waiting on others ({others.length})</h2><Table rows={others} empty="No other tasks in review." /></section>}
+      <h1 className="text-2xl font-semibold">الموافقات</h1>
+      <section className="space-y-2"><h2 className="font-medium">بانتظارك ({mine.length})</h2><Table rows={mine} empty="لا شيء بانتظار موافقتك." /></section>
+      {can(user.role, "task:view:all") && <section className="space-y-2"><h2 className="font-medium">بانتظار آخرين ({others.length})</h2><Table rows={others} empty="لا توجد مهام أخرى قيد المراجعة." /></section>}
     </div>
   );
 }

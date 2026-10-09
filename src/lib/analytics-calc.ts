@@ -114,8 +114,8 @@ function bucketKey(d: Date, g: Granularity, tz: string, weekStart: number): stri
 export function volumeSeries(tasks: ATask[], handoffs: AHandoff[], range: Range, g: Granularity, tz: string, weekStart: number): Bucket[] {
   const buckets = new Map<string, Bucket>();
   const label = (key: string) => g === "month"
-    ? new Date(`${key}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" })
-    : new Date(`${key}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    ? new Date(`${key}-01T00:00:00Z`).toLocaleDateString("ar", { month: "short", year: "2-digit", timeZone: "UTC" })
+    : new Date(`${key}T00:00:00Z`).toLocaleDateString("ar", { day: "numeric", month: "short", timeZone: "UTC" });
   // pre-fill every bucket in the range so empty periods show as zero, not as gaps
   for (let t = range.from.getTime(); t < range.to.getTime(); t += DAY) {
     const k = bucketKey(new Date(t), g, tz, weekStart);
@@ -189,7 +189,7 @@ export function campaignStats(campaignIds: string[], tasks: ATask[], handoffs: A
 
 export function formatDuration(hours: number | null): string {
   if (hours === null) return "—";
-  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} min`;
-  if (hours < 48) return `${round(hours)} h`;
-  return `${round(hours / 24)} d`;
+  if (hours < 1) return `${Math.max(1, Math.round(hours * 60))} د`;
+  if (hours < 48) return `${round(hours)} س`;
+  return `${round(hours / 24)} ي`;
 }

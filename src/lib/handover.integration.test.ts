@@ -53,24 +53,24 @@ describe("handover workflow (integration)", () => {
 
     // guards
     await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id }))).rejects.toThrow(ForbiddenError); // not owner
-    await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/delivering/); // no deliverables
-    await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deliverables: "raw", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/raw footage/i); // no files yet
+    await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/تسلّمه/); // no deliverables
+    await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deliverables: "raw", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/الخام/); // no files yet
     await up(video, t.id, "RAW", "Raw_01.png");
     await up(video, t.id, "REFERENCE", "ref.png"); // wrong kind alone is not enough, RAW above satisfies it
-    await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deliverables: "raw" }))).rejects.toThrow(/deadline/i);
-    await expect(submitHandover(video, t.id, ho({ toUserId: editor.id, instructions: "x", deliverables: "raw", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/handled by/); // wrong role for PRODUCTION_REVIEW
+    await expect(submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "review", deliverables: "raw" }))).rejects.toThrow(/موعداً نهائياً/);
+    await expect(submitHandover(video, t.id, ho({ toUserId: editor.id, instructions: "x", deliverables: "raw", deadline: "2026-10-08T12:00" }))).rejects.toThrow(/يتولاها/); // wrong role for PRODUCTION_REVIEW
     expect(await stage(t.id)).toBe("PRODUCTION");
 
     await submitHandover(video, t.id, ho({ toUserId: mm.id, instructions: "Please review the takes", deliverables: "Raw_01, Raw_02; best take #2", deadline: "2026-10-08T12:00" }));
     expect(await stage(t.id)).toBe("PRODUCTION_REVIEW");
     // reviewer must confirm before passing on
-    await expect(submitHandover(mm, t.id, ho({ toUserId: editor.id, instructions: "edit", deadline: "2026-10-09T12:00" }))).rejects.toThrow(/Confirm the handover/);
+    await expect(submitHandover(mm, t.id, ho({ toUserId: editor.id, instructions: "edit", deadline: "2026-10-09T12:00" }))).rejects.toThrow(/أكّد التسليم/);
     await acceptHandover(mm, await pending(mm, t.id));
     await submitHandover(mm, t.id, ho({ toUserId: editor.id, instructions: "Cut to 30s", requiredOutput: "30 sec vertical", deadline: "2026-10-09T12:00" }));
     expect(await stage(t.id)).toBe("EDITING");
 
     await acceptHandover(editor, await pending(editor, t.id));
-    await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T18:00" }))).rejects.toThrow(/final output/i);
+    await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T18:00" }))).rejects.toThrow(/المخرج النهائي/);
     await up(editor, t.id, "FINAL", "Final.png");
     await submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "review V1", deliverables: "Final_V1", deadline: "2026-10-09T18:00" }));
     await acceptHandover(mm, await pending(mm, t.id));
@@ -84,7 +84,7 @@ describe("handover workflow (integration)", () => {
     expect(full?.revisions).toHaveLength(1);
     await acceptHandover(editor, await pending(editor, t.id));
     // a revision needs a NEW version: the old final does not count
-    await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T20:00" }))).rejects.toThrow(/final output/i);
+    await expect(submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T20:00" }))).rejects.toThrow(/المخرج النهائي/);
     expect((await up(editor, t.id, "FINAL", "Final.png")).version).toBe(2);
     await submitHandover(editor, t.id, ho({ toUserId: mm.id, instructions: "review V2", deliverables: "Final_V2", deadline: "2026-10-09T20:00" }));
     await acceptHandover(mm, await pending(mm, t.id));
@@ -92,7 +92,7 @@ describe("handover workflow (integration)", () => {
     // EDITING_REVIEW → INTERNAL_APPROVAL → SOCIAL_APPROVAL
     await submitHandover(mm, t.id, ho({ toUserId: mm.id, deadline: "2026-10-09T21:00" })); // self-handover needs no instructions
     expect(await stage(t.id)).toBe("INTERNAL_APPROVAL");
-    await expect(submitHandover(mm, t.id, ho({ toUserId: mm.id, instructions: "x", deadline: "2026-10-09T22:00" }))).rejects.toThrow(/handled by/);
+    await expect(submitHandover(mm, t.id, ho({ toUserId: mm.id, instructions: "x", deadline: "2026-10-09T22:00" }))).rejects.toThrow(/يتولاها/);
     await submitHandover(mm, t.id, ho({ toUserId: sm.id, instructions: "Final approval please", deadline: "2026-10-09T22:00" }));
     await acceptHandover(sm, await pending(sm, t.id));
     expect(await stage(t.id)).toBe("SOCIAL_APPROVAL");
@@ -132,7 +132,7 @@ describe("handover workflow (integration)", () => {
     await submitHandover(mm, t.id, ho({ toUserId: mm.id, deadline: "2026-10-09T13:00" }));
     await submitHandover(mm, t.id, ho({ toUserId: sm.id, instructions: "approve", deadline: "2026-10-09T14:00" }));
     await acceptHandover(sm, await pending(sm, t.id));
-    await expect(submitHandover(sm, t.id, ho({ toUserId: sm.id }))).rejects.toThrow(/publishing date/);
+    await expect(submitHandover(sm, t.id, ho({ toUserId: sm.id }))).rejects.toThrow(/موعد النشر/);
     // the Marketing Manager (not owner, no approval:final) cannot move it either
     await expect(submitHandover(mm, t.id, ho({ toUserId: sm.id }))).rejects.toThrow(ForbiddenError);
   });

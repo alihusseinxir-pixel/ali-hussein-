@@ -25,10 +25,10 @@ export function CommentBox({ taskId, people }: { taskId: string; people: { id: s
     start(async () => {
       setError(null);
       const res = await addCommentAction(taskId, undefined, fd);
-      if (!res?.ok || !res.data) { setError(res?.error ?? "Could not post comment."); return; }
+      if (!res?.ok || !res.data) { setError(res?.error ?? "تعذّر نشر التعليق."); return; }
       for (const f of files) {
         try { await uploadTaskFile(taskId, f, "OTHER", res.data); }
-        catch (e) { setError(`Comment posted, but ${f.name} failed: ${e instanceof Error ? e.message : "upload error"}`); break; }
+        catch (e) { setError(`نُشر التعليق، لكن فشل رفع ${f.name}: ${e instanceof Error ? e.message : "خطأ في الرفع"}`); break; }
       }
       if (text.current) text.current.value = "";
       if (file.current) file.current.value = "";
@@ -38,14 +38,14 @@ export function CommentBox({ taskId, people }: { taskId: string; people: { id: s
 
   return (
     <form onSubmit={submit} className="space-y-2">
-      <textarea ref={text} name="body" rows={3} required maxLength={5000} className="input" placeholder="Write a comment… use @Name to mention someone" />
+      <textarea ref={text} name="body" rows={3} required maxLength={5000} className="input" placeholder="اكتب تعليقاً… استخدم @الاسم للإشارة إلى شخص" />
       <div className="flex flex-wrap items-center gap-3">
-        <select className="input !w-48" defaultValue="" onChange={(e) => { insertMention(e.target.value); e.target.value = ""; }} aria-label="Mention someone">
-          <option value="">@ Mention…</option>
+        <select className="input !w-48" defaultValue="" onChange={(e) => { insertMention(e.target.value); e.target.value = ""; }} aria-label="الإشارة إلى شخص">
+          <option value="">@ إشارة…</option>
           {people.map((p) => <option key={p.id} value={p.name}>{p.name}</option>)}
         </select>
         <input ref={file} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.mp4,.mov,.docx,.xlsx" className="text-sm" />
-        <button className="btn ml-auto" disabled={pending}>{pending ? "Posting…" : "Post comment"}</button>
+        <button className="btn ms-auto" disabled={pending}>{pending ? "جارٍ النشر…" : "نشر التعليق"}</button>
       </div>
       {error && <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
     </form>

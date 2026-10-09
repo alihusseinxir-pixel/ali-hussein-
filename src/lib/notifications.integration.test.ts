@@ -12,7 +12,7 @@ let sm: Actor, mm: Actor, video: Actor, video2: Actor, outsider: Actor;
 const NOW = new Date("2026-10-05T12:00:00Z"); // 15:00 Riyadh
 const T = (h: number) => new Date(NOW.getTime() + h * 3600e3);
 const local = (d: Date) => new Date(d.getTime() + 3 * 3600e3).toISOString().slice(0, 16); // UTC → Riyadh wall clock for the form
-const input = (o: Record<string, string>) => taskInputSchema.parse({ title: "Remind", contentType: "REEL", ...o });
+const input = (o: Record<string, string>) => taskInputSchema.parse({ title: "Remind", contentType: "REEL", allowDuplicate: "1", ...o });
 const notes = (a: Actor, type?: string) => db.notification.findMany({ where: { userId: a.id, ...(type && { type: type as never }) } });
 
 async function user(org: string, role: Actor["role"], n: string): Promise<Actor> {

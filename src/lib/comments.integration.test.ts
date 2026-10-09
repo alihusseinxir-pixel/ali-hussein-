@@ -66,16 +66,16 @@ describe("comments (integration)", () => {
   });
 
   it("people who cannot see the task cannot read or write comments", async () => {
-    await expect(addComment(video2, taskId, "hi")).rejects.toThrow(/not found/i);
-    await expect(addComment(outsider, taskId, "hi")).rejects.toThrow(/not found/i);
+    await expect(addComment(video2, taskId, "hi")).rejects.toThrow(/غير موجود/);
+    await expect(addComment(outsider, taskId, "hi")).rejects.toThrow(/غير موجود/);
     expect(await listComments(video2, taskId)).toHaveLength(0);
-    await expect(addComment(video, taskId, "   ")).rejects.toThrow(/Write a comment/);
+    await expect(addComment(video, taskId, "   ")).rejects.toThrow(/اكتب تعليقاً/);
   });
 
   it("only the author or an admin can delete; deletion is soft", async () => {
     const c = await addComment(video, taskId, "to delete");
     await expect(deleteComment(sm, c.id)).rejects.toThrow(ForbiddenError);
-    await expect(deleteComment(outsider, c.id)).rejects.toThrow(/not found/i);
+    await expect(deleteComment(outsider, c.id)).rejects.toThrow(/غير موجود/);
     await deleteComment(video, c.id);
     expect((await listComments(sm, taskId)).find((x) => x.id === c.id)).toBeUndefined();
     expect(await db.taskComment.findUnique({ where: { id: c.id } })).not.toBeNull();

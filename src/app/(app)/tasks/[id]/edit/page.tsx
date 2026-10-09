@@ -22,8 +22,8 @@ export default async function EditTask({ params }: { params: Promise<{ id: strin
   ]);
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Edit {task.taskCode}</h1>
-      <ActionForm action={updateTaskAction.bind(null, id)} submitLabel="Save changes" className="space-y-6">
+      <h1 className="text-2xl font-semibold">تعديل <bdi dir="ltr">{task.taskCode}</bdi></h1>
+      <ActionForm action={updateTaskAction.bind(null, id)} submitLabel="حفظ التعديلات" className="space-y-6">
         <TaskForm task={task} template={template} brands={brands} campaigns={campaigns} />
       </ActionForm>
     </div>

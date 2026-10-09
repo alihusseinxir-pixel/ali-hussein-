@@ -15,19 +15,19 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
   });
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold">Files</h1>
-      <form className="flex gap-2"><input name="q" defaultValue={q} placeholder="Search file name" className="input !w-72" /><button className="btn-secondary">Search</button></form>
+      <h1 className="text-2xl font-semibold">الملفات</h1>
+      <form className="flex gap-2"><input name="q" defaultValue={q} placeholder="ابحث باسم الملف" className="input !w-72" /><button className="btn-secondary">بحث</button></form>
       <div className="card overflow-x-auto !p-0">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500"><tr><th className="p-3">File</th><th className="p-3">Task</th><th className="p-3">Uploaded</th><th className="p-3" /></tr></thead>
+        <table className="w-full text-start text-sm">
+          <thead className="border-b bg-slate-50 text-xs text-slate-500"><tr><th className="p-3 text-start">الملف</th><th className="p-3 text-start">المهمة</th><th className="p-3 text-start">الرفع</th><th className="p-3" /></tr></thead>
           <tbody className="divide-y">
-            {files.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-slate-500">No files.</td></tr>}
+            {files.length === 0 && <tr><td colSpan={4} className="p-6 text-center text-slate-500">لا توجد ملفات.</td></tr>}
             {files.map((f) => (
               <tr key={f.id}>
-                <td className="p-3">{f.fileName} <span className="text-xs text-slate-400">V{f.version} · {f.kind.toLowerCase()}</span></td>
+                <td className="p-3"><bdi dir="ltr">{f.fileName}</bdi> <span className="text-xs text-slate-400">V{f.version} · {f.kind.toLowerCase()}</span></td>
                 <td className="p-3"><Link className="hover:underline" href={`/tasks/${f.task.id}`}>{f.task.taskCode}</Link> <span className="text-slate-400">{f.task.title}</span></td>
-                <td className="p-3 text-slate-500">{f.uploadedBy.name} · {formatDateTime(f.createdAt, env.timezone)}</td>
-                <td className="p-3"><a className="text-brand-600 underline" href={`/api/files/${f.id}?download=1`}>Download</a></td>
+                <td className="p-3 text-slate-500">{f.uploadedBy.name} · <bdi dir="ltr">{formatDateTime(f.createdAt, env.timezone)}</bdi></td>
+                <td className="p-3"><a className="text-brand-600 underline" href={`/api/files/${f.id}?download=1`}>تنزيل</a></td>
               </tr>
             ))}
           </tbody>

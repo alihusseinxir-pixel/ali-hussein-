@@ -23,21 +23,21 @@ async function visibleTask(actor: Actor, taskId: string) {
 /** Everything that must be true before any bytes are accepted (shared by both upload paths). */
 async function authorizeUpload(actor: Actor, taskId: string, kind: string, commentId?: string | null) {
   const task = await visibleTask(actor, taskId);
-  if (!task) throw new TaskError("Task not found.");
+  if (!task) throw new TaskError("المهمة غير موجودة.");
   if (commentId) {
     // Commenters may attach files to their own comment even if they do not own the task.
     const c = await db.taskComment.findFirst({ where: { id: commentId, taskId, authorId: actor.id, deletedAt: null } });
-    if (!c) throw new ForbiddenError("You can only attach files to your own comment.");
-  } else if (!canUpload(actor, task)) throw new ForbiddenError("You cannot add files to this task right now.");
-  if (!(FILE_KINDS as readonly string[]).includes(kind)) throw new TaskError("Unknown file kind.");
+    if (!c) throw new ForbiddenError("يمكنك إرفاق الملفات بتعليقك فقط.");
+  } else if (!canUpload(actor, task)) throw new ForbiddenError("لا يمكنك إضافة ملفات إلى هذه المهمة الآن.");
+  if (!(FILE_KINDS as readonly string[]).includes(kind)) throw new TaskError("نوع الملف غير معروف.");
 }
 
 function checkSize(size: number) {
-  if (!Number.isFinite(size) || size <= 0) throw new TaskError("The file is empty.");
-  if (size > MAX_UPLOAD_BYTES) throw new TaskError(`File is larger than ${MAX_UPLOAD_BYTES / 1024 / 1024} MB.`);
+  if (!Number.isFinite(size) || size <= 0) throw new TaskError("الملف فارغ.");
+  if (size > MAX_UPLOAD_BYTES) throw new TaskError(`حجم الملف أكبر من ${MAX_UPLOAD_BYTES / 1024 / 1024} ميغابايت.`);
 }
 
-const UNSUPPORTED = "Unsupported or corrupted file. Allowed: PDF, JPG, PNG, MP4, MOV, DOCX, XLSX.";
+const UNSUPPORTED = "ملف غير مدعوم أو تالف. المسموح: PDF, JPG, PNG, MP4, MOV, DOCX, XLSX.";
 
 /** Insert the attachment row (+ activity) with the next version number; retried on a concurrent same-name upload. */
 async function recordAttachment(actor: Actor, a: { taskId: string; commentId: string | null; fileName: string; key: string; mime: string; kind: string; size: number }) {
@@ -107,14 +107,14 @@ export async function planUpload(actor: Actor, taskId: string, req: { fileName: 
 export async function completeUpload(actor: Actor, tokenStr: string) {
   const claim = parseUploadToken(tokenStr);
   if (!claim || claim.userId !== actor.id || !claim.key.startsWith(`pending/${actor.organizationId}/${claim.taskId}/`) || !storage.direct) {
-    throw new TaskError("This upload is invalid or has expired.");
+    throw new TaskError("هذا الرفع غير صالح أو منتهٍ.");
   }
   await authorizeUpload(actor, claim.taskId, claim.kind, claim.commentId);
   const reject = async (message: string): Promise<never> => { await storage.remove(claim.key).catch(() => {}); throw new TaskError(message); };
 
   const actual = await storage.size(claim.key).catch(() => -1);
-  if (actual < 0) throw new TaskError("The file was not received. Please try again.");
-  if (actual !== claim.size || actual > MAX_UPLOAD_BYTES) return reject("The uploaded file does not match what was announced.");
+  if (actual < 0) throw new TaskError("لم يصل الملف. حاول مجدداً.");
+  if (actual !== claim.size || actual > MAX_UPLOAD_BYTES) return reject("الملف المرفوع لا يطابق ما أُعلن عنه.");
   const chunks: Buffer[] = [];
   for await (const c of await storage.get(claim.key, { start: 0, end: 15 })) chunks.push(Buffer.from(c));
   const type = detectType(claim.fileName, new Uint8Array(Buffer.concat(chunks)));
@@ -145,7 +145,7 @@ export async function getFileForUser(actor: Actor, id: string) {
 /** Soft delete: the row and blob are kept so history (and handover snapshots) stay intact. */
 export async function deleteFile(actor: Actor, id: string) {
   const f = await getFileForUser(actor, id);
-  if (!f) throw new TaskError("File not found.");
+  if (!f) throw new TaskError("الملف غير موجود.");
   const task = await db.task.findUniqueOrThrow({ where: { id: f.taskId } });
   if (!canUpload(actor, task) || !(f.uploadedById === actor.id || can(actor.role, "task:edit:any"))) throw new ForbiddenError();
   await db.$transaction(async (tx) => {

@@ -43,7 +43,7 @@ export async function updateTaskAction(taskId: string, _: FormState, fd: FormDat
 export async function assignTaskAction(taskId: string, _: FormState, fd: FormData): Promise<FormState> {
   const actor = await requireUser();
   const assigneeId = String(fd.get("assigneeId") ?? "");
-  if (!assigneeId) return { error: "Choose a person." };
+  if (!assigneeId) return { error: "اختر شخصاً." };
   try { await assignTask(actor, taskId, assigneeId); } catch (e) { return toState(e); }
   revalidatePath(`/tasks/${taskId}`);
   return { ok: true };

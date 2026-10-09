@@ -60,7 +60,7 @@ export async function getCampaign(actor: Actor, id: string) {
 }
 
 const update = z.object({
-  name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
+  name: z.string().trim().min(2, "الاسم حرفان على الأقل").max(100),
   description: z.string().trim().max(2000).optional(),
   startDate: z.string().trim().optional(),
   endDate: z.string().trim().optional(),
@@ -71,12 +71,12 @@ export async function updateCampaign(actor: Actor, id: string, raw: z.input<type
   const p = update.safeParse(raw);
   if (!p.success) throw new TaskError(p.error.issues[0].message);
   const c = await db.campaign.findFirst({ where: { id, organizationId: actor.organizationId, deletedAt: null } });
-  if (!c) throw new TaskError("Campaign not found.");
-  const date = (v?: string) => { if (!v) return null; const d = parseLocalDateTime(v, env.timezone); if (!d) throw new TaskError("Invalid date."); return d; };
+  if (!c) throw new TaskError("الحملة غير موجودة.");
+  const date = (v?: string) => { if (!v) return null; const d = parseLocalDateTime(v, env.timezone); if (!d) throw new TaskError("التاريخ غير صالح."); return d; };
   const startDate = date(p.data.startDate), endDate = date(p.data.endDate);
-  if (startDate && endDate && endDate < startDate) throw new TaskError("The end date must be after the start date.");
+  if (startDate && endDate && endDate < startDate) throw new TaskError("تاريخ النهاية يجب أن يكون بعد البداية.");
   const clash = await db.campaign.findFirst({ where: { organizationId: actor.organizationId, brandId: c.brandId, name: p.data.name, NOT: { id } } });
-  if (clash) throw new TaskError("Another campaign of this brand already has this name.");
+  if (clash) throw new TaskError("توجد حملة أخرى بهذا الاسم لنفس البراند.");
   await db.$transaction(async (tx) => {
     await tx.campaign.update({ where: { id }, data: { name: p.data.name, description: p.data.description || null, startDate, endDate } });
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "campaign.updated", meta: { campaignId: id, name: p.data.name } });
@@ -86,9 +86,9 @@ export async function updateCampaign(actor: Actor, id: string, raw: z.input<type
 export async function archiveCampaign(actor: Actor, id: string) {
   assertCan(actor.role, "campaign:manage");
   const c = await db.campaign.findFirst({ where: { id, organizationId: actor.organizationId, deletedAt: null } });
-  if (!c) throw new TaskError("Campaign not found.");
+  if (!c) throw new TaskError("الحملة غير موجودة.");
   const open = await db.task.count({ where: { campaignId: id, deletedAt: null, organizationId: actor.organizationId, stage: { notIn: CLOSED } } });
-  if (open > 0) throw new TaskError(`${open} task${open > 1 ? "s are" : " is"} still in progress. Finish or move ${open > 1 ? "them" : "it"} first.`);
+  if (open > 0) throw new TaskError(`ما زال هناك ${open} مهمة قيد التنفيذ. أنهِها أو انقلها أولاً.`);
   await db.$transaction(async (tx) => {
     await tx.campaign.update({ where: { id }, data: { deletedAt: new Date() } });
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "campaign.archived", meta: { campaignId: id, name: c.name } });
@@ -98,8 +98,8 @@ export async function archiveCampaign(actor: Actor, id: string) {
 export async function archiveBrand(actor: Actor, id: string) {
   assertCan(actor.role, "campaign:manage");
   const b = await db.brand.findFirst({ where: { id, organizationId: actor.organizationId, deletedAt: null } });
-  if (!b) throw new TaskError("Brand not found.");
-  if (await db.campaign.count({ where: { brandId: id, deletedAt: null } })) throw new TaskError("Archive the brand's campaigns first.");
+  if (!b) throw new TaskError("البراند غير موجود.");
+  if (await db.campaign.count({ where: { brandId: id, deletedAt: null } })) throw new TaskError("أرشف حملات البراند أولاً.");
   await db.$transaction(async (tx) => {
     await tx.brand.update({ where: { id }, data: { deletedAt: new Date() } });
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, action: "brand.archived", meta: { brandId: id, name: b.name } });

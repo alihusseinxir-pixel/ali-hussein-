@@ -69,6 +69,27 @@ enum TaskStage {
   COMPLETED
 }
 
+enum ScriptStatus {
+  DRAFT
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  READY_FOR_PRODUCTION
+}
+
+enum ShootStatus {
+  PLANNED
+  COMPLETED
+  CANCELLED
+}
+
+enum ChecklistPhase {
+  PRE_PRODUCTION
+  SHOOT_DAY
+  HANDOVER
+  EQUIPMENT
+}
+
 enum HandoffStatus {
   PENDING
   ACCEPTED
@@ -122,6 +143,9 @@ model Organization {
   counters       TaskCounter[]
   calendarEvents CalendarEvent[]
   notifications  Notification[]
+  talents        Talent[]
+  locations      Location[]
+  shoots         ShootSession[]
 }
 
 model User {
@@ -155,6 +179,10 @@ model User {
   handoffsTo      TaskHandoff[]    @relation("HandoffTo")
   assignments     TaskAssignment[]
   invitationsSent Invitation[]
+  collaborations       TaskCollaborator[]
+  shootsAsPhotographer ShootSession[] @relation("ShootPhotographer")
+  shootsAsVideographer ShootSession[] @relation("ShootVideographer")
+  shootsAsDirector     ShootSession[] @relation("ShootDirector")
 
   @@index([organizationId, role])
 }
@@ -265,12 +293,15 @@ model Task {
   objective       String?
   targetAudience  String?
   consumerInsight String?
+  hook            String?
+  contentPillar   String?
   keyMessage      String?
   cta             String?
   caption         String?
   hashtags        String?
   brief           String?
-  script          String?
+  script          String? // legacy free-text script; scene-by-scene scripts live in ScriptScene
+  scriptStatus    ScriptStatus @default(DRAFT)
   references      String?
   models          String?
   location        String?
@@ -306,12 +337,185 @@ model Task {
   calendarEvents CalendarEvent[]
   activityLogs   ActivityLog[]
   notifications  Notification[]
+  scenes         ScriptScene[]
+  shootLinks     ShootContent[]
+  collaborators  TaskCollaborator[]
+  checklist      TaskChecklistItem[]
+  scriptRevisions ScriptRevision[]
 
   @@unique([organizationId, taskCode])
   @@index([organizationId, stage])
   @@index([organizationId, currentAssigneeId])
   @@index([organizationId, deadline])
   @@index([campaignId])
+}
+
+// Extra people on a task besides its single accountable owner (`currentAssigneeId`). They can see it, comment and tick the checklist.
+model TaskCollaborator {
+  taskId  String
+  task    Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User     @relation(fields: [userId], references: [id])
+  addedBy String
+  addedAt DateTime @default(now())
+
+  @@id([taskId, userId])
+  @@index([userId])
+}
+
+model TaskChecklistItem {
+  id       String    @id @default(cuid())
+  taskId   String
+  task     Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  label    String
+  position Int
+  done     Boolean   @default(false)
+  doneById String?
+  doneAt   DateTime?
+  sourceSceneNumber Int? // created from this script scene (its number when created; scenes are renumbered on reorder)
+
+  @@index([taskId, position])
+}
+
+// ───────────── Shoot planning ─────────────
+
+// A model / talent appearing on shoots. Reusable per organization; archived (not deleted) when no longer used.
+model Talent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  phone          String?
+  email          String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  deletedAt      DateTime?
+
+  shoots ShootTalent[]
+
+  @@index([organizationId])
+}
+
+model Location {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  name           String
+  address        String?
+  mapUrl         String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  deletedAt      DateTime?
+
+  shoots ShootSession[]
+
+  @@index([organizationId])
+}
+
+model ShootSession {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  title          String
+  status         ShootStatus  @default(PLANNED)
+  startsAt       DateTime
+  endsAt         DateTime
+  callTime       DateTime?
+  locationId     String?
+  location       Location?    @relation(fields: [locationId], references: [id])
+  photographerId String?
+  photographer   User?        @relation("ShootPhotographer", fields: [photographerId], references: [id])
+  videographerId String?
+  videographer   User?        @relation("ShootVideographer", fields: [videographerId], references: [id])
+  directorId     String?
+  director       User?        @relation("ShootDirector", fields: [directorId], references: [id])
+  requiredItems  String? // products, props, wardrobe
+  shotList       String?
+  prepNotes      String?
+  budget         Decimal?     @db.Decimal(12, 2)
+  createdById    String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
+
+  contents  ShootContent[]
+  talents   ShootTalent[]
+  checklist ShootChecklistItem[]
+
+  @@index([organizationId, startsAt])
+  @@index([photographerId])
+  @@index([videographerId])
+  @@index([directorId])
+}
+
+model ShootContent {
+  shootId String
+  shoot   ShootSession @relation(fields: [shootId], references: [id], onDelete: Cascade)
+  taskId  String
+  task    Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([shootId, taskId])
+  @@index([taskId])
+}
+
+model ShootTalent {
+  shootId  String
+  shoot    ShootSession @relation(fields: [shootId], references: [id], onDelete: Cascade)
+  talentId String
+  talent   Talent       @relation(fields: [talentId], references: [id])
+
+  @@id([shootId, talentId])
+  @@index([talentId])
+}
+
+model ShootChecklistItem {
+  id         String         @id @default(cuid())
+  shootId    String
+  shoot      ShootSession   @relation(fields: [shootId], references: [id], onDelete: Cascade)
+  phase      ChecklistPhase
+  label      String
+  position   Int
+  done       Boolean        @default(false)
+  doneById   String?
+  doneAt     DateTime?
+
+  @@index([shootId, phase, position])
+}
+
+// One row per scene of a task's script, ordered by `position` (0-based, contiguous).
+model ScriptScene {
+  id              String   @id @default(cuid())
+  taskId          String
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  position        Int
+  durationSec     Int?
+  shotDescription String
+  cameraAngle     String?
+  visualAction    String?
+  dialogue        String?
+  onScreenText    String?
+  audio           String?
+  props           String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([taskId, position])
+}
+
+// Append-only script history: a full snapshot per save and per status change.
+model ScriptRevision {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  version   Int
+  actorId   String
+  action    String // "saved" | "status:<ScriptStatus>"
+  note      String?
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, version])
 }
 
 // Who owned the task and when — never overwritten, only appended.

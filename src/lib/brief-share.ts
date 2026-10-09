@@ -35,12 +35,12 @@ export function parseToken(token: string, now = Date.now()): { taskId: string; v
 }
 
 function assertMayShare(actor: Actor, createdById: string) {
-  if (!(can(actor.role, "task:edit:any") || (can(actor.role, "task:edit:own") && createdById === actor.id))) throw new ForbiddenError("Only the task's creator or a manager can share the brief.");
+  if (!(can(actor.role, "task:edit:any") || (can(actor.role, "task:edit:own") && createdById === actor.id))) throw new ForbiddenError("منشئ المهمة أو المدير فقط يستطيع مشاركة الملخص.");
 }
 
 export async function createShareLink(actor: Actor, taskId: string, days: number) {
   const task = await db.task.findFirst({ where: { AND: [visibleTasksWhere(actor), { id: taskId }] } });
-  if (!task) throw new TaskError("Task not found.");
+  if (!task) throw new TaskError("المهمة غير موجودة.");
   assertMayShare(actor, task.createdById);
   const d = Math.min(MAX_SHARE_DAYS, Math.max(1, Math.floor(days) || 7));
   const expiresAt = new Date(Date.now() + d * 864e5);
@@ -50,7 +50,7 @@ export async function createShareLink(actor: Actor, taskId: string, days: number
 
 export async function revokeShareLinks(actor: Actor, taskId: string) {
   const task = await db.task.findFirst({ where: { AND: [visibleTasksWhere(actor), { id: taskId }] } });
-  if (!task) throw new TaskError("Task not found.");
+  if (!task) throw new TaskError("المهمة غير موجودة.");
   assertMayShare(actor, task.createdById);
   await db.task.update({ where: { id: taskId }, data: { briefShareVersion: { increment: 1 } } });
   await logActivity(db, { organizationId: actor.organizationId, actorId: actor.id, taskId, action: "brief.share_revoked" });

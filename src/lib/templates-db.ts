@@ -20,8 +20,8 @@ export async function listCustomTemplates(organizationId: string) {
 }
 
 const input = z.object({
-  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
-  base: z.string().refine((k) => !!builtinByKey(k), "Choose a base template"),
+  name: z.string().trim().min(2, "الاسم حرفان على الأقل").max(80),
+  base: z.string().refine((k) => !!builtinByKey(k), "اختر القالب الأساسي"),
   description: z.string().trim().max(300).optional(),
   defaults: z.record(z.string(), z.string().max(5000)).optional(),
 });
@@ -34,7 +34,7 @@ export async function createCustomTemplate(actor: Actor, raw: CustomTemplateInpu
   const { name, base, description, defaults } = p.data;
   const base_ = builtinByKey(base)!;
   if (await db.contentTemplate.findFirst({ where: { organizationId: actor.organizationId, name: { equals: name, mode: "insensitive" } } })) {
-    throw new TaskError("A template with this name already exists.");
+    throw new TaskError("يوجد قالب بهذا الاسم.");
   }
   const clean: CustomFields["defaults"] = {};
   for (const k of BASE_FIELDS) { const v = defaults?.[k]?.trim(); if (v && base_.show.includes(k)) clean[k] = v; } // only fields the base template shows
@@ -49,7 +49,7 @@ export async function createCustomTemplate(actor: Actor, raw: CustomTemplateInpu
 export async function deleteCustomTemplate(actor: Actor, id: string) {
   assertCan(actor.role, "template:manage");
   const row = await db.contentTemplate.findFirst({ where: { id, organizationId: actor.organizationId } });
-  if (!row) throw new TaskError("Template not found.");
+  if (!row) throw new TaskError("القالب غير موجود.");
   // Existing tasks keep their data; they simply fall back to the free-form editor.
   await db.$transaction(async (tx) => {
     await tx.contentTemplate.delete({ where: { id } });

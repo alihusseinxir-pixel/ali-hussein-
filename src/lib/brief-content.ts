@@ -2,7 +2,7 @@
 
 export interface Scene { title: string; body: string }
 
-const SCENE_HEAD = /^\s*(?:(?:scene|shot)\s*#?\s*(\d+)|مشهد\s*(?:رقم\s*)?([\d٠-٩]+))\s*[:\-–—.)]*\s*(.*)$/i;
+const SCENE_HEAD = /^\s*(?:(?:scene|shot)\s*#?\s*(\d+)|(?:ال)?مشهد\s*(?:رقم\s*)?([\d٠-٩]+))\s*[:\-–—.)]*\s*(.*)$/i;
 
 const toWesternDigits = (s: string) => s.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
 

@@ -12,9 +12,9 @@ import {
 import type { Actor } from "./tasks";
 
 export const RANGES = {
-  "30": { days: 30, label: "30 days", phrase: "the last 30 days", g: "week" },
-  "90": { days: 90, label: "90 days", phrase: "the last 90 days", g: "week" },
-  "365": { days: 365, label: "12 months", phrase: "the last 12 months", g: "month" },
+  "30": { days: 30, label: "30 يوماً", phrase: "آخر 30 يوماً", g: "week" },
+  "90": { days: 90, label: "90 يوماً", phrase: "آخر 90 يوماً", g: "week" },
+  "365": { days: 365, label: "12 شهراً", phrase: "آخر 12 شهراً", g: "month" },
 } as const;
 export type RangeKey = keyof typeof RANGES;
 export const parseRange = (v: string | undefined): RangeKey => (v && v in RANGES ? (v as RangeKey) : "30");

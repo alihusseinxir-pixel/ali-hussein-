@@ -5,7 +5,7 @@ import { taskInputSchema } from "./task-schema";
 import { ForbiddenError } from "./rbac";
 
 const tag = `t${Date.now()}`;
-const input = (over: Record<string, string> = {}) => taskInputSchema.parse({ title: "Reel – test", contentType: "REEL", ...over });
+const input = (over: Record<string, string> = {}) => taskInputSchema.parse({ title: "Reel – test", contentType: "REEL", allowDuplicate: "1", ...over });
 
 let orgA: string, orgB: string;
 let sm: Actor, mm: Actor, video: Actor, video2: Actor, designer: Actor, outsider: Actor, otherSm: Actor;

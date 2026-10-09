@@ -112,9 +112,9 @@ describe("campaigns", () => {
 describe("formatDuration", () => {
   it("picks a readable unit", () => {
     expect(formatDuration(null)).toBe("—");
-    expect(formatDuration(0.2)).toBe("12 min");
-    expect(formatDuration(5.04)).toBe("5 h");
-    expect(formatDuration(36)).toBe("36 h");
-    expect(formatDuration(72)).toBe("3 d");
+    expect(formatDuration(0.2)).toBe("12 د");
+    expect(formatDuration(5.04)).toBe("5 س");
+    expect(formatDuration(36)).toBe("36 س");
+    expect(formatDuration(72)).toBe("3 ي");
   });
 });
