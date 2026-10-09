@@ -12,7 +12,7 @@ const id = z.string().trim().optional().transform((v) => (v ? v : null));
 const when = z.string().trim().optional().transform((v) => (v ? v : null));
 
 export const taskInputSchema = z.object({
-  title: z.string().trim().min(3, "Task name must be at least 3 characters").max(200),
+  title: z.string().trim().min(3, "اسم المهمة 3 أحرف على الأقل").max(200),
   contentType: z.enum(CONTENT_TYPES),
   platform: z.enum(PLATFORMS).optional().or(z.literal("").transform(() => undefined)),
   priority: z.enum(PRIORITIES).default("MEDIUM"),
@@ -47,21 +47,21 @@ export const taskInputSchema = z.object({
 export type TaskInput = z.infer<typeof taskInputSchema>;
 
 export const TASK_FIELD_LABELS = {
-  objective: "Objective",
-  targetAudience: "Target audience",
-  contentPillar: "Content pillar",
-  hook: "Hook",
-  consumerInsight: "Consumer insight",
-  keyMessage: "Key message",
-  cta: "CTA",
-  caption: "Caption",
-  hashtags: "Hashtags",
-  brief: "Brief",
-  script: "Script",
-  references: "References",
-  models: "Models",
-  location: "Location",
-  props: "Props",
-  product: "Product",
-  specialNotes: "Special notes",
+  objective: "الهدف",
+  targetAudience: "الجمهور المستهدف",
+  contentPillar: "ركيزة المحتوى",
+  hook: "الخطاف (Hook)",
+  consumerInsight: "رؤية المستهلك",
+  keyMessage: "الرسالة الرئيسية",
+  cta: "دعوة لاتخاذ إجراء",
+  caption: "الكابشن",
+  hashtags: "الهاشتاقات",
+  brief: "الملخص",
+  script: "السكريبت (نص)",
+  references: "المراجع",
+  models: "المودلز",
+  location: "اللوكيشن",
+  props: "الإكسسوارات",
+  product: "المنتج",
+  specialNotes: "ملاحظات خاصة",
 } as const;

@@ -21,7 +21,7 @@ function columnPath(x: number, w: number, top: number, base: number): string {
   return `M${x},${base} V${top + r} Q${x},${top} ${x + r},${top} H${x + w - r} Q${x + w},${top} ${x + w},${top + r} V${base} Z`;
 }
 
-export function VolumeChart({ data, createdLabel = "Created", publishedLabel = "Published", unit = "tasks" }: { data: VolumePoint[]; createdLabel?: string; publishedLabel?: string; unit?: string }) {
+export function VolumeChart({ data, createdLabel = "مُنشأة", publishedLabel = "منشورة", unit = "المهام" }: { data: VolumePoint[]; createdLabel?: string; publishedLabel?: string; unit?: string }) {
   const [active, setActive] = useState<number | null>(null);
   const max = niceMax(Math.max(1, ...data.flatMap((d) => [d.created, d.published])));
   const ticks = [0, 1, 2, 3, 4].map((i) => (max / 4) * i);
@@ -34,16 +34,16 @@ export function VolumeChart({ data, createdLabel = "Created", publishedLabel = "
   const flip = active !== null && active > data.length / 2; // right half → tooltip sits to the left of the band
   const tipEdge = active === null ? 0 : (((M.l + band * (flip ? active : active + 1)) / W) * 100);
 
-  if (empty) return <p className="rounded-md bg-slate-50 p-6 text-center text-sm text-slate-500">No activity in this period.</p>;
+  if (empty) return <p className="rounded-md bg-slate-50 p-6 text-center text-sm text-slate-500">لا نشاط في هذه الفترة.</p>;
 
   return (
     <div>
-      <ul className="mb-2 flex gap-4 text-xs text-[color:var(--text-secondary)]" aria-label="Legend">
+      <ul className="mb-2 flex gap-4 text-xs text-[color:var(--text-secondary)]" aria-label="دليل الألوان">
         <li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--series-1)" }} />{createdLabel}</li>
         <li className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--series-2)" }} />{publishedLabel}</li>
       </ul>
       <div className="relative" onPointerLeave={() => setActive(null)}>
-        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${createdLabel} and ${publishedLabel.toLowerCase()} ${unit} per period. A table view follows the chart.`}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={`${unit} ${createdLabel} و${publishedLabel} لكل فترة. يلي الرسم جدول بالقيم.`}>
           {ticks.map((t) => (
             <g key={t}>
               <line x1={M.l} x2={W - M.r} y1={y(t)} y2={y(t)} stroke={t === 0 ? "var(--axis)" : "var(--grid)"} strokeWidth={1} />
@@ -63,7 +63,7 @@ export function VolumeChart({ data, createdLabel = "Created", publishedLabel = "
                 )}
                 {/* Hit target: the whole band, far larger than the marks. Also keyboard-focusable. */}
                 <rect x={M.l + band * i} y={M.t} width={band} height={innerH + M.b} fill="transparent" tabIndex={0}
-                  aria-label={`${d.label}: ${d.created} ${createdLabel.toLowerCase()}, ${d.published} ${publishedLabel.toLowerCase()}`}
+                  aria-label={`${d.label}: ${d.created} ${createdLabel}، ${d.published} ${publishedLabel}`}
                   onPointerEnter={() => setActive(i)} onPointerMove={() => setActive(i)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} />
               </g>
             );
@@ -82,9 +82,9 @@ export function VolumeChart({ data, createdLabel = "Created", publishedLabel = "
         )}
       </div>
       <details className="mt-3 text-sm">
-        <summary className="cursor-pointer text-brand-600">View as table</summary>
-        <table className="mt-2 w-full text-left text-xs">
-          <thead className="text-slate-500"><tr><th className="py-1">Period</th><th>{createdLabel}</th><th>{publishedLabel}</th></tr></thead>
+        <summary className="cursor-pointer text-brand-600">عرض كجدول</summary>
+        <table className="mt-2 w-full text-start text-xs">
+          <thead className="text-slate-500"><tr><th className="py-1 text-start">الفترة</th><th>{createdLabel}</th><th>{publishedLabel}</th></tr></thead>
           <tbody className="divide-y">{data.map((d, i) => <tr key={i}><td className="py-1">{d.label}</td><td className="tabular-nums">{d.created}</td><td className="tabular-nums">{d.published}</td></tr>)}</tbody>
         </table>
       </details>

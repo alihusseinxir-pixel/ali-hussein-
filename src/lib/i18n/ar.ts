@@ -85,3 +85,14 @@ export const AR_PERMISSION: Record<Permission, string> = {
   "calendar:view:all": "عرض تقويم الجميع",
   "shoot:manage": "إدارة جلسات التصوير والمودلز واللوكيشنات",
 };
+
+export const AR_CONTENT_TYPE: Record<string, string> = {
+  REEL: "ريل", STATIC_POST: "منشور ثابت", CAROUSEL: "كاروسيل", STORY: "ستوري", TIKTOK: "تيك توك", UGC: "محتوى مستخدمين (UGC)",
+  CAMPAIGN_VIDEO: "فيديو حملة", PRODUCT_PHOTOGRAPHY: "تصوير منتجات", PRODUCT_SHOOT: "جلسة منتج",
+};
+export const AR_PLATFORM: Record<string, string> = {
+  INSTAGRAM: "إنستغرام", TIKTOK: "تيك توك", FACEBOOK: "فيسبوك", SNAPCHAT: "سناب شات", YOUTUBE: "يوتيوب", X: "إكس", LINKEDIN: "لينكدإن",
+};
+export const AR_BUCKET: Record<string, string> = {
+  planning: "التخطيط", production: "التصوير", editing: "المونتاج / التصميم", approval: "المراجعة والموافقة", scheduled: "مجدول", published: "منشور",
+};

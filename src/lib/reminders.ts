@@ -44,9 +44,9 @@ export async function runReminders(o: ReminderOptions = {}): Promise<ReminderRes
     const owner = t.currentAssigneeId ?? t.createdById;
     const label = `${t.taskCode}: ${t.title}`;
     if (when > now) {
-      push(approaching, draft(t, owner, "DEADLINE_APPROACHING", `Task deadline is approaching (${fmt(when)}): ${label}`, `deadline:${t.id}:${stamp}`));
+      push(approaching, draft(t, owner, "DEADLINE_APPROACHING", `اقترب الموعد النهائي (${fmt(when)}): ${label}`, `deadline:${t.id}:${stamp}`));
     } else {
-      const text = `Task is overdue (was due ${fmt(when)}): ${label}`;
+      const text = `المهمة متأخرة (كان موعدها ${fmt(when)}): ${label}`;
       for (const uid of new Set([owner, t.createdById])) push(overdue, draft(t, uid, "TASK_OVERDUE", text, `overdue:${t.id}:${stamp}`));
     }
   }
@@ -60,7 +60,7 @@ export async function runReminders(o: ReminderOptions = {}): Promise<ReminderRes
     const when = t.publishAt!;
     const label = `${t.taskCode}: ${t.title}`;
     const due = when <= now;
-    const text = due ? `Publishing time has passed (${fmt(when)}) — publish it now: ${label}` : `Publishing soon (${fmt(when)}): ${label}`;
+    const text = due ? `فات موعد النشر (${fmt(when)}) — انشرها الآن: ${label}` : `النشر قريباً (${fmt(when)}): ${label}`;
     for (const uid of new Set([t.currentAssigneeId ?? t.createdById, t.createdById])) {
       push(publishing, draft(t, uid, "PUBLISHING_REMINDER", text, `${due ? "publish-due" : "publish"}:${t.id}:${when.getTime()}`));
     }

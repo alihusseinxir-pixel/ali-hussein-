@@ -22,12 +22,12 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
     const href = (ref: string) => `/tasks/new?${new URLSearchParams({ template: ref, ...Object.fromEntries(keep) })}`;
     const cards = [
       ...BUILTIN_TEMPLATES.map((t) => ({ ref: t.key, name: t.name, description: t.description, tag: "" })),
-      ...customs.map((c) => ({ ref: c.def.key, name: c.def.name, description: c.def.description, tag: "Custom" })),
+      ...customs.map((c) => ({ ref: c.def.key, name: c.def.name, description: c.def.description, tag: "مخصص" })),
     ];
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-semibold">Create Task</h1>
-        <p className="text-sm text-slate-500">Choose a template — it sets up the right fields for the content type.</p>
+        <h1 className="text-2xl font-semibold">مهمة جديدة</h1>
+        <p className="text-sm text-slate-500">اختر قالباً — يجهّز الحقول المناسبة لنوع المحتوى.</p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {cards.map((c) => (
             <Link key={c.ref} href={href(c.ref)} className="card block transition hover:border-brand-500 hover:shadow">
@@ -36,7 +36,7 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
             </Link>
           ))}
           <Link href={href(BLANK_REF)} className="card block border-dashed transition hover:border-brand-500">
-            <h2 className="font-medium">Blank task</h2><p className="mt-1 text-sm text-slate-500">Start from scratch with every field.</p>
+            <h2 className="font-medium">مهمة فارغة</h2><p className="mt-1 text-sm text-slate-500">ابدأ من الصفر بكل الحقول.</p>
           </Link>
         </div>
       </div>
@@ -58,10 +58,10 @@ export default async function NewTask({ searchParams }: { searchParams: Promise<
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Create Task{template ? ` · ${template.name}` : ""}</h1>
-        <Link href="/tasks/new" className="text-sm text-brand-600 underline">Change template</Link>
+        <h1 className="text-2xl font-semibold">مهمة جديدة{template ? ` · ${template.name}` : ""}</h1>
+        <Link href="/tasks/new" className="text-sm text-brand-600 underline">تغيير القالب</Link>
       </div>
-      <ActionForm action={createTaskAction} submitLabel="Create task" className="space-y-6">
+      <ActionForm action={createTaskAction} submitLabel="إنشاء المهمة" className="space-y-6">
         <TaskForm template={template} templateRef={template?.key} brands={brands} campaigns={campaigns} assignees={assignees}
           preset={{ campaignId: campaign?.id, brandId: campaign?.brandId ?? brands.find((b) => b.id === sp.brand)?.id }} />
       </ActionForm>

@@ -97,7 +97,7 @@ describe("direct upload flow (presigned PUT → verify → record)", () => {
     const p = await plan(video, EXE, "evil.png");
     await put(p, EXE);
     const claim = m.token.parseUploadToken(p.token)!;
-    await expect(m.files.completeUpload(video, p.token)).rejects.toThrow(/Unsupported or corrupted/);
+    await expect(m.files.completeUpload(video, p.token)).rejects.toThrow(/غير مدعوم/);
     await expect(m.storage.size(claim.key)).rejects.toThrow(); // gone
     expect(await m.db.taskAttachment.count({ where: { fileName: "evil.png" } })).toBe(0);
   });
@@ -105,44 +105,44 @@ describe("direct upload flow (presigned PUT → verify → record)", () => {
   it("rejects an object whose size differs from the announced size", async () => {
     const p = await plan(video, PNG, "size.png");
     await put({ ...p, headers: { "Content-Type": "image/png" } }, Buffer.concat([PNG, PNG])); // emulator accepts the longer body
-    await expect(m.files.completeUpload(video, p.token)).rejects.toThrow(/does not match/);
+    await expect(m.files.completeUpload(video, p.token)).rejects.toThrow(/لا يطابق/);
     expect(await m.db.taskAttachment.count({ where: { fileName: "size.png" } })).toBe(0);
   });
 
   it("rejects completion when nothing was uploaded, and a replayed token", async () => {
     const none = await plan(video, PNG, "none.png");
-    await expect(m.files.completeUpload(video, none.token)).rejects.toThrow(/not received/);
+    await expect(m.files.completeUpload(video, none.token)).rejects.toThrow(/لم يصل/);
     const p = await plan(video, PNG, "once.png");
     await put(p, PNG);
     await m.files.completeUpload(video, p.token);
-    await expect(m.files.completeUpload(video, p.token)).rejects.toThrow(/not received|invalid/); // already moved out of pending
+    await expect(m.files.completeUpload(video, p.token)).rejects.toThrow(/لم يصل|غير صالح/); // already moved out of pending
     expect(await m.db.taskAttachment.count({ where: { fileName: "once.png" } })).toBe(1);
   });
 
   it("binds the token to the user and to the signature: others' and forged tokens fail", async () => {
     const p = await plan(video, PNG, "bound.png");
     await put(p, PNG);
-    await expect(m.files.completeUpload(sm, p.token)).rejects.toThrow(/invalid or has expired/); // someone else's token
-    await expect(m.files.completeUpload(outsider, p.token)).rejects.toThrow(/invalid or has expired/);
-    await expect(m.files.completeUpload(video, p.token.slice(0, -3) + "AAA")).rejects.toThrow(/invalid or has expired/);
+    await expect(m.files.completeUpload(sm, p.token)).rejects.toThrow(/غير صالح أو منتهٍ/); // someone else's token
+    await expect(m.files.completeUpload(outsider, p.token)).rejects.toThrow(/غير صالح أو منتهٍ/);
+    await expect(m.files.completeUpload(video, p.token.slice(0, -3) + "AAA")).rejects.toThrow(/غير صالح أو منتهٍ/);
     const claim = m.token.parseUploadToken(p.token)!;
     const expired = m.token.makeUploadToken(claim, -10);
-    await expect(m.files.completeUpload(video, expired)).rejects.toThrow(/invalid or has expired/);
+    await expect(m.files.completeUpload(video, expired)).rejects.toThrow(/غير صالح أو منتهٍ/);
     // a token pointing outside this organization's quarantine area is refused even if correctly signed
     const evil = m.token.makeUploadToken({ ...claim, key: `pending/${orgB}/${taskId}/x.png` }, 60);
-    await expect(m.files.completeUpload(video, evil)).rejects.toThrow(/invalid or has expired/);
+    await expect(m.files.completeUpload(video, evil)).rejects.toThrow(/غير صالح أو منتهٍ/);
     await m.files.completeUpload(video, p.token); // the legitimate holder still succeeds
   });
 
   it("refuses to plan uploads for people who may not upload, bad names, kinds and sizes", async () => {
     const ask = (a: Actor, o: Partial<{ fileName: string; size: number; kind: string }> = {}) => m.files.planUpload(a, taskId, { fileName: "a.png", size: 10, kind: "RAW", ...o });
-    await expect(ask(video2)).rejects.toThrow(/not found/i); // cannot even see the task
-    await expect(ask(outsider)).rejects.toThrow(/not found/i);
-    await expect(ask(video, { fileName: "run.exe" })).rejects.toThrow(/Unsupported/);
-    await expect(ask(video, { fileName: "page.html" })).rejects.toThrow(/Unsupported/);
-    await expect(ask(video, { size: 0 })).rejects.toThrow(/empty/);
-    await expect(ask(video, { size: 10 * 1024 ** 3 })).rejects.toThrow(/larger than/);
-    await expect(ask(video, { kind: "NOPE" })).rejects.toThrow(/kind/);
+    await expect(ask(video2)).rejects.toThrow(/غير موجود/); // cannot even see the task
+    await expect(ask(outsider)).rejects.toThrow(/غير موجود/);
+    await expect(ask(video, { fileName: "run.exe" })).rejects.toThrow(/غير مدعوم/);
+    await expect(ask(video, { fileName: "page.html" })).rejects.toThrow(/غير مدعوم/);
+    await expect(ask(video, { size: 0 })).rejects.toThrow(/فارغ/);
+    await expect(ask(video, { size: 10 * 1024 ** 3 })).rejects.toThrow(/أكبر من/);
+    await expect(ask(video, { kind: "NOPE" })).rejects.toThrow(/نوع الملف/);
   });
 
   it("lets a commenter attach to their own comment through the same flow", async () => {
@@ -150,7 +150,7 @@ describe("direct upload flow (presigned PUT → verify → record)", () => {
     const p = await plan(sm, PNG, "note.png", "OTHER", c.id);
     await put(p, PNG);
     expect((await m.files.completeUpload(sm, p.token)).commentId).toBe(c.id);
-    await expect(m.files.planUpload(video, taskId, { fileName: "x.png", size: 5, kind: "OTHER", commentId: c.id })).rejects.toThrow(/own comment/);
+    await expect(m.files.planUpload(video, taskId, { fileName: "x.png", size: 5, kind: "OTHER", commentId: c.id })).rejects.toThrow(/بتعليقك/);
   });
 
   it("serves downloads as a short-lived signed redirect target carrying our content type", async () => {

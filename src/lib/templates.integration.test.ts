@@ -48,10 +48,10 @@ describe("tasks from templates", () => {
   });
 
   it("enforces required fields on the server, naming what is missing", async () => {
-    await expect(createTask(sm, input({ templateRef: "instagram-reel", objective: "x" }))).rejects.toThrow(/Script is required for Instagram Reel/);
-    await expect(createTask(sm, input({ templateRef: "product-photography" }))).rejects.toThrow(/Product, Shot list are required/);
-    await expect(createTask(sm, input({ templateRef: "static-post", keyMessage: "k", extra: { onImageCopy: "   " } }))).rejects.toThrow(/Copy on the design/);
-    await expect(createTask(sm, input({ templateRef: "does-not-exist" }))).rejects.toThrow(/Unknown template/);
+    await expect(createTask(sm, input({ templateRef: "instagram-reel", objective: "x" }))).rejects.toThrow(/السكريبت \(نص\) مطلوب في قالب ريل إنستغرام/);
+    await expect(createTask(sm, input({ templateRef: "product-photography" }))).rejects.toThrow(/المنتج، قائمة اللقطات مطلوبة/);
+    await expect(createTask(sm, input({ templateRef: "static-post", keyMessage: "k", extra: { onImageCopy: "   " } }))).rejects.toThrow(/النص على التصميم/);
+    await expect(createTask(sm, input({ templateRef: "does-not-exist" }))).rejects.toThrow(/القالب غير موجود/);
   });
 
   it("free-form tasks keep working with no template", async () => {
@@ -61,7 +61,7 @@ describe("tasks from templates", () => {
 
   it("editing keeps the template rules, merges extras and never wipes values", async () => {
     const t = await createTask(sm, input({ templateRef: "product-photography", product: "P", extra: { shotList: "1.", angles: "top" } }));
-    await expect(updateTask(sm, t.id, input({ contentType: "REEL", product: "P", extra: { shotList: "" } }))).rejects.toThrow(/Shot list is required/);
+    await expect(updateTask(sm, t.id, input({ contentType: "REEL", product: "P", extra: { shotList: "" } }))).rejects.toThrow(/قائمة اللقطات مطلوب/);
     await updateTask(sm, t.id, input({ contentType: "REEL", product: "P2", extra: { shotList: "1. new", lighting: "hard" } }));
     const full = await getTask(sm, t.id);
     expect(full?.contentType).toBe("PRODUCT_PHOTOGRAPHY"); // type cannot drift away from the template
@@ -74,13 +74,13 @@ describe("custom templates", () => {
   it("only roles with template:manage can create or delete; names are unique per org", async () => {
     await expect(createCustomTemplate(video, { name: "Nope", base: "instagram-reel" })).rejects.toThrow(ForbiddenError);
     const row = await createCustomTemplate(mm, { name: "Tazaj Reel", base: "instagram-reel", description: "House style", defaults: { hashtags: "#tazaj", cta: "Order now", models: "ignored? no, reel shows models", location: "", bogus: "x" } });
-    await expect(createCustomTemplate(sm, { name: "tazaj reel", base: "tiktok" })).rejects.toThrow(/already exists/);
-    await expect(createCustomTemplate(sm, { name: "Bad", base: "nope" })).rejects.toThrow(/base template/i);
-    await expect(createCustomTemplate(sm, { name: "x", base: "tiktok" })).rejects.toThrow(/at least 2/);
+    await expect(createCustomTemplate(sm, { name: "tazaj reel", base: "tiktok" })).rejects.toThrow(/يوجد قالب بهذا الاسم/);
+    await expect(createCustomTemplate(sm, { name: "Bad", base: "nope" })).rejects.toThrow(/القالب الأساسي/);
+    await expect(createCustomTemplate(sm, { name: "x", base: "tiktok" })).rejects.toThrow(/حرفان/);
     const def = await resolveTemplateRef(orgA, `custom:${row.id}`);
     expect(def?.defaults.hashtags).toBe("#tazaj");
     expect(def?.defaults.cta).toBe("Order now");
-    expect(def?.defaults.script).toContain("SCENE 01");
+    expect(def?.defaults.script).toContain("المشهد 01");
     expect(Object.keys(def!.defaults)).not.toContain("bogus");
     expect(row.contentType).toBe("REEL");
   });
@@ -98,9 +98,9 @@ describe("custom templates", () => {
     expect(t.templateRef).toBe(`custom:${row.id}`);
     expect(t.contentType).toBe("REEL");
     expect(await resolveTemplateRef(orgB, `custom:${row.id}`)).toBeNull();
-    await expect(createTask(outsider, input({ templateRef: `custom:${row.id}`, objective: "o", script: "s" }))).rejects.toThrow(/Unknown template/);
+    await expect(createTask(outsider, input({ templateRef: `custom:${row.id}`, objective: "o", script: "s" }))).rejects.toThrow(/القالب غير موجود/);
     expect(await listCustomTemplates(orgB)).toHaveLength(0);
-    await expect(deleteCustomTemplate(outsider, row.id)).rejects.toThrow(/not found/i);
+    await expect(deleteCustomTemplate(outsider, row.id)).rejects.toThrow(/غير موجود/);
   });
 
   it("deleting a template leaves its tasks intact (they fall back to free-form)", async () => {

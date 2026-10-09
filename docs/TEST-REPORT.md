@@ -25,7 +25,7 @@ npm run typecheck && npm run lint && npm test && npm run build
 |---|---|
 | `npm run typecheck` | passed |
 | `npm run lint` | passed, no warnings |
-| `npm test` | 43 files, 255 tests passed |
+| `npm test` | 43 files, 256 tests passed |
 | `npm run build` | passed |
 | Production-build crawl, 7 roles, mobile viewport (390 px), 109–120 pages each | no 4xx/5xx, no horizontal scroll, every page RTL |
 | Production-build crawl of a brand-new empty organization (empty states) | 120 pages, no errors |
@@ -36,6 +36,10 @@ npm run typecheck && npm run lint && npm test && npm run build
 | Cron endpoint without `CRON_SECRET` | 503 (disabled) |
 | Full lifecycle test (idea → script review → approval → shoot → scene sub-tasks → production → editing → approvals → published → completed) | passed, with every approval recorded against a reviewer |
 | Secrets scan of tracked files | nothing real; `.env` is git-ignored; CI uses a throwaway local DB credential |
+
+## Arabic localization pass (after the audit)
+
+All remaining pages were translated (sign-in, account, tasks, task detail, campaigns, approvals, team, templates, files, analytics, notifications), together with built-in template names and fields, stored notification texts and about 100 server error messages. Dates now come from one function (`formatDateTime`) in Arabic with Western digits. Two real bugs surfaced while doing it and were fixed: the files panel formatted dates in the browser's time zone (a server/browser mismatch for anyone outside the server's zone), and the PDF scene splitter did not recognize "المشهد 01" headings (the new template default), so it now accepts them (test added). Older tests that matched English error text were updated to the Arabic text.
 
 ## What the audit found and fixed
 
@@ -50,7 +54,7 @@ npm run typecheck && npm run lint && npm test && npm run build
 - **Roles are fixed.** Custom roles are intentionally out of version 1.
 - **Workflow rules are warnings, not gates:** an unapproved script does not stop a hand-over; it shows as a blocker on the dashboard and the task page.
 - **Duplicate-title check is not atomic**: two simultaneous creates can both pass it.
-- **Dates:** older pages still format dates in English. "Tomorrow / in N days" wording uses UTC days.
+- **Arabic coverage:** every page, form, server error message and in-app notification is Arabic (an automated scan of 30 pages found no English UI text; only data such as brand names, demo user names and task codes remains Latin). Still English: invitation / password-reset / digest **emails**, the browser's own file-picker text ("Choose Files"), and storage-configuration errors meant for administrators. "Tomorrow / in N days" wording uses UTC days.
 - **Calendar:** a task with `shootingAt` plus a linked shoot session can appear twice.
 - **Shoot attachments** are not implemented (files are attached to the linked content tasks).
 - **Not tested:** real SMTP delivery, S3 storage against a real bucket, Render deployment, and browsers other than Chromium.

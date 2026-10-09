@@ -24,10 +24,10 @@ export async function taskParticipants(actor: Actor, taskId: string) {
 export async function addComment(actor: Actor, taskId: string, body: string) {
   if (!can(actor.role, "task:comment")) throw new ForbiddenError();
   const ctx = await taskParticipants(actor, taskId);
-  if (!ctx) throw new TaskError("Task not found.");
+  if (!ctx) throw new TaskError("المهمة غير موجودة.");
   const text = body.trim();
-  if (!text) throw new TaskError("Write a comment first.");
-  if (text.length > 5000) throw new TaskError("Comment is too long.");
+  if (!text) throw new TaskError("اكتب تعليقاً أولاً.");
+  if (text.length > 5000) throw new TaskError("التعليق طويل جداً.");
   const mentions = extractMentions(text, ctx.people).filter((id) => id !== actor.id);
   return db.$transaction(async (tx) => {
     const c = await tx.taskComment.create({ data: { taskId, authorId: actor.id, body: text, mentions } });
@@ -35,12 +35,12 @@ export async function addComment(actor: Actor, taskId: string, body: string) {
     const notified = new Set<string>();
     for (const id of mentions) {
       notified.add(id);
-      await tx.notification.create({ data: { organizationId: actor.organizationId, userId: id, taskId, type: "MENTION", message: `You were mentioned on ${label}` } });
+      await tx.notification.create({ data: { organizationId: actor.organizationId, userId: id, taskId, type: "MENTION", message: `تمت الإشارة إليك في ${label}` } });
     }
     for (const id of [ctx.task.currentAssigneeId, ctx.task.createdById]) {
       if (id && id !== actor.id && !notified.has(id)) {
         notified.add(id);
-        await tx.notification.create({ data: { organizationId: actor.organizationId, userId: id, taskId, type: "COMMENT", message: `New comment on ${label}` } });
+        await tx.notification.create({ data: { organizationId: actor.organizationId, userId: id, taskId, type: "COMMENT", message: `تعليق جديد على ${label}` } });
       }
     }
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId, action: "comment.added", meta: { commentId: c.id } });
@@ -58,7 +58,7 @@ export async function listComments(actor: Actor, taskId: string) {
 
 export async function deleteComment(actor: Actor, commentId: string) {
   const c = await db.taskComment.findFirst({ where: { id: commentId, deletedAt: null, task: visibleTasksWhere(actor) } });
-  if (!c) throw new TaskError("Comment not found.");
+  if (!c) throw new TaskError("التعليق غير موجود.");
   if (c.authorId !== actor.id && actor.role !== "ADMIN") throw new ForbiddenError();
   await db.$transaction(async (tx) => {
     await tx.taskComment.update({ where: { id: commentId }, data: { deletedAt: new Date() } });

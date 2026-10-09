@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const type = FILE_TYPES[extensionOf(file.fileName)];
   const download = req.nextUrl.searchParams.get("download") === "1" || !type?.inline;
   const size = await storage.size(file.fileUrl).catch(() => null);
-  if (size === null) return json({ error: "File is missing from storage." }, 410);
+  if (size === null) return json({ error: "الملف غير موجود في التخزين." }, 410);
 
   // Direct storage (S3): permissions were checked above; hand the browser a short-lived signed URL so the bytes
   // (incl. video range requests) flow straight from the bucket. Type and disposition come from OUR whitelist, not from the object.

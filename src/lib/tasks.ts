@@ -1,4 +1,5 @@
 import "server-only";
+import { AR_CONTENT_TYPE, AR_ROLE } from "./i18n/ar";
 import { Prisma, type Role, type TaskStage, type Priority } from "@prisma/client";
 import { db } from "./db";
 import { env } from "./env";
@@ -147,22 +148,22 @@ async function resolveRefs(actor: Actor, input: TaskInput) {
   // Brand/campaign/assignee must belong to the actor's organization.
   if (input.brandId) {
     const ok = await db.brand.findFirst({ where: { id: input.brandId, organizationId: actor.organizationId, deletedAt: null } });
-    if (!ok) throw new TaskError("Unknown brand.");
+    if (!ok) throw new TaskError("البراند غير موجود.");
   }
   if (input.campaignId) {
     const c = await db.campaign.findFirst({ where: { id: input.campaignId, organizationId: actor.organizationId, deletedAt: null } });
-    if (!c) throw new TaskError("Unknown campaign.");
-    if (input.brandId && c.brandId !== input.brandId) throw new TaskError("Campaign does not belong to that brand.");
+    if (!c) throw new TaskError("الحملة غير موجودة.");
+    if (input.brandId && c.brandId !== input.brandId) throw new TaskError("الحملة لا تتبع هذا البراند.");
     input.brandId = c.brandId;
   }
   if (input.assigneeId) {
     const u = await db.user.findFirst({
       where: { id: input.assigneeId, organizationId: actor.organizationId, status: "ACTIVE", deletedAt: null },
     });
-    if (!u) throw new TaskError("Unknown assignee.");
+    if (!u) throw new TaskError("المسؤول غير موجود.");
     const allowed = firstAssigneeRoles(input.contentType);
     if (!allowed.includes(u.role)) {
-      throw new TaskError(`A ${input.contentType.replace(/_/g, " ").toLowerCase()} task must be assigned to a ${allowed.join(" / ").replace(/_/g, " ").toLowerCase()}.`);
+      throw new TaskError(`مهمة "${AR_CONTENT_TYPE[input.contentType]}" تُسند إلى: ${allowed.map((r) => AR_ROLE[r]).join(" أو ")}.`);
     }
   }
 }
@@ -172,7 +173,7 @@ function dataFrom(input: TaskInput) {
   const d = (v: string | null) => {
     if (!v) return null;
     const out = parseLocalDateTime(v, tz);
-    if (!out) throw new TaskError("Invalid date/time.");
+    if (!out) throw new TaskError("التاريخ/الوقت غير صالح.");
     return out;
   };
   const {
@@ -185,7 +186,7 @@ function dataFrom(input: TaskInput) {
     specialNotes,
     shootingAt: d(input.shootingAt), publishAt: d(input.publishAt), startDate: d(input.startDate), deadline: d(input.deadline),
   };
-  if (data.startDate && data.deadline && data.deadline < data.startDate) throw new TaskError("Deadline must be after the start date.");
+  if (data.startDate && data.deadline && data.deadline < data.startDate) throw new TaskError("الموعد النهائي يجب أن يكون بعد تاريخ البداية.");
   return data;
 }
 
@@ -196,7 +197,7 @@ function applyTemplate(tpl: TemplateDef | null, input: TaskInput, existingExtra:
   if (!input.platform && tpl.platform) input.platform = tpl.platform;
   const extra = sanitizeExtra(tpl, input.extra, existingExtra);
   const missing = missingRequired(tpl, input as Partial<Record<string, unknown>>, extra);
-  if (missing.length) throw new TaskError(`${missing.join(", ")} ${missing.length > 1 ? "are" : "is"} required for ${tpl.name}.`);
+  if (missing.length) throw new TaskError(`${missing.join("، ")} ${missing.length > 1 ? "مطلوبة" : "مطلوب"} في قالب ${tpl.name}.`);
   return { extra };
 }
 const extraJson = (e: Record<string, string>) => (Object.keys(e).length ? e : Prisma.DbNull);
@@ -217,7 +218,7 @@ async function nextTaskCode(tx: Prisma.TransactionClient, organizationId: string
 export async function createTask(actor: Actor, input: TaskInput) {
   assertCan(actor.role, "task:create");
   const tpl = await resolveTemplateRef(actor.organizationId, input.templateRef);
-  if (input.templateRef && !tpl) throw new TaskError("Unknown template.");
+  if (input.templateRef && !tpl) throw new TaskError("القالب غير موجود.");
   const { extra } = applyTemplate(tpl, input);
   await resolveRefs(actor, input);
   const data = dataFrom(input);
@@ -245,7 +246,7 @@ export async function createTask(actor: Actor, input: TaskInput) {
       await tx.notification.create({
         data: {
           organizationId: actor.organizationId, userId: input.assigneeId, taskId: task.id,
-          type: "TASK_ASSIGNED", message: `You have been assigned ${taskCode}: ${task.title}`,
+          type: "TASK_ASSIGNED", message: `أُسندت إليك المهمة ${taskCode}: ${task.title}`,
         },
       });
       await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: task.id, action: "task.assigned", meta: { toUserId: input.assigneeId } });
@@ -263,9 +264,9 @@ const TRACKED = ["title", "priority", "deadline", "shootingAt", "publishAt", "st
 
 export async function updateTask(actor: Actor, id: string, input: TaskInput) {
   const existing = await db.task.findFirst({ where: { id, organizationId: actor.organizationId, deletedAt: null } });
-  if (!existing) throw new TaskError("Task not found.");
+  if (!existing) throw new TaskError("المهمة غير موجودة.");
   if (!canEdit(actor, existing.createdById)) throw new ForbiddenError();
-  if (["PUBLISHED", "COMPLETED"].includes(existing.stage)) throw new TaskError("Published or completed tasks are read-only.");
+  if (["PUBLISHED", "COMPLETED"].includes(existing.stage)) throw new TaskError("المهام المنشورة أو المكتملة للقراءة فقط.");
   // The assignee is changed through assignTask so history stays consistent.
   input.assigneeId = existing.currentAssigneeId;
   const tpl = await resolveTemplateRef(actor.organizationId, existing.templateRef);
@@ -292,14 +293,14 @@ export async function updateTask(actor: Actor, id: string, input: TaskInput) {
 export async function assignTask(actor: Actor, id: string, assigneeId: string) {
   assertCan(actor.role, "task:assign");
   const task = await db.task.findFirst({ where: { id, organizationId: actor.organizationId, deletedAt: null } });
-  if (!task) throw new TaskError("Task not found.");
-  if (!isReassignable(task.stage)) throw new TaskError("Tasks in review or approval move through handovers, not reassignment.");
+  if (!task) throw new TaskError("المهمة غير موجودة.");
+  if (!isReassignable(task.stage)) throw new TaskError("المهام في المراجعة أو الموافقة تنتقل عبر التسليم لا إعادة الإسناد.");
   if (task.currentAssigneeId === assigneeId) return task;
   const user = await db.user.findFirst({ where: { id: assigneeId, organizationId: actor.organizationId, status: "ACTIVE", deletedAt: null } });
-  if (!user) throw new TaskError("Unknown assignee.");
+  if (!user) throw new TaskError("المسؤول غير موجود.");
   const inEditing = task.stage === "EDITING";
-  const allowed = inEditing ? ["VIDEO_EDITOR", "DESIGNER"] : firstAssigneeRoles(task.contentType);
-  if (!allowed.includes(user.role)) throw new TaskError(`This task must be assigned to: ${allowed.join(" / ").replace(/_/g, " ").toLowerCase()}.`);
+  const allowed: Role[] = inEditing ? ["VIDEO_EDITOR", "DESIGNER"] : firstAssigneeRoles(task.contentType);
+  if (!allowed.includes(user.role)) throw new TaskError(`تُسند هذه المهمة إلى: ${allowed.map((r) => AR_ROLE[r]).join(" أو ")}.`);
   const stage: TaskStage = task.stage === "IDEA" || task.stage === "BRIEF" ? "ASSIGNED" : task.stage;
   return db.$transaction(async (tx) => {
     await tx.taskAssignment.updateMany({ where: { taskId: id, releasedAt: null }, data: { releasedAt: new Date() } });
@@ -310,7 +311,7 @@ export async function assignTask(actor: Actor, id: string, assigneeId: string) {
       instructions: "Reassigned", reason: "Reassigned by manager", deadline: task.deadline, payload: { context: contextSnapshot(updated) } } });
     await tx.notification.create({
       data: { organizationId: actor.organizationId, userId: assigneeId, taskId: id, type: "TASK_ASSIGNED",
-        message: `You have been assigned ${task.taskCode}: ${task.title}` },
+        message: `أُسندت إليك المهمة ${task.taskCode}: ${task.title}` },
     });
     await logActivity(tx, { organizationId: actor.organizationId, actorId: actor.id, taskId: id, action: "task.assigned",
       meta: { fromUserId: task.currentAssigneeId, toUserId: assigneeId } });
@@ -322,7 +323,7 @@ export async function assignTask(actor: Actor, id: string, assigneeId: string) {
 export async function deleteTask(actor: Actor, id: string) {
   assertCan(actor.role, "task:delete");
   const res = await db.task.updateMany({ where: { id, organizationId: actor.organizationId, deletedAt: null }, data: { deletedAt: new Date() } });
-  if (res.count === 0) throw new TaskError("Task not found.");
+  if (res.count === 0) throw new TaskError("المهمة غير موجودة.");
   await clearTaskCalendar(id);
   await logActivity(db, { organizationId: actor.organizationId, actorId: actor.id, taskId: id, action: "task.deleted" });
 }

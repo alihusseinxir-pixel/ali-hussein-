@@ -19,7 +19,7 @@ export function TimeGrid({ days, today, events, tz, hrefFor }: { days: string[];
           <div className="sticky top-0 z-20 border-b bg-slate-50" />
           {days.map((k) => (
             <Link key={k} href={hrefFor(k)} className={`sticky top-0 z-20 border-b border-l bg-slate-50 p-2 text-center font-medium hover:bg-slate-100 ${k === today ? "text-brand-700" : "text-slate-600"}`}>
-              {new Date(`${k}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
+              {new Date(`${k}T00:00:00Z`).toLocaleDateString("ar", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}
             </Link>
           ))}
           <div>{hours.map((h) => <div key={h} className="border-b pe-1 text-end text-[10px] text-slate-400" style={{ height: HOUR_PX }}>{String(h).padStart(2, "0")}:00</div>)}</div>

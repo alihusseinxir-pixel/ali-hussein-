@@ -60,7 +60,7 @@ describe("brief data + share links (integration)", () => {
   it("only the creator or a manager may create/revoke share links", async () => {
     await expect(createShareLink(video, taskId, 7)).rejects.toThrow(ForbiddenError);
     await expect(createShareLink(sm2, taskId, 7)).rejects.toThrow(ForbiddenError); // another social manager, not creator
-    await expect(createShareLink(outsider, taskId, 7)).rejects.toThrow(/not found/i);
+    await expect(createShareLink(outsider, taskId, 7)).rejects.toThrow(/غير موجود/);
     await expect(revokeShareLinks(video, taskId)).rejects.toThrow(ForbiddenError);
     const l = await createShareLink(mm, taskId, 7);
     expect(l.url).toContain("/share/brief/");

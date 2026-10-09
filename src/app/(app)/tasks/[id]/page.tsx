@@ -2,14 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/session";
-import { can, ROLE_LABELS } from "@/lib/rbac";
+import { can } from "@/lib/rbac";
 import { getTask } from "@/lib/tasks";
 import { env } from "@/lib/env";
 import { formatDateTime } from "@/lib/datetime";
-import { STAGE_LABELS, exitPermission, firstAssigneeRoles, isHandoverStage, isReassignable, nextStage, revisionTarget, stageOwnerRoles, workflowPath } from "@/lib/workflow";
+import { exitPermission, firstAssigneeRoles, isHandoverStage, isReassignable, nextStage, revisionTarget, stageOwnerRoles, workflowPath } from "@/lib/workflow";
 import { TASK_FIELD_LABELS } from "@/lib/task-schema";
 import { PriorityBadge, StageBadge } from "@/components/Badges";
-import { AR_SCRIPT_STATUS } from "@/lib/i18n/ar";
+import { AR_SCRIPT_STATUS, AR_ROLE, AR_STAGE, AR_CONTENT_TYPE, AR_PLATFORM } from "@/lib/i18n/ar";
 import { AssignForm } from "@/components/AssignForm";
 import { CommentBox } from "@/components/CommentBox";
 import { CommentThread } from "@/components/CommentThread";
@@ -29,8 +29,12 @@ import { listCollaborators, listTaskChecklist } from "@/lib/task-team";
 import { acceptHandoverAction, deleteTaskAction } from "@/app/actions/tasks";
 
 const ACTION_LABELS: Record<string, string> = {
-  "task.created": "created the task", "task.updated": "updated the task", "task.assigned": "assigned the task",
-  "task.deadline_changed": "changed the deadline", "handover.created": "handed the task over", "handover.accepted": "confirmed the handover", "file.uploaded": "uploaded a file", "file.replaced": "uploaded a new file version", "file.deleted": "removed a file", "comment.added": "commented", "brief.shared": "created a share link for the brief", "brief.share_revoked": "revoked the brief share links", "comment.deleted": "deleted a comment", "task.approved": "approved the task", "stage.changed": "moved the task to the next stage", "revision.requested": "requested changes", "task.deleted": "deleted the task",
+  "task.created": "أنشأ المهمة", "task.updated": "عدّل المهمة", "task.assigned": "أسند المهمة", "task.deadline_changed": "غيّر الموعد النهائي",
+  "handover.created": "سلّم المهمة", "handover.accepted": "أكّد التسليم", "file.uploaded": "رفع ملفاً", "file.replaced": "رفع نسخة جديدة من ملف", "file.deleted": "حذف ملفاً",
+  "comment.added": "علّق", "comment.deleted": "حذف تعليقاً", "brief.shared": "أنشأ رابط مشاركة للملخص", "brief.share_revoked": "ألغى روابط مشاركة الملخص",
+  "task.approved": "وافق على المهمة", "stage.changed": "نقل المهمة إلى المرحلة التالية", "revision.requested": "طلب تعديلات", "task.deleted": "حذف المهمة",
+  "script.saved": "حفظ السكريبت", "script.status": "غيّر حالة السكريبت", "script.scene_task_created": "أنشأ مهمة فرعية من مشهد",
+  "task.collaborator_added": "أضاف متعاوناً", "task.collaborator_removed": "أزال متعاوناً",
 };
 
 const Section = ({ title, value }: { title: string; value: string | null }) =>
@@ -69,7 +73,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const canUpload = !["PUBLISHED", "COMPLETED"].includes(task.stage) && (isOwner || task.createdById === user.id || can(user.role, "task:edit:any"));
   const fileRows = files.map((f) => ({
     id: f.id, fileName: f.fileName, fileType: f.fileType, kind: f.kind, version: f.version, sizeBytes: f.sizeBytes,
-    uploadedBy: f.uploadedBy.name, createdAt: f.createdAt.toISOString(),
+    uploadedBy: f.uploadedBy.name, createdAtLabel: formatDateTime(f.createdAt, tz),
     canDelete: canUpload && (f.uploadedById === user.id || can(user.role, "task:edit:any")),
   }));
   const [comments, ctx, collabs, checklist] = await Promise.all([listComments(user, id), taskParticipants(user, id), listCollaborators(user, id), listTaskChecklist(user, id)]);
@@ -84,7 +88,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const doneByNames = Object.fromEntries((await db.user.findMany({ where: { id: { in: checklist.flatMap((c) => (c.doneById ? [c.doneById] : [])) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
   const people = ctx?.people ?? [];
   const inReview = ["PRODUCTION_REVIEW", "EDITING_REVIEW", "INTERNAL_APPROVAL", "SOCIAL_APPROVAL"].includes(task.stage);
-  const submitLabel = task.stage === "SOCIAL_APPROVAL" ? "Approve & Schedule" : inReview ? "Approve & hand over" : "Confirm handover";
+  const submitLabel = task.stage === "SOCIAL_APPROVAL" ? "اعتماد وجدولة" : inReview ? "اعتماد وتسليم" : "تأكيد التسليم";
   const overdue = task.deadline && task.deadline < new Date() && !["PUBLISHED", "COMPLETED"].includes(task.stage);
   const wide = (["brief", "script"] as const);
 
@@ -97,7 +101,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             <h1 className="text-2xl font-semibold">{task.title}</h1>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-600">
               <StageBadge s={task.stage} /><PriorityBadge p={task.priority} />
-              <span>{task.contentType.replace(/_/g, " ").toLowerCase()}{task.platform && ` · ${task.platform.toLowerCase()}`}</span>
+              <span>{AR_CONTENT_TYPE[task.contentType]}{task.platform && ` · ${AR_PLATFORM[task.platform]}`}</span>
               {task.brand && <span>· {task.brand.name}{task.campaign && ` / ${task.campaign.name}`}</span>}
               {task.brand?.guidelinesUrl && /^https?:\/\//i.test(task.brand.guidelinesUrl) && <a href={task.brand.guidelinesUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-600 underline">إرشادات البراند</a>}
               {template && <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs text-brand-700">{template.name}</span>}
@@ -106,17 +110,17 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           <div className="flex gap-2">
             {can(user.role, "shoot:manage") && <Link href={`/shoots/new?task=${id}`} className="btn-secondary">تخطيط تصوير</Link>}
             <Link href={`/tasks/${id}/script`} className="btn-secondary">السكريبت · {AR_SCRIPT_STATUS[task.scriptStatus]}</Link>
-            {canEdit && !["PUBLISHED", "COMPLETED"].includes(task.stage) && <Link href={`/tasks/${id}/edit`} className="btn-secondary">Edit</Link>}
+            {canEdit && !["PUBLISHED", "COMPLETED"].includes(task.stage) && <Link href={`/tasks/${id}/edit`} className="btn-secondary">تعديل</Link>}
             {can(user.role, "task:delete") && (
-              <form action={deleteTaskAction.bind(null, id)}><button className="btn-secondary text-red-600">Delete</button></form>
+              <form action={deleteTaskAction.bind(null, id)}><button className="btn-secondary text-red-600">حذف</button></form>
             )}
           </div>
         </div>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div><dt className="label">Deadline</dt><dd className={overdue ? "font-medium text-red-600" : ""}>{formatDateTime(task.deadline, tz)}{overdue && " · overdue"}</dd></div>
-          <div><dt className="label">Shooting</dt><dd>{formatDateTime(task.shootingAt, tz)}</dd></div>
-          <div><dt className="label">Publishing</dt><dd>{formatDateTime(task.publishAt, tz)}</dd></div>
-          <div><dt className="label">Current owner</dt><dd>{task.currentAssignee ? `${task.currentAssignee.name} (${ROLE_LABELS[task.currentAssignee.role]})` : "Unassigned"}</dd></div>
+          <div><dt className="label">الموعد النهائي</dt><dd className={overdue ? "font-medium text-red-600" : ""}><bdi dir="ltr">{formatDateTime(task.deadline, tz)}</bdi>{overdue && " · متأخرة"}</dd></div>
+          <div><dt className="label">التصوير</dt><dd><bdi dir="ltr">{formatDateTime(task.shootingAt, tz)}</bdi></dd></div>
+          <div><dt className="label">النشر</dt><dd><bdi dir="ltr">{formatDateTime(task.publishAt, tz)}</bdi></dd></div>
+          <div><dt className="label">المالك الحالي</dt><dd>{task.currentAssignee ? `${task.currentAssignee.name} (${AR_ROLE[task.currentAssignee.role]})` : "غير مسندة"}</dd></div>
         </dl>
       </header>
 
@@ -134,27 +138,27 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
         nameOf={doneByNames} userId={user.id} canManage={canManageTeam} canWork={canWorkList} readOnly={closed} />
 
       <section className="card">
-        <h2 className="mb-3 font-medium">Workflow</h2>
+        <h2 className="mb-3 font-medium">مسار العمل</h2>
         <ol className="flex flex-wrap gap-2 text-xs">
           {path.map((s, i) => (
             <li key={s} className={`rounded-full border px-3 py-1 ${i < idx ? "border-green-200 bg-green-50 text-green-700" : i === idx ? "border-brand-500 bg-brand-50 font-semibold text-brand-700" : "text-slate-400"}`}>
-              {i < idx ? "✓ " : i === idx ? "● " : "○ "}{STAGE_LABELS[s]}
+              {i < idx ? "✓ " : i === idx ? "● " : "○ "}{AR_STAGE[s]}
             </li>
           ))}
         </ol>
       </section>
 
       <section className="card">
-        <h2 className="mb-3 font-medium">Ownership</h2>
+        <h2 className="mb-3 font-medium">الملكية</h2>
         <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div><dt className="label">Created by</dt><dd>{task.createdBy.name} · {formatDateTime(task.createdAt, tz)}</dd></div>
-          <div><dt className="label">Owns it now</dt><dd>{task.currentAssignee?.name ?? "—"}</dd></div>
-          <div><dt className="label">Owned it before</dt><dd>{previousOwners.length ? previousOwners.map((a) => a.user.name).join(", ") : "—"}</dd></div>
-          <div><dt className="label">Next stage</dt><dd>{next ? STAGE_LABELS[next] : "—"}</dd></div>
+          <div><dt className="label">أنشأها</dt><dd>{task.createdBy.name} · <bdi dir="ltr">{formatDateTime(task.createdAt, tz)}</bdi></dd></div>
+          <div><dt className="label">مسؤول الآن</dt><dd>{task.currentAssignee?.name ?? "—"}</dd></div>
+          <div><dt className="label">كان مسؤولاً سابقاً</dt><dd>{previousOwners.length ? previousOwners.map((a) => a.user.name).join("، ") : "—"}</dd></div>
+          <div><dt className="label">المرحلة التالية</dt><dd>{next ? AR_STAGE[next] : "—"}</dd></div>
         </dl>
         {canAssign && (
-          <div className="mt-4 border-t pt-4"><div className="label">{task.currentAssignee ? "Reassign" : "Assign"}</div>
-            {assignable.length ? <AssignForm taskId={id} users={assignable} /> : <p className="text-sm text-slate-500">No active team member with a suitable role yet.</p>}</div>
+          <div className="mt-4 border-t pt-4"><div className="label">{task.currentAssignee ? "إعادة الإسناد" : "إسناد"}</div>
+            {assignable.length ? <AssignForm taskId={id} users={assignable} /> : <p className="text-sm text-slate-500">لا يوجد عضو نشط بدور مناسب بعد.</p>}</div>
         )}
       </section>
 
@@ -164,25 +168,25 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
       {pendingForMe && (
         <section className="card border-brand-500 bg-brand-50">
-          <h2 className="font-medium">Handover waiting for your confirmation</h2>
+          <h2 className="font-medium">تسليم بانتظار تأكيدك</h2>
           <p className="my-2 whitespace-pre-wrap text-sm">{pendingForMe.instructions || "—"}</p>
           <form action={acceptHandoverAction.bind(null, id)}><input type="hidden" name="handoffId" value={pendingForMe.id} />
-            <button className="btn">{task.stage === "ASSIGNED" ? "Confirm & start work" : "Confirm handover"}</button></form>
+            <button className="btn">{task.stage === "ASSIGNED" ? "تأكيد وبدء العمل" : "تأكيد التسليم"}</button></form>
         </section>
       )}
       {inReview && isOwner && <ReviewCard task={task} files={files} tz={tz} />}
       {canHandOver && next && <HandoverPanel taskId={id} from={task.stage} to={next} candidates={candidates} revertTo={revertTo} tz={tz} submitLabel={submitLabel} />}
 
       <section className="card grid gap-5 md:grid-cols-2">
-        <h2 className="font-medium md:col-span-2">Brief &amp; content</h2>
+        <h2 className="font-medium md:col-span-2">الملخص والمحتوى</h2>
         {wide.map((k) => <div key={k} className="md:col-span-2"><Section title={TASK_FIELD_LABELS[k]} value={task[k]} /></div>)}
         {extras.map((e) => <Section key={e.label} title={e.label} value={e.value} />)}
         {(Object.keys(TASK_FIELD_LABELS) as (keyof typeof TASK_FIELD_LABELS)[]).filter((k) => !wide.includes(k as never)).map((k) => <Section key={k} title={TASK_FIELD_LABELS[k]} value={task[k]} />)}
       </section>
 
       <section className="card">
-        <h2 className="mb-3 font-medium">Handovers</h2>
-        {task.handoffs.length === 0 ? <p className="text-sm text-slate-500">No handovers yet.</p> : (
+        <h2 className="mb-3 font-medium">التسليمات</h2>
+        {task.handoffs.length === 0 ? <p className="text-sm text-slate-500">لا توجد تسليمات بعد.</p> : (
           <ol className="space-y-4">
             {task.handoffs.map((h) => {
               const p = h.payload as { deliverables?: string | null; files?: { fileName: string; version: number; kind: string }[] } | null;
@@ -190,14 +194,14 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
                 <li key={h.id} className="rounded-md border p-3 text-sm">
                   <div className="flex flex-wrap justify-between gap-2">
                     <b>{h.fromUser.name} → {h.toUser.name}</b>
-                    <span className="text-xs text-slate-400">{formatDateTime(h.createdAt, tz)} · {h.status.toLowerCase()}{h.acceptedAt && ` ${formatDateTime(h.acceptedAt, tz)}`}</span>
+                    <span className="text-xs text-slate-400">{formatDateTime(h.createdAt, tz)} · {h.status === "PENDING" ? "بانتظار التأكيد" : h.status === "ACCEPTED" ? "مؤكَّد" : "مرفوض"}{h.acceptedAt && ` ${formatDateTime(h.acceptedAt, tz)}`}</span>
                   </div>
-                  <div className="text-xs text-slate-500">{STAGE_LABELS[h.fromStage]} → {STAGE_LABELS[h.toStage]}{h.deadline && ` · due ${formatDateTime(h.deadline, tz)}`}</div>
-                  {h.instructions && <p className="mt-2 whitespace-pre-wrap"><span className="label !inline">Instructions </span>{h.instructions}</p>}
-                  {h.requiredOutput && <p><span className="label !inline">Expected output </span>{h.requiredOutput}</p>}
-                  {p?.deliverables && <p className="whitespace-pre-wrap"><span className="label !inline">Delivered </span>{p.deliverables}</p>}
-                  {p?.files && p.files.length > 0 && <p><span className="label !inline">Files </span>{p.files.map((f) => `${f.fileName} (V${f.version})`).join(", ")}</p>}
-                  {h.reason && h.reason !== h.instructions && <p className="whitespace-pre-wrap"><span className="label !inline">Why </span>{h.reason}</p>}
+                  <div className="text-xs text-slate-500">{AR_STAGE[h.fromStage]} ← {AR_STAGE[h.toStage]}{h.deadline && ` · الموعد ${formatDateTime(h.deadline, tz)}`}</div>
+                  {h.instructions && <p className="mt-2 whitespace-pre-wrap"><span className="label !inline">التعليمات </span>{h.instructions}</p>}
+                  {h.requiredOutput && <p><span className="label !inline">المخرج المتوقع </span>{h.requiredOutput}</p>}
+                  {p?.deliverables && <p className="whitespace-pre-wrap"><span className="label !inline">المُسلَّم </span>{p.deliverables}</p>}
+                  {p?.files && p.files.length > 0 && <p><span className="label !inline">الملفات </span>{p.files.map((f) => `${f.fileName} (V${f.version})`).join(", ")}</p>}
+                  {h.reason && h.reason !== h.instructions && <p className="whitespace-pre-wrap"><span className="label !inline">السبب </span>{h.reason}</p>}
                 </li>
               );
             })}
@@ -206,17 +210,17 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
       </section>
 
       <section className="card">
-        <h2 className="mb-3 font-medium">Approvals &amp; revisions</h2>
-        {task.approvals.length === 0 ? <p className="text-sm text-slate-500">No approvals or change requests yet.</p> : (
+        <h2 className="mb-3 font-medium">الموافقات والتعديلات</h2>
+        {task.approvals.length === 0 ? <p className="text-sm text-slate-500">لا توجد موافقات أو طلبات تعديل بعد.</p> : (
           <ol className="space-y-3">
             {task.approvals.map((a) => (
               <li key={a.id} className="text-sm">
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.status === "APPROVED" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"}`}>{a.status === "APPROVED" ? "Approved" : "Changes requested"}</span>{" "}
-                <b>{a.approver.name}</b> <span className="text-slate-500">at {STAGE_LABELS[a.stage]} · {formatDateTime(a.createdAt, tz)}</span>
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${a.status === "APPROVED" ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-800"}`}>{a.status === "APPROVED" ? "موافقة" : "مطلوب تعديلات"}</span>{" "}
+                <b>{a.approver.name}</b> <span className="text-slate-500">عند {AR_STAGE[a.stage]} · {formatDateTime(a.createdAt, tz)}</span>
                 {a.comments && <p className="mt-1 whitespace-pre-wrap text-slate-700">{a.comments}</p>}
                 {a.status === "CHANGES_REQUESTED" && (() => {
                   const r = task.revisions.find((x) => x.stage === a.stage && Math.abs(x.createdAt.getTime() - a.createdAt.getTime()) < 5000);
-                  return r ? <p className="text-xs text-slate-400">{r.resolvedAt ? `Resolved ${formatDateTime(r.resolvedAt, tz)}` : "Open — waiting for a new version"}</p> : null;
+                  return r ? <p className="text-xs text-slate-400">{r.resolvedAt ? `تمت المعالجة ${formatDateTime(r.resolvedAt, tz)}` : "مفتوح — بانتظار نسخة جديدة"}</p> : null;
                 })()}
               </li>
             ))}
@@ -225,23 +229,22 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
       </section>
 
       <section className="card space-y-4">
-        <h2 className="font-medium">Comments</h2>
+        <h2 className="font-medium">التعليقات</h2>
         <CommentThread taskId={id} comments={comments} people={people} meId={user.id} isAdmin={user.role === "ADMIN"} tz={tz} />
         {can(user.role, "task:comment") && <CommentBox taskId={id} people={people.filter((p) => p.id !== user.id)} />}
       </section>
 
       <section className="card">
-          <h2 className="mb-3 font-medium">Activity log</h2>
+          <h2 className="mb-3 font-medium">سجل الأنشطة</h2>
           <ol className="space-y-3 border-s ps-4">
             {task.activityLogs.map((a) => (
               <li key={a.id} className="text-sm">
                 <div className="text-xs text-slate-400">{formatDateTime(a.createdAt, tz)}</div>
-                <b>{a.actor?.name ?? "System"}</b> {ACTION_LABELS[a.action] ?? a.action}
+                <b>{a.actor?.name ?? "النظام"}</b> {ACTION_LABELS[a.action] ?? a.action}
               </li>
             ))}
           </ol>
         </section>
-      <p className="text-xs text-slate-400">Notifications UI, templates and analytics arrive in Phases 8–10.</p>
     </div>
   );
 }

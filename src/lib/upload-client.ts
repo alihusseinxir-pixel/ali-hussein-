@@ -12,7 +12,7 @@ export async function uploadTaskFile(taskId: string, file: File, kind: string, c
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fileName: file.name, size: file.size, kind, commentId: commentId ?? null }),
   });
-  if (!planRes.ok) throw new Error(await errorOf(planRes, "Upload failed"));
+  if (!planRes.ok) throw new Error(await errorOf(planRes, "فشل الرفع"));
   const plan = await planRes.json();
 
   if (plan.mode === "direct") {
@@ -24,7 +24,7 @@ export async function uploadTaskFile(taskId: string, file: File, kind: string, c
     }
     if (!put.ok) throw new Error(put.status === 403 ? "The upload link expired. Please try again." : "The file storage rejected the upload.");
     const done = await fetch(`/api/tasks/${taskId}/files/complete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: plan.token }) });
-    if (!done.ok) throw new Error(await errorOf(done, "Upload failed"));
+    if (!done.ok) throw new Error(await errorOf(done, "فشل الرفع"));
     return;
   }
 
@@ -32,5 +32,5 @@ export async function uploadTaskFile(taskId: string, file: File, kind: string, c
   fd.set("file", file); fd.set("kind", kind);
   if (commentId) fd.set("commentId", commentId);
   const res = await fetch(`/api/tasks/${taskId}/files`, { method: "POST", body: fd });
-  if (!res.ok) throw new Error(await errorOf(res, "Upload failed"));
+  if (!res.ok) throw new Error(await errorOf(res, "فشل الرفع"));
 }

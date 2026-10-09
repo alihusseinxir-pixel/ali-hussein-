@@ -18,13 +18,13 @@ export async function inviteMemberAction(_: FormState, fd: FormData): Promise<Fo
   try { assertCan(actor.role, "user:manage"); } catch (e) { if (e instanceof ForbiddenError) return { error: e.message }; throw e; }
   const parsed = z.object({
     name: z.string().trim().min(2).max(100),
-    email: z.string().trim().toLowerCase().email("Enter a valid email"),
+    email: z.string().trim().toLowerCase().email("أدخل بريداً إلكترونياً صالحاً"),
     role: z.enum(ROLES),
     department: z.string().trim().max(100).optional(),
   }).safeParse(formToObject(fd));
   if (!parsed.success) return zodErrors(parsed.error);
   const d = parsed.data;
-  if (await db.user.findUnique({ where: { email: d.email } })) return { error: "A user with this email already exists." };
+  if (await db.user.findUnique({ where: { email: d.email } })) return { error: "يوجد مستخدم بهذا البريد بالفعل." };
   const token = randomBytes(32).toString("base64url");
   await db.$transaction(async (tx) => {
     await tx.invitation.deleteMany({ where: { organizationId: actor.organizationId, email: d.email, acceptedAt: null } });

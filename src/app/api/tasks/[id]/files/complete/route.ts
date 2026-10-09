@@ -24,6 +24,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (e instanceof ForbiddenError) return json({ error: e.message }, 403);
     if (e instanceof TaskError) return json({ error: e.message }, 400);
     logError("upload:complete", e);
-    return json({ error: "Upload failed." }, 500);
+    return json({ error: "فشل الرفع." }, 500);
   }
 }

@@ -73,9 +73,9 @@ describe("campaigns (integration)", () => {
 
   it("validates edits (permissions, names, dates) and logs them", async () => {
     await expect(updateCampaign(video, campA, { name: "Hacked" })).rejects.toThrow(ForbiddenError);
-    await expect(updateCampaign(outsider, campA, { name: "Hacked" })).rejects.toThrow(/not found/i);
-    await expect(updateCampaign(sm, campA, { name: "Ramadan" })).rejects.toThrow(/already has this name/);
-    await expect(updateCampaign(sm, campA, { name: "Fresh", startDate: "2026-10-10T10:00", endDate: "2026-10-01T10:00" })).rejects.toThrow(/end date/);
+    await expect(updateCampaign(outsider, campA, { name: "Hacked" })).rejects.toThrow(/غير موجود/);
+    await expect(updateCampaign(sm, campA, { name: "Ramadan" })).rejects.toThrow(/بهذا الاسم/);
+    await expect(updateCampaign(sm, campA, { name: "Fresh", startDate: "2026-10-10T10:00", endDate: "2026-10-01T10:00" })).rejects.toThrow(/تاريخ النهاية/);
     await updateCampaign(sm, campA, { name: "Fresh With You 2", description: "Autumn push", startDate: "2026-10-01T00:00", endDate: "2026-12-31T00:00" });
     const c = await db.campaign.findUniqueOrThrow({ where: { id: campA } });
     expect(c.name).toBe("Fresh With You 2");
@@ -84,8 +84,8 @@ describe("campaigns (integration)", () => {
   });
 
   it("archives only when nothing is in progress, and brands only when empty", async () => {
-    await expect(archiveCampaign(sm, campA)).rejects.toThrow(/still in progress/);
-    await expect(archiveBrand(sm, brandId)).rejects.toThrow(/campaigns first/);
+    await expect(archiveCampaign(sm, campA)).rejects.toThrow(/قيد التنفيذ/);
+    await expect(archiveBrand(sm, brandId)).rejects.toThrow(/أرشف حملات/);
     await archiveCampaign(sm, campB); // empty campaign
     expect(await getCampaign(sm, campB)).toBeNull();
     await db.task.updateMany({ where: { campaignId: campA }, data: { stage: "COMPLETED" } });

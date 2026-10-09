@@ -13,11 +13,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const user = await getCurrentUser();
   if (!user) return json({ error: "Not signed in" }, 401);
   const len = Number(req.headers.get("content-length") ?? 0);
-  if (len > MAX_UPLOAD_BYTES + 1024 * 1024) return json({ error: "File too large." }, 413);
+  if (len > MAX_UPLOAD_BYTES + 1024 * 1024) return json({ error: "الملف كبير جداً." }, 413);
   const { id } = await params;
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
-  if (!(file instanceof File)) return json({ error: "No file provided." }, 400);
+  if (!(file instanceof File)) return json({ error: "لم يتم اختيار ملف." }, 400);
   try {
     const row = await uploadFile(user, id, file, String(form?.get("kind") ?? "OTHER"), (form?.get("commentId") as string | null) || null);
     return json({ id: row.id, fileName: row.fileName, version: row.version }, 201);
@@ -25,6 +25,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     if (e instanceof ForbiddenError) return json({ error: e.message }, 403);
     if (e instanceof TaskError) return json({ error: e.message }, 400);
     logError("upload", e);
-    return json({ error: "Upload failed." }, 500);
+    return json({ error: "فشل الرفع." }, 500);
   }
 }

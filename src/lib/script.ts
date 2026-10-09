@@ -35,7 +35,7 @@ export async function getScript(actor: Actor, taskId: string) {
     db.scriptScene.findMany({ where: { taskId }, orderBy: { position: "asc" } }),
     db.scriptRevision.findMany({ where: { taskId }, orderBy: { version: "desc" }, take: 30 }),
   ]);
-  const linked = await db.taskChecklistItem.findMany({ where: { taskId, sourceSceneNumber: { not: null } }, select: { sourceSceneNumber: true, done: true } });
+  const linked = await db.taskChecklistItem.findMany({ where: { taskId, sourceSceneNumber: { not: null } }, orderBy: { sourceSceneNumber: "asc" }, select: { sourceSceneNumber: true, done: true } });
   const names = await db.user.findMany({ where: { id: { in: [...new Set(revisions.map((r) => r.actorId))] } }, select: { id: true, name: true } });
   const nameOf = new Map(names.map((u) => [u.id, u.name]));
   return {

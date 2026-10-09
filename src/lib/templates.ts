@@ -28,103 +28,103 @@ export interface TemplateDef {
 
 const CONTENT: BaseField[] = ["objective", "targetAudience", "contentPillar", "consumerInsight", "hook", "keyMessage", "cta", "caption", "hashtags", "references", "brief", "specialNotes"];
 const SHOOT: BaseField[] = ["script", "models", "props", "location", "product", "shootingAt"];
-const SCENES = "SCENE 01 – \n\nSCENE 02 – \n\nSCENE 03 – ";
+const SCENES = "المشهد 01 – \n\nالمشهد 02 – \n\nالمشهد 03 – ";
 
 export const BUILTIN_TEMPLATES: TemplateDef[] = [
   {
-    key: "instagram-reel", name: "Instagram Reel", description: "Short vertical video: script by scene, shoot details, music.",
+    key: "instagram-reel", name: "ريل إنستغرام", description: "فيديو قصير عمودي: سكريبت بالمشاهد وتفاصيل التصوير والموسيقى.",
     contentType: "REEL", platform: "INSTAGRAM", show: [...CONTENT, ...SHOOT, "publishAt"], required: ["objective", "script"],
     extra: [
-      { key: "duration", label: "Duration", placeholder: "30 sec vertical 9:16" },
-      { key: "music", label: "Music / audio", placeholder: "Track name, trending audio, or brand sound" },
+      { key: "duration", label: "المدة", placeholder: "30 ثانية عمودي 9:16" },
+      { key: "music", label: "الموسيقى / الصوت", placeholder: "اسم المقطع أو صوت رائج أو صوت البراند" },
     ],
     defaults: { script: SCENES },
   },
   {
-    key: "product-photography", name: "Product Photography", description: "Studio product shots: background, lighting, angles and shot list.",
+    key: "product-photography", name: "تصوير منتجات", description: "لقطات استوديو للمنتج: الخلفية والإضاءة والزوايا وقائمة اللقطات.",
     contentType: "PRODUCT_PHOTOGRAPHY", show: ["objective", "brief", "product", "props", "location", "references", "specialNotes", "shootingAt", "publishAt"],
     required: ["product", "extra.shotList"],
     extra: [
-      { key: "background", label: "Background", placeholder: "White sweep, wooden table…" },
-      { key: "lighting", label: "Lighting", placeholder: "Soft box, natural light, hard shadow…" },
-      { key: "angles", label: "Angles", textarea: true, placeholder: "Top-down, 45°, hero front…" },
-      { key: "shotList", label: "Shot list", textarea: true, placeholder: "1. Hero shot\n2. Detail close-up\n3. In-context" },
+      { key: "background", label: "الخلفية", placeholder: "خلفية بيضاء، طاولة خشبية…" },
+      { key: "lighting", label: "الإضاءة", placeholder: "سوفت بوكس، ضوء طبيعي، ظل حاد…" },
+      { key: "angles", label: "الزوايا", textarea: true, placeholder: "من الأعلى، 45°، أمامية رئيسية…" },
+      { key: "shotList", label: "قائمة اللقطات", textarea: true, placeholder: "1. اللقطة الرئيسية\n2. لقطة تفصيلية قريبة\n3. المنتج في سياقه" },
     ],
     defaults: {},
   },
   {
-    key: "static-post", name: "Static Post", description: "Single designed image with copy.",
+    key: "static-post", name: "منشور ثابت", description: "صورة واحدة مصممة مع نص.",
     contentType: "STATIC_POST", platform: "INSTAGRAM",
     show: ["objective", "targetAudience", "keyMessage", "cta", "caption", "hashtags", "references", "brief", "product", "specialNotes", "publishAt"],
     required: ["keyMessage", "extra.onImageCopy"],
     extra: [
-      { key: "dimensions", label: "Dimensions", placeholder: "1080×1350" },
-      { key: "onImageCopy", label: "Copy on the design", textarea: true, placeholder: "Headline, sub-headline, legal line…" },
+      { key: "dimensions", label: "الأبعاد", placeholder: "1080×1350" },
+      { key: "onImageCopy", label: "النص على التصميم", textarea: true, placeholder: "العنوان، العنوان الفرعي، السطر القانوني…" },
     ],
     defaults: {},
   },
   {
-    key: "carousel", name: "Carousel", description: "Multi-slide post with slide-by-slide copy.",
+    key: "carousel", name: "كاروسيل", description: "منشور متعدد الشرائح مع نص لكل شريحة.",
     contentType: "CAROUSEL", platform: "INSTAGRAM",
     show: ["objective", "targetAudience", "keyMessage", "cta", "caption", "hashtags", "references", "brief", "product", "specialNotes", "publishAt"],
     required: ["extra.slides"],
     extra: [
-      { key: "slideCount", label: "Number of slides", placeholder: "5" },
-      { key: "slides", label: "Slide-by-slide copy", textarea: true, placeholder: "Slide 1 – …\nSlide 2 – …" },
-      { key: "dimensions", label: "Dimensions", placeholder: "1080×1350" },
+      { key: "slideCount", label: "عدد الشرائح", placeholder: "5" },
+      { key: "slides", label: "نص كل شريحة", textarea: true, placeholder: "الشريحة 1 – …\nالشريحة 2 – …" },
+      { key: "dimensions", label: "الأبعاد", placeholder: "1080×1350" },
     ],
     defaults: {},
   },
   {
-    key: "story", name: "Story", description: "Vertical story frames with optional interactive stickers.",
+    key: "story", name: "ستوري", description: "إطارات ستوري عمودية مع ملصقات تفاعلية اختيارية.",
     contentType: "STORY", platform: "INSTAGRAM",
     show: ["objective", "keyMessage", "cta", "references", "brief", "product", "specialNotes", "publishAt"],
     required: ["extra.frames"],
     extra: [
-      { key: "frames", label: "Frames", textarea: true, placeholder: "Frame 1 – …\nFrame 2 – …" },
-      { key: "interactive", label: "Interactive element", placeholder: "Poll, question box, link sticker…" },
-      { key: "dimensions", label: "Dimensions", placeholder: "1080×1920" },
+      { key: "frames", label: "الإطارات", textarea: true, placeholder: "الإطار 1 – …\nالإطار 2 – …" },
+      { key: "interactive", label: "العنصر التفاعلي", placeholder: "استطلاع، صندوق أسئلة، ملصق رابط…" },
+      { key: "dimensions", label: "الأبعاد", placeholder: "1080×1920" },
     ],
     defaults: {},
   },
   {
-    key: "tiktok", name: "TikTok", description: "Short vertical video built for TikTok.",
+    key: "tiktok", name: "تيك توك", description: "فيديو قصير عمودي مصمم لتيك توك.",
     contentType: "TIKTOK", platform: "TIKTOK", show: [...CONTENT, ...SHOOT, "publishAt"], required: ["script"],
     extra: [
-      { key: "duration", label: "Duration", placeholder: "15–30 sec" },
-      { key: "sound", label: "Sound / trend", placeholder: "Trending sound or original audio" },
+      { key: "duration", label: "المدة", placeholder: "15–30 ثانية" },
+      { key: "sound", label: "الصوت / الترند", placeholder: "صوت رائج أو صوت أصلي" },
     ],
     defaults: { script: SCENES },
   },
   {
-    key: "ugc", name: "UGC", description: "Creator-made content: brief, deliverables and usage rights.",
+    key: "ugc", name: "محتوى المستخدمين (UGC)", description: "محتوى يصنعه صانع محتوى: الملخص والمخرجات وحقوق الاستخدام.",
     contentType: "UGC", platform: "INSTAGRAM",
     show: ["objective", "brief", "models", "product", "props", "location", "references", "caption", "hashtags", "cta", "specialNotes", "shootingAt", "publishAt"],
     required: ["brief", "extra.deliverables"],
     extra: [
-      { key: "creator", label: "Creator / handle", placeholder: "@creator" },
-      { key: "deliverables", label: "Deliverables", textarea: true, placeholder: "2 videos, 1 raw file pack…" },
-      { key: "usageRights", label: "Usage rights", placeholder: "Paid ads, 6 months…" },
+      { key: "creator", label: "صانع المحتوى / الحساب", placeholder: "@creator" },
+      { key: "deliverables", label: "المخرجات", textarea: true, placeholder: "فيديوهان، حزمة ملفات خام…" },
+      { key: "usageRights", label: "حقوق الاستخدام", placeholder: "إعلانات مدفوعة، 6 أشهر…" },
     ],
     defaults: {},
   },
   {
-    key: "campaign-video", name: "Campaign Video", description: "Hero campaign film with cut-downs and aspect ratios.",
+    key: "campaign-video", name: "فيديو حملة", description: "فيلم الحملة الرئيسي مع نسخ مختصرة ونسب عرض متعددة.",
     contentType: "CAMPAIGN_VIDEO", platform: "YOUTUBE", show: [...CONTENT, ...SHOOT, "publishAt"], required: ["objective", "brief", "script"],
     extra: [
-      { key: "duration", label: "Master duration", placeholder: "60 sec" },
-      { key: "aspectRatios", label: "Aspect ratios", placeholder: "16:9, 9:16, 1:1" },
-      { key: "cutdowns", label: "Cut-downs", textarea: true, placeholder: "30s, 15s, 6s bumper…" },
+      { key: "duration", label: "المدة الرئيسية", placeholder: "60 ثانية" },
+      { key: "aspectRatios", label: "نسب العرض", placeholder: "16:9, 9:16, 1:1" },
+      { key: "cutdowns", label: "النسخ المختصرة", textarea: true, placeholder: "30ث، 15ث، 6ث…" },
     ],
     defaults: { script: SCENES },
   },
   {
-    key: "product-shoot", name: "Product Shoot", description: "Photo and/or video shoot day with shot list and crew.",
+    key: "product-shoot", name: "جلسة منتج", description: "يوم تصوير صور و/أو فيديو مع قائمة لقطات وطاقم.",
     contentType: "PRODUCT_SHOOT", show: [...CONTENT, ...SHOOT, "publishAt"], required: ["product", "shootingAt", "extra.shotList"],
     extra: [
-      { key: "shotList", label: "Shot list", textarea: true, placeholder: "1. …\n2. …" },
-      { key: "crew", label: "Crew / equipment", textarea: true },
-      { key: "deliverableFormat", label: "Deliverable formats", placeholder: "Stills 4000px, video 4K…" },
+      { key: "shotList", label: "قائمة اللقطات", textarea: true, placeholder: "1. …\n2. …" },
+      { key: "crew", label: "الطاقم / المعدات", textarea: true },
+      { key: "deliverableFormat", label: "صيغ المخرجات", placeholder: "صور 4000 بكسل، فيديو 4K…" },
     ],
     defaults: {},
   },
@@ -160,10 +160,10 @@ export function resolveTemplate(ref: string | null | undefined, customs: CustomT
 }
 
 const LABELS: Record<BaseField, string> = {
-  objective: "Objective", targetAudience: "Target audience", contentPillar: "Content pillar", hook: "Hook", consumerInsight: "Consumer insight", keyMessage: "Key message", cta: "CTA",
-  caption: "Caption", hashtags: "Hashtags", references: "References", brief: "Brief", script: "Script", models: "Models", props: "Props",
-  location: "Location", product: "Product", specialNotes: "Special notes", shootingAt: "Shooting date & time", publishAt: "Publishing date & time",
-  startDate: "Start date",
+  objective: "الهدف", targetAudience: "الجمهور المستهدف", contentPillar: "ركيزة المحتوى", hook: "الخطاف (Hook)", consumerInsight: "رؤية المستهلك", keyMessage: "الرسالة الرئيسية", cta: "دعوة لاتخاذ إجراء",
+  caption: "الكابشن", hashtags: "الهاشتاقات", references: "المراجع", brief: "الملخص", script: "السكريبت (نص)", models: "المودلز", props: "الإكسسوارات",
+  location: "اللوكيشن", product: "المنتج", specialNotes: "ملاحظات خاصة", shootingAt: "موعد التصوير", publishAt: "موعد النشر",
+  startDate: "تاريخ البداية",
 };
 export const baseLabel = (k: BaseField) => LABELS[k];
 

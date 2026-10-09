@@ -36,7 +36,8 @@ export function toLocalInput(date: Date | null | undefined, timeZone: string): s
 
 export function formatDateTime(date: Date | null | undefined, timeZone: string): string {
   if (!date) return "—";
-  return new Intl.DateTimeFormat("en-GB", {
+  // Arabic month names and am/pm, but Western digits (0-9) so dates match the rest of the numbers in the UI
+  return new Intl.DateTimeFormat("ar-u-nu-latn", {
     timeZone, day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", hour12: true,
   }).format(date);
 }

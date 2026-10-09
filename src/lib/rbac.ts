@@ -60,7 +60,7 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 
 export class ForbiddenError extends Error {
-  constructor(message = "You do not have permission to do that.") {
+  constructor(message = "ليست لديك صلاحية لهذا الإجراء.") {
     super(message);
     this.name = "ForbiddenError";
   }
