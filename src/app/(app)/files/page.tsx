@@ -26,7 +26,7 @@ export default async function FilesPage({ searchParams }: { searchParams: Promis
               <tr key={f.id}>
                 <td className="p-3"><bdi dir="ltr">{f.fileName}</bdi> <span className="text-xs text-slate-400">V{f.version} · {f.kind.toLowerCase()}</span></td>
                 <td className="p-3"><Link className="hover:underline" href={`/tasks/${f.task.id}`}>{f.task.taskCode}</Link> <span className="text-slate-400">{f.task.title}</span></td>
-                <td className="p-3 text-slate-500">{f.uploadedBy.name} · <bdi dir="ltr">{formatDateTime(f.createdAt, env.timezone)}</bdi></td>
+                <td className="p-3 text-slate-500">{f.uploadedBy.name} · <bdi>{formatDateTime(f.createdAt, env.timezone)}</bdi></td>
                 <td className="p-3"><a className="text-brand-600 underline" href={`/api/files/${f.id}?download=1`}>تنزيل</a></td>
               </tr>
             ))}

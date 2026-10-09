@@ -9,7 +9,7 @@ describe("eventsForTask", () => {
     const ev = eventsForTask({ ...base, shootingAt: d("2026-10-07T13:00Z"), deadline: d("2026-10-08T09:00Z"), publishAt: d("2026-10-10T17:00Z") },
       { owner: { id: "u1", role: "VIDEOGRAPHER" }, production: { id: "u1", role: "VIDEOGRAPHER" } });
     expect(ev.map((e) => e.type).sort()).toEqual(["PUBLISHING", "SHOOTING", "SHOOTING"]);
-    expect(ev.find((e) => e.title.startsWith("Shooting"))?.userId).toBe("u1");
+    expect(ev.find((e) => e.title.startsWith("تصوير"))?.userId).toBe("u1");
   });
   it("types the deadline by the current stage and owner", () => {
     const own = (role: "VIDEO_EDITOR" | "DESIGNER") => ({ owner: { id: "x", role }, production: null });

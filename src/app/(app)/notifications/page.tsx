@@ -33,7 +33,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
           const body = (
             <div className={`flex gap-3 px-4 py-3 text-sm hover:bg-slate-50 ${n.readAt ? "text-slate-500" : ""}`}>
               <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.readAt ? "bg-slate-200" : m.dot}`} />
-              <div><p>{n.message}</p><p className="text-xs text-slate-400">{m.label} · {timeAgo(n.createdAt.toISOString())} · <bdi dir="ltr">{formatDateTime(n.createdAt, env.timezone)}</bdi></p></div>
+              <div><p>{n.message}</p><p className="text-xs text-slate-400">{m.label} · {timeAgo(n.createdAt.toISOString())} · <bdi>{formatDateTime(n.createdAt, env.timezone)}</bdi></p></div>
             </div>
           );
           return <li key={n.id}>{n.taskId ? <Link href={`/tasks/${n.taskId}`}>{body}</Link> : body}</li>;

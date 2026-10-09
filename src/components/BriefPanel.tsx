@@ -42,7 +42,7 @@ export function BriefPanel({ taskId, canShare }: { taskId: string; canShare: boo
           </div>
           {link && (
             <div className="space-y-2 rounded-md bg-slate-50 p-3 text-sm">
-              <p className="text-amber-700">أي شخص يملك هذا الرابط يستطيع فتح الملخص دون تسجيل دخول حتى <bdi dir="ltr">{new Date(link.expiresAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</bdi>.</p>
+              <p className="text-amber-700">أي شخص يملك هذا الرابط يستطيع فتح الملخص دون تسجيل دخول حتى <bdi>{new Date(link.expiresAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}</bdi>.</p>
               <input readOnly value={link.url} className="input" onFocus={(e) => e.currentTarget.select()} aria-label="رابط المشاركة" />
               <div className="flex gap-2">
                 <button type="button" className="btn-secondary" onClick={copy}>نسخ الرابط</button>

@@ -36,7 +36,7 @@ export function CommentThread({
           <Avatar name={c.author.name} />
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-baseline gap-2 text-xs text-slate-500">
-              <b className="text-sm text-slate-900">{c.author.name}</b><span>{ROLE_LABELS[c.author.role]}</span><bdi dir="ltr">{formatDateTime(c.createdAt, tz)}</bdi>
+              <b className="text-sm text-slate-900">{c.author.name}</b><span>{ROLE_LABELS[c.author.role]}</span><bdi>{formatDateTime(c.createdAt, tz)}</bdi>
               {(c.author.id === meId || isAdmin) && (
                 <form action={deleteCommentAction.bind(null, taskId)} className="ms-auto"><input type="hidden" name="commentId" value={c.id} /><button className="text-red-600 underline">حذف</button></form>
               )}

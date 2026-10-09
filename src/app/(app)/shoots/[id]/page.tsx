@@ -38,9 +38,9 @@ export default async function ShootPage({ params }: { params: Promise<{ id: stri
           )}
         </div>
         <dl className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Row k="البداية"><bdi dir="ltr">{formatDateTime(s.startsAt, tz)}</bdi></Row>
-          <Row k="النهاية"><bdi dir="ltr">{formatDateTime(s.endsAt, tz)}</bdi></Row>
-          <Row k="وقت الحضور">{s.callTime && <bdi dir="ltr">{formatDateTime(s.callTime, tz)}</bdi>}</Row>
+          <Row k="البداية"><bdi>{formatDateTime(s.startsAt, tz)}</bdi></Row>
+          <Row k="النهاية"><bdi>{formatDateTime(s.endsAt, tz)}</bdi></Row>
+          <Row k="وقت الحضور">{s.callTime && <bdi>{formatDateTime(s.callTime, tz)}</bdi>}</Row>
           <Row k="الميزانية">{s.budget != null && Number(s.budget).toLocaleString("ar", { minimumFractionDigits: 2 })}</Row>
         </dl>
       </header>

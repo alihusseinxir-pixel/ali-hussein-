@@ -26,7 +26,7 @@ export function ReviewCard({ task, files, tz }: { task: Task; files: F[]; tz: st
       {final && (
         <dl className="grid gap-3 text-sm sm:grid-cols-2">
           <div><dt className="label">المنصة</dt><dd>{task.platform ? AR_PLATFORM[task.platform] : "—"}</dd></div>
-          <div><dt className="label">النشر</dt><dd><bdi dir="ltr">{formatDateTime(task.publishAt, tz)}</bdi></dd></div>
+          <div><dt className="label">النشر</dt><dd><bdi>{formatDateTime(task.publishAt, tz)}</bdi></dd></div>
           <div className="sm:col-span-2"><dt className="label">الكابشن</dt><dd className="whitespace-pre-wrap">{task.caption ?? "—"}</dd></div>
           <div className="sm:col-span-2"><dt className="label">الهاشتاقات</dt><dd>{task.hashtags ?? "—"}</dd></div>
         </dl>

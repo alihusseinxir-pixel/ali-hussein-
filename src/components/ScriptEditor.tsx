@@ -154,7 +154,7 @@ export function ScriptEditor({ taskId, initial, initialVersion, status, editable
           <ul className="divide-y text-sm">
             {revisions.map((r) => (
               <li key={r.id} className="py-2"><b>#{r.version}</b> · {actionLabel(r.action)} · {r.actorName}
-                <span className="text-xs text-slate-400"> · <bdi dir="ltr">{r.when}</bdi></span>
+                <span className="text-xs text-slate-400"> · <bdi>{r.when}</bdi></span>
                 {r.note && <p className="mt-1 whitespace-pre-wrap text-slate-600">{r.note}</p>}</li>
             ))}
           </ul>

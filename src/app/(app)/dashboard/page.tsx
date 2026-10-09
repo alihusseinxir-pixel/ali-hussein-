@@ -64,7 +64,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
             <ul className="divide-y text-sm">
               {x.overdue.map((t) => (
                 <li key={t.id} className="py-2"><Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title}</Link>
-                  <div className="text-xs text-red-600">الموعد: <bdi dir="ltr">{formatDateTime(t.deadline, tz)}</bdi>{t.currentAssignee && ` · ${t.currentAssignee.name}`}</div></li>
+                  <div className="text-xs text-red-600">الموعد: <bdi>{formatDateTime(t.deadline, tz)}</bdi>{t.currentAssignee && ` · ${t.currentAssignee.name}`}</div></li>
               ))}
             </ul>
           )}
@@ -81,7 +81,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
           <h2 className="mb-3 font-medium">مواعيد النشر خلال 7 أيام</h2>
           {x.publishing.length === 0 ? <p className="text-sm text-slate-500">لا توجد مواعيد نشر قريبة.</p> : (
             <ul className="divide-y text-sm">
-              {x.publishing.map((t) => <li key={t.id} className="py-2"><Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title}</Link><div className="text-xs text-slate-500"><bdi dir="ltr">{formatDateTime(t.publishAt, tz)}</bdi> · {AR_STAGE[t.stage]}</div></li>)}
+              {x.publishing.map((t) => <li key={t.id} className="py-2"><Link href={`/tasks/${t.id}`} className="font-medium hover:underline">{t.title}</Link><div className="text-xs text-slate-500"><bdi>{formatDateTime(t.publishAt, tz)}</bdi> · {AR_STAGE[t.stage]}</div></li>)}
             </ul>
           )}
         </section>

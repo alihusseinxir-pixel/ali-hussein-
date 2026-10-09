@@ -117,9 +117,9 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           </div>
         </div>
         <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div><dt className="label">الموعد النهائي</dt><dd className={overdue ? "font-medium text-red-600" : ""}><bdi dir="ltr">{formatDateTime(task.deadline, tz)}</bdi>{overdue && " · متأخرة"}</dd></div>
-          <div><dt className="label">التصوير</dt><dd><bdi dir="ltr">{formatDateTime(task.shootingAt, tz)}</bdi></dd></div>
-          <div><dt className="label">النشر</dt><dd><bdi dir="ltr">{formatDateTime(task.publishAt, tz)}</bdi></dd></div>
+          <div><dt className="label">الموعد النهائي</dt><dd className={overdue ? "font-medium text-red-600" : ""}><bdi>{formatDateTime(task.deadline, tz)}</bdi>{overdue && " · متأخرة"}</dd></div>
+          <div><dt className="label">التصوير</dt><dd><bdi>{formatDateTime(task.shootingAt, tz)}</bdi></dd></div>
+          <div><dt className="label">النشر</dt><dd><bdi>{formatDateTime(task.publishAt, tz)}</bdi></dd></div>
           <div><dt className="label">المالك الحالي</dt><dd>{task.currentAssignee ? `${task.currentAssignee.name} (${AR_ROLE[task.currentAssignee.role]})` : "غير مسندة"}</dd></div>
         </dl>
       </header>
@@ -129,7 +129,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           <h2 className="font-medium">جلسات التصوير</h2>
           {scriptBlocked && <p role="status" className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-900">⚠ لهذا المحتوى جلسة تصوير مخططة لكن السكريبت غير معتمد بعد (الحالة: {AR_SCRIPT_STATUS[task.scriptStatus]}). <Link className="underline" href={`/tasks/${id}/script`}>فتح السكريبت</Link></p>}
           <ul className="divide-y text-sm">
-            {shoots.map((s) => <li key={s.id} className="py-1.5"><Link href={`/shoots/${s.id}`} className="text-brand-600 underline">{s.title}</Link> <span className="text-slate-500">· <bdi dir="ltr">{formatDateTime(s.startsAt, tz)}</bdi> · {AR_SHOOT_STATUS[s.status]}</span></li>)}
+            {shoots.map((s) => <li key={s.id} className="py-1.5"><Link href={`/shoots/${s.id}`} className="text-brand-600 underline">{s.title}</Link> <span className="text-slate-500">· <bdi>{formatDateTime(s.startsAt, tz)}</bdi> · {AR_SHOOT_STATUS[s.status]}</span></li>)}
           </ul>
         </section>
       )}
@@ -151,7 +151,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
       <section className="card">
         <h2 className="mb-3 font-medium">الملكية</h2>
         <dl className="grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-          <div><dt className="label">أنشأها</dt><dd>{task.createdBy.name} · <bdi dir="ltr">{formatDateTime(task.createdAt, tz)}</bdi></dd></div>
+          <div><dt className="label">أنشأها</dt><dd>{task.createdBy.name} · <bdi>{formatDateTime(task.createdAt, tz)}</bdi></dd></div>
           <div><dt className="label">مسؤول الآن</dt><dd>{task.currentAssignee?.name ?? "—"}</dd></div>
           <div><dt className="label">كان مسؤولاً سابقاً</dt><dd>{previousOwners.length ? previousOwners.map((a) => a.user.name).join("، ") : "—"}</dd></div>
           <div><dt className="label">المرحلة التالية</dt><dd>{next ? AR_STAGE[next] : "—"}</dd></div>

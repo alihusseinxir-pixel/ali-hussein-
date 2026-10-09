@@ -1,6 +1,6 @@
 import type { CalendarEventType, ContentType, Role, TaskStage } from "@prisma/client";
 import { parseLocalDateTime, toLocalInput } from "./datetime";
-import { STAGE_LABELS } from "./workflow";
+import { AR_STAGE } from "./i18n/ar";
 
 // ───────── Deriving events from a task (pure) ─────────
 
@@ -23,17 +23,17 @@ export function eventsForTask(t: TaskLike, ctx: Ctx): EventDraft[] {
   const designType: CalendarEventType = DESIGN_ONLY.includes(t.contentType) || ctx.owner?.role === "DESIGNER" ? "DESIGN" : "EDITING";
 
   if (t.shootingAt) {
-    out.push({ type: shootType, title: `${photo ? "Photo shoot" : "Shooting"} – ${t.title}`, startsAt: t.shootingAt, endsAt: new Date(t.shootingAt.getTime() + 2 * HOUR), userId: ctx.production?.id ?? null });
+    out.push({ type: shootType, title: `${photo ? "تصوير فوتوغرافي" : "تصوير"} – ${t.title}`, startsAt: t.shootingAt, endsAt: new Date(t.shootingAt.getTime() + 2 * HOUR), userId: ctx.production?.id ?? null });
   }
   if (t.publishAt) {
-    out.push({ type: "PUBLISHING", title: `Publish – ${t.title}`, startsAt: t.publishAt, endsAt: null, userId: t.stage === "PUBLISHED" || t.stage === "COMPLETED" ? null : t.currentAssigneeId });
+    out.push({ type: "PUBLISHING", title: `نشر – ${t.title}`, startsAt: t.publishAt, endsAt: null, userId: t.stage === "PUBLISHED" || t.stage === "COMPLETED" ? null : t.currentAssigneeId });
   }
   if (t.deadline && !["SCHEDULED", "PUBLISHED", "COMPLETED"].includes(t.stage)) {
     const type: CalendarEventType =
       t.stage === "EDITING" ? designType
       : ["PRODUCTION_REVIEW", "EDITING_REVIEW", "INTERNAL_APPROVAL", "SOCIAL_APPROVAL"].includes(t.stage) ? "REVIEW"
       : DESIGN_ONLY.includes(t.contentType) ? "DESIGN" : shootType;
-    out.push({ type, title: `Due: ${STAGE_LABELS[t.stage]} – ${t.title}`, startsAt: t.deadline, endsAt: null, userId: t.currentAssigneeId });
+    out.push({ type, title: `موعد تسليم (${AR_STAGE[t.stage]}) – ${t.title}`, startsAt: t.deadline, endsAt: null, userId: t.currentAssigneeId });
   }
   return out;
 }

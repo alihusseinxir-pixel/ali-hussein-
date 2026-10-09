@@ -242,7 +242,7 @@ export async function createTask(actor: Actor, input: TaskInput) {
     if (input.assigneeId) {
       await tx.taskAssignment.create({ data: { taskId: task.id, userId: input.assigneeId, stage } });
       await tx.taskHandoff.create({ data: { taskId: task.id, fromUserId: actor.id, toUserId: input.assigneeId, fromStage: "BRIEF", toStage: stage,
-        instructions: "Initial assignment", requiredOutput: null, deadline: task.deadline, payload: { context: contextSnapshot(task) } } });
+        instructions: "الإسناد الأولي", requiredOutput: null, deadline: task.deadline, payload: { context: contextSnapshot(task) } } });
       await tx.notification.create({
         data: {
           organizationId: actor.organizationId, userId: input.assigneeId, taskId: task.id,
@@ -308,7 +308,7 @@ export async function assignTask(actor: Actor, id: string, assigneeId: string) {
     const updated = await tx.task.update({ where: { id }, data: { currentAssigneeId: assigneeId, stage } });
     await tx.taskHandoff.updateMany({ where: { taskId: id, status: "PENDING" }, data: { status: "REJECTED" } });
     await tx.taskHandoff.create({ data: { taskId: id, fromUserId: actor.id, toUserId: assigneeId, fromStage: task.stage, toStage: stage,
-      instructions: "Reassigned", reason: "Reassigned by manager", deadline: task.deadline, payload: { context: contextSnapshot(updated) } } });
+      instructions: "إعادة إسناد", reason: "أعاد المدير الإسناد", deadline: task.deadline, payload: { context: contextSnapshot(updated) } } });
     await tx.notification.create({
       data: { organizationId: actor.organizationId, userId: assigneeId, taskId: id, type: "TASK_ASSIGNED",
         message: `أُسندت إليك المهمة ${task.taskCode}: ${task.title}` },

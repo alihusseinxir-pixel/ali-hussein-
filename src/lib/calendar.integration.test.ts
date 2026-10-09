@@ -48,13 +48,13 @@ describe("calendar (integration)", () => {
     taskId = t.id;
     const ev = (await events(sm)).filter((e) => e.task.id === taskId);
     expect(ev.map((e) => e.type).sort()).toEqual(["PUBLISHING", "SHOOTING", "SHOOTING"]);
-    expect(ev.find((e) => e.title.startsWith("Shooting"))?.startsAt.toISOString()).toBe("2026-10-07T13:00:00.000Z"); // 16:00 Riyadh
-    expect(ev.find((e) => e.title.startsWith("Shooting"))?.userName).toBe("video");
+    expect(ev.find((e) => e.title.startsWith("تصوير"))?.startsAt.toISOString()).toBe("2026-10-07T13:00:00.000Z"); // 16:00 Riyadh
+    expect(ev.find((e) => e.title.startsWith("تصوير"))?.userName).toBe("video");
   });
 
   it("follows the task: edits move events, reassignment changes the person, handover changes the type", async () => {
     await updateTask(sm, taskId, taskInputSchema.parse({ title: "Cal reel", contentType: "REEL", shootingAt: "2026-10-07T18:00", deadline: "2026-10-08T12:00", publishAt: "2026-10-10T20:00" }));
-    expect((await events(sm)).find((e) => e.title.startsWith("Shooting"))?.startsAt.toISOString()).toBe("2026-10-07T15:00:00.000Z");
+    expect((await events(sm)).find((e) => e.title.startsWith("تصوير"))?.startsAt.toISOString()).toBe("2026-10-07T15:00:00.000Z");
 
     await assignTask(sm, taskId, video2.id);
     expect((await events(sm)).filter((e) => e.task.id === taskId).every((e) => e.type === "PUBLISHING" || e.userName === "video2")).toBe(true);
@@ -63,11 +63,11 @@ describe("calendar (integration)", () => {
     await uploadFile(video2, taskId, new File([PNG], "raw.png"), "RAW");
     await submitHandover(video2, taskId, handoverSchema.parse({ toUserId: mm.id, instructions: "r", deliverables: "d", deadline: "2026-10-09T09:00" }));
     const ev = (await events(sm)).filter((e) => e.task.id === taskId);
-    const due = ev.find((e) => e.title.startsWith("Due"))!;
+    const due = ev.find((e) => e.title.startsWith("موعد تسليم"))!;
     expect(due.type).toBe("REVIEW");
     expect(due.userName).toBe("mm");
     expect(due.startsAt.toISOString()).toBe("2026-10-09T06:00:00.000Z");
-    expect(ev.filter((e) => e.title.startsWith("Due"))).toHaveLength(1); // rebuilt, never duplicated
+    expect(ev.filter((e) => e.title.startsWith("موعد تسليم"))).toHaveLength(1); // rebuilt, never duplicated
   });
 
   it("restricts who sees which events", async () => {

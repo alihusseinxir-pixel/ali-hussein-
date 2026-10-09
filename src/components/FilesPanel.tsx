@@ -64,7 +64,7 @@ export function FilesPanel({ taskId, files, canUpload, maxMb }: { taskId: string
                   <li key={v.id} className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
                     <span className="w-8 font-semibold">V{v.version}</span>
                     <span>{size(v.sizeBytes)}</span>
-                    <span>{v.uploadedBy} · <bdi dir="ltr">{v.createdAtLabel}</bdi></span>
+                    <span>{v.uploadedBy} · <bdi>{v.createdAtLabel}</bdi></span>
                     {/^(image|video)\//.test(v.fileType) || v.fileType === "application/pdf"
                       ? <button type="button" className="text-brand-600 underline" onClick={() => setPreview(preview === v.id ? null : v.id)}>{preview === v.id ? "إغلاق" : "معاينة"}</button> : null}
                     <a className="text-brand-600 underline" href={`/api/files/${v.id}?download=1`}>تنزيل</a>

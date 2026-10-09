@@ -102,7 +102,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
                     <td className="p-3"><StageBadge s={t.stage} /></td>
                     <td className="p-3"><PriorityBadge p={t.priority} /></td>
                     <td className="p-3">{t.currentAssignee?.name ?? <span className="text-slate-400">غير مسندة</span>}</td>
-                    <td className={`p-3 ${late ? "font-medium text-red-600" : ""}`}><bdi dir="ltr">{formatDateTime(t.deadline, env.timezone)}</bdi>{late && " · متأخرة"}</td>
+                    <td className={`p-3 ${late ? "font-medium text-red-600" : ""}`}><bdi>{formatDateTime(t.deadline, env.timezone)}</bdi>{late && " · متأخرة"}</td>
                   </tr>
                 );
               })}
@@ -129,7 +129,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
                           <span>{t.currentAssignee?.name ?? "غير مسندة"}</span>
                           {t.checklist.length > 0 && <span>✓ {done}/{t.checklist.length}</span>}
                         </div>
-                        {t.deadline && <div className={`mt-1 text-xs ${late ? "font-medium text-red-600" : "text-slate-500"}`}><bdi dir="ltr">{formatDateTime(t.deadline, env.timezone)}</bdi>{late && " · متأخرة"}</div>}
+                        {t.deadline && <div className={`mt-1 text-xs ${late ? "font-medium text-red-600" : "text-slate-500"}`}><bdi>{formatDateTime(t.deadline, env.timezone)}</bdi>{late && " · متأخرة"}</div>}
                       </li>
                     );
                   })}

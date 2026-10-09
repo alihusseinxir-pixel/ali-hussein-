@@ -56,7 +56,7 @@ export default async function TeamPage() {
           <ul className="divide-y text-sm">
             {invites.map((i) => (
               <li key={i.id} className="flex items-center justify-between py-2">
-                <span>{i.name} · <bdi dir="ltr">{i.email}</bdi> · {ROLE_LABELS[i.role]} <span className="text-slate-400">(تنتهي <bdi dir="ltr">{formatDateTime(i.expiresAt, env.timezone)}</bdi>)</span></span>
+                <span>{i.name} · <bdi dir="ltr">{i.email}</bdi> · {ROLE_LABELS[i.role]} <span className="text-slate-400">(تنتهي <bdi>{formatDateTime(i.expiresAt, env.timezone)}</bdi>)</span></span>
                 <form action={revokeInvitationAction}><input type="hidden" name="id" value={i.id} /><button className="text-xs text-red-600 underline">إلغاء الدعوة</button></form>
               </li>
             ))}
