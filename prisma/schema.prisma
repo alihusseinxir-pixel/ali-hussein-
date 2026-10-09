@@ -69,6 +69,14 @@ enum TaskStage {
   COMPLETED
 }
 
+enum ScriptStatus {
+  DRAFT
+  IN_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  READY_FOR_PRODUCTION
+}
+
 enum HandoffStatus {
   PENDING
   ACCEPTED
@@ -265,12 +273,15 @@ model Task {
   objective       String?
   targetAudience  String?
   consumerInsight String?
+  hook            String?
+  contentPillar   String?
   keyMessage      String?
   cta             String?
   caption         String?
   hashtags        String?
   brief           String?
-  script          String?
+  script          String? // legacy free-text script; scene-by-scene scripts live in ScriptScene
+  scriptStatus    ScriptStatus @default(DRAFT)
   references      String?
   models          String?
   location        String?
@@ -306,12 +317,50 @@ model Task {
   calendarEvents CalendarEvent[]
   activityLogs   ActivityLog[]
   notifications  Notification[]
+  scenes         ScriptScene[]
+  scriptRevisions ScriptRevision[]
 
   @@unique([organizationId, taskCode])
   @@index([organizationId, stage])
   @@index([organizationId, currentAssigneeId])
   @@index([organizationId, deadline])
   @@index([campaignId])
+}
+
+// One row per scene of a task's script, ordered by `position` (0-based, contiguous).
+model ScriptScene {
+  id              String   @id @default(cuid())
+  taskId          String
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  position        Int
+  durationSec     Int?
+  shotDescription String
+  cameraAngle     String?
+  visualAction    String?
+  dialogue        String?
+  onScreenText    String?
+  audio           String?
+  props           String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([taskId, position])
+}
+
+// Append-only script history: a full snapshot per save and per status change.
+model ScriptRevision {
+  id        String   @id @default(cuid())
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  version   Int
+  actorId   String
+  action    String // "saved" | "status:<ScriptStatus>"
+  note      String?
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  @@unique([taskId, version])
 }
 
 // Who owned the task and when — never overwritten, only appended.

@@ -9,6 +9,7 @@ import { formatDateTime } from "@/lib/datetime";
 import { STAGE_LABELS, exitPermission, firstAssigneeRoles, isHandoverStage, isReassignable, nextStage, revisionTarget, stageOwnerRoles, workflowPath } from "@/lib/workflow";
 import { TASK_FIELD_LABELS } from "@/lib/task-schema";
 import { PriorityBadge, StageBadge } from "@/components/Badges";
+import { AR_SCRIPT_STATUS } from "@/lib/i18n/ar";
 import { AssignForm } from "@/components/AssignForm";
 import { CommentBox } from "@/components/CommentBox";
 import { CommentThread } from "@/components/CommentThread";
@@ -88,6 +89,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             </div>
           </div>
           <div className="flex gap-2">
+            <Link href={`/tasks/${id}/script`} className="btn-secondary">السكريبت · {AR_SCRIPT_STATUS[task.scriptStatus]}</Link>
             {canEdit && !["PUBLISHED", "COMPLETED"].includes(task.stage) && <Link href={`/tasks/${id}/edit`} className="btn-secondary">Edit</Link>}
             {can(user.role, "task:delete") && (
               <form action={deleteTaskAction.bind(null, id)}><button className="btn-secondary text-red-600">Delete</button></form>

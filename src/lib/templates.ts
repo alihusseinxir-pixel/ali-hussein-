@@ -7,7 +7,7 @@ import type { ContentType, Platform } from "@prisma/client";
  */
 
 export const BASE_FIELDS = [
-  "objective", "targetAudience", "consumerInsight", "keyMessage", "cta", "caption", "hashtags", "references", "brief",
+  "objective", "targetAudience", "contentPillar", "consumerInsight", "hook", "keyMessage", "cta", "caption", "hashtags", "references", "brief",
   "script", "models", "props", "location", "product", "specialNotes", "shootingAt", "publishAt", "startDate",
 ] as const;
 export type BaseField = (typeof BASE_FIELDS)[number];
@@ -26,7 +26,7 @@ export interface TemplateDef {
   defaults: Partial<Record<BaseField, string>>;
 }
 
-const CONTENT: BaseField[] = ["objective", "targetAudience", "consumerInsight", "keyMessage", "cta", "caption", "hashtags", "references", "brief", "specialNotes"];
+const CONTENT: BaseField[] = ["objective", "targetAudience", "contentPillar", "consumerInsight", "hook", "keyMessage", "cta", "caption", "hashtags", "references", "brief", "specialNotes"];
 const SHOOT: BaseField[] = ["script", "models", "props", "location", "product", "shootingAt"];
 const SCENES = "SCENE 01 – \n\nSCENE 02 – \n\nSCENE 03 – ";
 
@@ -160,7 +160,7 @@ export function resolveTemplate(ref: string | null | undefined, customs: CustomT
 }
 
 const LABELS: Record<BaseField, string> = {
-  objective: "Objective", targetAudience: "Target audience", consumerInsight: "Consumer insight", keyMessage: "Key message", cta: "CTA",
+  objective: "Objective", targetAudience: "Target audience", contentPillar: "Content pillar", hook: "Hook", consumerInsight: "Consumer insight", keyMessage: "Key message", cta: "CTA",
   caption: "Caption", hashtags: "Hashtags", references: "References", brief: "Brief", script: "Script", models: "Models", props: "Props",
   location: "Location", product: "Product", specialNotes: "Special notes", shootingAt: "Shooting date & time", publishAt: "Publishing date & time",
   startDate: "Start date",

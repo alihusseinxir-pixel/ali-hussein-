@@ -8,7 +8,7 @@ import { baseLabel, visibleFields, type BaseField, type TemplateDef } from "@/li
 
 const pretty = (s: string) => s.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase());
 const LONG = new Set<BaseField>(["consumerInsight", "keyMessage", "caption", "brief", "script", "references", "models", "props", "specialNotes"]);
-const CONTENT_KEYS: BaseField[] = ["objective", "targetAudience", "consumerInsight", "keyMessage", "cta", "caption", "hashtags", "references", "brief"];
+const CONTENT_KEYS: BaseField[] = ["objective", "targetAudience", "contentPillar", "consumerInsight", "hook", "keyMessage", "cta", "caption", "hashtags", "references", "brief"];
 const PRODUCTION_KEYS: BaseField[] = ["models", "props", "location", "product", "specialNotes"];
 const DATE_KEYS: BaseField[] = ["shootingAt", "publishAt", "startDate"];
 

@@ -53,3 +53,11 @@ export const AR_NAV = {
   signOut: "تسجيل الخروج",
   home: "الرئيسية",
 } as const;
+
+export const AR_SCRIPT_STATUS = {
+  DRAFT: "مسودة",
+  IN_REVIEW: "قيد المراجعة",
+  CHANGES_REQUESTED: "مطلوب تعديلات",
+  APPROVED: "معتمد",
+  READY_FOR_PRODUCTION: "جاهز للتصوير",
+} as const;

@@ -21,6 +21,8 @@ export const taskInputSchema = z.object({
   assigneeId: id,
   objective: text(1000),
   targetAudience: text(1000),
+  contentPillar: text(200),
+  hook: text(500),
   consumerInsight: text(),
   keyMessage: text(),
   cta: text(500),
@@ -46,6 +48,8 @@ export type TaskInput = z.infer<typeof taskInputSchema>;
 export const TASK_FIELD_LABELS = {
   objective: "Objective",
   targetAudience: "Target audience",
+  contentPillar: "Content pillar",
+  hook: "Hook",
   consumerInsight: "Consumer insight",
   keyMessage: "Key message",
   cta: "CTA",

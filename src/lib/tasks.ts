@@ -153,12 +153,12 @@ function dataFrom(input: TaskInput) {
     return out;
   };
   const {
-    title, contentType, platform, priority, brandId, campaignId, objective, targetAudience, consumerInsight, keyMessage,
+    title, contentType, platform, priority, brandId, campaignId, objective, targetAudience, contentPillar, hook, consumerInsight, keyMessage,
     cta, caption, hashtags, brief, script, references, models, location, props, product, specialNotes,
   } = input;
   const data = {
     title, contentType, platform: platform ?? null, priority, brandId, campaignId, objective, targetAudience,
-    consumerInsight, keyMessage, cta, caption, hashtags, brief, script, references, models, location, props, product,
+    contentPillar, hook, consumerInsight, keyMessage, cta, caption, hashtags, brief, script, references, models, location, props, product,
     specialNotes,
     shootingAt: d(input.shootingAt), publishAt: d(input.publishAt), startDate: d(input.startDate), deadline: d(input.deadline),
   };
