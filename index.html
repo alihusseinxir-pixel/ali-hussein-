@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>10 BUNZ | اطلب مباشرة</title>
+<meta name="description" content="اطلب برگر 10 BUNZ مباشرة من المطعم، توصيل لباب البيت بكركوك.">
+<meta name="theme-color" content="#0a1440">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--navy:#0a1440;--navy2:#111d55;--blue:#2d5bff;--yellow:#ffd23f;--cyan:#5fd4ff;--bg:#f4f6fb;--card:#fff;--text:#0a1440;--muted:#5b6585;--line:#e3e7f2;--red:#e5484d;--green:#1f9d55}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:Cairo,system-ui,sans-serif}
+button,input,textarea{font-family:inherit;font-size:16px}
+button{cursor:pointer}
+.hero{background:radial-gradient(120% 120% at 100% 0,#2d5bff 0,#0a1440 60%);color:#fff;padding:18px 16px 26px;position:relative;overflow:hidden}
+.hero .top{display:flex;align-items:center;gap:12px;max-width:900px;margin:0 auto}
+.logo{width:58px;height:58px;border-radius:16px;background:#fff;object-fit:cover;box-shadow:0 6px 20px #0004}
+.hero h1{margin:0;font-size:22px;font-weight:900;letter-spacing:.5px}
+.hero .sub{opacity:.85;font-size:13px}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700}
+.badge.open{background:#1f9d5533;color:#7dffb0}.badge.closed{background:#e5484d33;color:#ffb3b5}
+.badge i{width:8px;height:8px;border-radius:50%;background:currentColor}
+.perk{max-width:900px;margin:14px auto 0;background:var(--yellow);color:var(--navy);border-radius:14px;padding:10px 14px;font-weight:800;font-size:14px;display:none}
+.cats{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.cats .row{display:flex;gap:8px;overflow-x:auto;padding:10px 16px;max-width:900px;margin:0 auto;scrollbar-width:none}
+.cats .row::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:#fff;color:var(--text);padding:7px 14px;border-radius:99px;font-weight:700;font-size:14px}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+main{max-width:900px;margin:0 auto;padding:6px 16px 120px}
+h2.sec{font-size:19px;font-weight:900;margin:22px 0 10px;scroll-margin-top:64px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(min-width:680px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 2px 10px #0a14400d;display:flex;flex-direction:column;border:0;padding:0;text-align:right;color:inherit}
+.card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#e9edf7}
+.card .b{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
+.card .n{font-weight:800;font-size:15px;line-height:1.35}
+.card .d{font-size:12px;color:var(--muted)}
+.card .f{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:6px}
+.card .p{font-weight:900;color:var(--blue);font-size:15px}
+.add{width:34px;height:34px;border-radius:12px;background:var(--navy);color:#fff;border:0;font-size:22px;line-height:1;display:grid;place-items:center}
+.card.out{opacity:.5}.card.out .add{background:#999}
+.tag{position:absolute;top:8px;right:8px;background:var(--yellow);color:var(--navy);font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px}
+.imgw{position:relative}
+.cartbar{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:30;max-width:876px;margin:0 auto;background:var(--navy);color:#fff;border:0;border-radius:18px;padding:14px 18px;display:none;align-items:center;justify-content:space-between;font-weight:800;font-size:16px;box-shadow:0 10px 30px #0a144055}
+.cartbar .cnt{background:var(--yellow);color:var(--navy);border-radius:10px;padding:2px 10px;margin-left:10px}
+.sheet-bg{position:fixed;inset:0;background:#0a144088;z-index:40;display:none;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:620px;max-height:92vh;overflow:auto;border-radius:24px 24px 0 0;padding:0 0 calc(18px + env(safe-area-inset-bottom));animation:up .22s ease}
+@media(min-width:680px){.sheet-bg{align-items:center}.sheet{border-radius:24px}}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.sheet .hd{position:sticky;top:0;background:#fff;z-index:2;display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line)}
+.sheet .hd b{font-size:18px;font-weight:900}
+.x{width:36px;height:36px;border-radius:12px;border:0;background:var(--bg);font-size:20px}
+.pad{padding:16px 18px}
+.big-img{width:100%;max-height:280px;object-fit:cover;display:block;background:#e9edf7}
+.grp{margin:14px 0}
+.grp h4{margin:0 0 8px;font-size:15px;display:flex;justify-content:space-between;align-items:center}
+.grp h4 small{font-weight:600;color:var(--muted);font-size:12px}
+.opt{display:flex;align-items:center;justify-content:space-between;border:1.5px solid var(--line);border-radius:14px;padding:11px 14px;margin-bottom:8px;font-weight:700;background:#fff;width:100%;color:var(--text)}
+.opt.on{border-color:var(--blue);background:#2d5bff0d}
+.opt .dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--line)}
+.opt.on .dot{border:6px solid var(--blue)}
+.stepper{display:inline-flex;align-items:center;gap:10px}
+.stepper button{width:34px;height:34px;border-radius:11px;border:0;background:var(--bg);font-size:20px;font-weight:800;color:var(--navy)}
+.stepper span{min-width:18px;text-align:center;font-weight:900}
+.btn{width:100%;border:0;border-radius:16px;padding:15px;font-weight:900;font-size:17px;background:var(--navy);color:#fff}
+.btn.y{background:var(--yellow);color:var(--navy)}
+.btn.g{background:#25d366;color:#fff}
+.btn:disabled{opacity:.45}
+.foot{display:flex;gap:12px;align-items:center;padding:0 18px}
+.line{display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+.line img{width:54px;height:54px;border-radius:12px;object-fit:cover}
+.line .t{flex:1}.line .t b{display:block;font-size:14px}.line .t small{color:var(--muted);font-size:12px}
+.line .pr{font-weight:800;font-size:14px;white-space:nowrap}
+.seg{display:flex;background:var(--bg);border-radius:14px;padding:4px;margin:6px 0 14px}
+.seg button{flex:1;border:0;background:transparent;padding:10px;border-radius:11px;font-weight:800;color:var(--muted)}
+.seg button.on{background:#fff;color:var(--navy);box-shadow:0 2px 8px #0a144014}
+label.f{display:block;font-weight:800;font-size:14px;margin:12px 0 6px}
+input.i,textarea.i{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;color:var(--text)}
+input.i:focus,textarea.i:focus{outline:none;border-color:var(--blue)}
+.locbtn{width:100%;border:1.5px dashed var(--blue);background:#2d5bff0d;color:var(--blue);border-radius:14px;padding:13px;font-weight:900}
+#map{height:220px;border-radius:14px;margin-top:10px;display:none;z-index:1}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.sum{background:var(--bg);border-radius:16px;padding:12px 14px;margin-top:16px}
+.sum div{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
+.sum .tot{font-weight:900;font-size:18px;border-top:1px dashed #c9d0e3;margin-top:6px;padding-top:10px}
+.err{color:var(--red);font-weight:700;font-size:13px;margin-top:8px}
+.ok{text-align:center;padding:30px 20px}
+.ok .num{font-size:40px;font-weight:900;color:var(--blue)}
+.closedmsg{background:#fff0f0;color:var(--red);border-radius:14px;padding:12px;font-weight:800;text-align:center;margin-top:12px}
+.skel{height:220px;border-radius:18px;background:linear-gradient(90deg,#e9edf7,#f6f8fc,#e9edf7);background-size:200% 100%;animation:sk 1.2s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="top">
+    <img class="logo" id="logo" alt="10 BUNZ">
+    <div style="flex:1">
+      <h1>10 BUNZ</h1>
+      <div class="sub" id="hours">كركوك · توصيل واستلام</div>
+    </div>
+    <span class="badge" id="openBadge"></span>
+  </div>
+  <div class="perk" id="perk"></div>
+</header>
+<nav class="cats"><div class="row" id="cats"></div></nav>
+<main id="menu"><div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></main>
+<footer id="foot"></footer>
+
+<button class="cartbar" id="cartbar"><span><span class="cnt" id="cartCnt">0</span>عرض السلة</span><span id="cartTot"></span></button>
+
+<div class="sheet-bg" id="itemBg"><div class="sheet" id="itemSheet"></div></div>
+<div class="sheet-bg" id="cartBg"><div class="sheet" id="cartSheet"></div></div>
+
+<script src="config.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const S = { settings: null, cats: [], items: [], cart: [], type: 'delivery', loc: null, sending: false };
+const $ = id => document.getElementById(id);
+const store = { get(k, d) { try { return JSON.parse(localStorage.getItem('bunz_' + k)) ?? d } catch { return d } }, set(k, v) { try { localStorage.setItem('bunz_' + k, JSON.stringify(v)) } catch {} } };
+
+// attribution: ?src=code (QR per gaming center / ad)
+const qs = new URLSearchParams(location.search);
+if (qs.get('src')) store.set('src', { code: qs.get('src').toLowerCase().slice(0, 40), at: Date.now() });
+function source() { const s = store.get('src'); return s && Date.now() - s.at < 30 * 864e5 ? s.code : null; }
+
+S.cart = store.get('cart', []);
+$('logo').src = BUNZ.LOGO;
+
+async function load() {
+  try {
+    const [settings, cats, items] = await Promise.all([
+      bunzApi.rpc('bunz_public_settings'),
+      bunzApi.get('bunz_categories?select=*&order=sort,id'),
+      bunzApi.get('bunz_items?select=*&order=sort,id')
+    ]);
+    S.settings = settings; S.cats = cats; S.items = items;
+    S.cart = S.cart.filter(l => items.some(i => i.id === l.id && !i.sold_out));
+    if (!settings.delivery_enabled) S.type = 'pickup';
+    renderHeader(); renderMenu(); renderCartBar();
+  } catch (e) {
+    $('menu').innerHTML = '<div class="closedmsg">صار خلل بالتحميل. حدّث الصفحة.</div>';
+    console.error(e);
+  }
+}
+
+function to12(t) { let [h, m] = t.split(':').map(Number); const ap = h < 12 ? 'ص' : 'م'; h = h % 12 || 12; return h + (m ? ':' + String(m).padStart(2, '0') : '') + ' ' + ap; }
+
+function renderHeader() {
+  const s = S.settings;
+  $('openBadge').className = 'badge ' + (s.is_open ? 'open' : 'closed');
+  $('openBadge').innerHTML = '<i></i>' + (s.is_open ? 'مفتوح' : 'مغلق');
+  $('hours').textContent = 'الدوام من ' + to12(s.open_time) + ' إلى ' + to12(s.close_time);
+  if (s.announcement) { $('perk').style.display = 'block'; $('perk').textContent = s.announcement; }
+  $('foot').innerHTML = esc(s.address) + (s.phone_display ? ' · <a href="tel:' + esc(s.phone_display) + '">' + esc(s.phone_display) + '</a>' : '');
+}
+
+function itemById(id) { return S.items.find(i => i.id === id); }
+
+function renderMenu() {
+  const cats = S.cats.filter(c => S.items.some(i => i.category_id === c.id));
+  $('cats').innerHTML = cats.map((c, k) => `<button class="chip${k ? '' : ' on'}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
+  $('menu').innerHTML = cats.map(c => `<h2 class="sec" id="c${c.id}">${esc(c.name)}</h2><div class="grid">` +
+    S.items.filter(i => i.category_id === c.id).map(i => `
+      <button class="card${i.sold_out ? ' out' : ''}" data-i="${i.id}">
+        <div class="imgw"><img loading="lazy" src="${esc(i.image_url)}" alt="${esc(i.name)}" onerror="this.style.visibility='hidden'">${i.sold_out ? '<span class="tag">نفد اليوم</span>' : i.featured ? '<span class="tag">الأكثر طلباً</span>' : ''}</div>
+        <div class="b"><div class="n">${esc(i.name)}</div>${i.description ? `<div class="d">${esc(i.description)}</div>` : ''}
+        <div class="f"><span class="p">${fmtIQD(i.price)}</span><span class="add">+</span></div></div>
+      </button>`).join('') + '</div>').join('');
+  $('cats').querySelectorAll('.chip').forEach(b => b.onclick = () => { document.getElementById('c' + b.dataset.c).scrollIntoView({ behavior: 'smooth' }); });
+  $('menu').querySelectorAll('.card').forEach(b => b.onclick = () => openItem(+b.dataset.i));
+  const obs = new IntersectionObserver(es => es.forEach(e => {
+    if (e.isIntersecting) { const id = e.target.id.slice(1); $('cats').querySelectorAll('.chip').forEach(c => { const on = c.dataset.c === id; c.classList.toggle('on', on); if (on) c.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); }); }
+  }), { rootMargin: '-70px 0px -70% 0px' });
+  document.querySelectorAll('h2.sec').forEach(h => obs.observe(h));
+}
+
+// ---------- item sheet ----------
+let cur = null;
+function openItem(id) {
+  const it = itemById(id); if (!it || it.sold_out) return;
+  cur = { it, qty: 1, sel: it.options.map(g => g.mode === 'single' && g.min >= 1 ? [] : []) };
+  drawItem(); show('itemBg');
+}
+function unitPrice(it, sel) { let p = it.price; it.options.forEach((g, gi) => (sel[gi] || []).forEach(pk => p += (g.choices[pk.i].price || 0) * pk.n)); return p; }
+function groupCount(sel) { return (sel || []).reduce((a, p) => a + p.n, 0); }
+function itemValid() { return cur.it.options.every((g, gi) => { const c = groupCount(cur.sel[gi]); return c >= (g.min || 0) && c <= (g.max || 1); }); }
+function drawItem() {
+  const { it, qty, sel } = cur;
+  $('itemSheet').innerHTML = `
+    <div class="hd"><b>${esc(it.name)}</b><button class="x" data-close>×</button></div>
+    <img class="big-img" src="${esc(it.image_url)}" alt="" onerror="this.style.display='none'">
+    <div class="pad">
+      ${it.description ? `<div style="color:var(--muted);font-size:14px">${esc(it.description)}</div>` : ''}
+      <div style="font-weight:900;font-size:20px;color:var(--blue);margin-top:6px">${fmtIQD(it.price)}</div>
+      ${it.options.map((g, gi) => {
+        const c = groupCount(sel[gi]);
+        return `<div class="grp"><h4>${esc(g.name)} <small>${g.mode === 'count' ? `${c} من ${g.max}` : (g.min ? 'مطلوب' : 'اختياري')}</small></h4>` +
+          g.choices.map((ch, ci) => {
+            const pk = (sel[gi] || []).find(p => p.i === ci);
+            const price = ch.price ? ` <small style="color:var(--muted)">+${fmtIQD(ch.price)}</small>` : '';
+            if (g.mode === 'count') return `<div class="opt${pk ? ' on' : ''}"><span>${esc(ch.name)}${price}</span><span class="stepper"><button data-g="${gi}" data-c="${ci}" data-d="-1">−</button><span>${pk ? pk.n : 0}</span><button data-g="${gi}" data-c="${ci}" data-d="1">+</button></span></div>`;
+            return `<button class="opt${pk ? ' on' : ''}" data-g="${gi}" data-c="${ci}"><span>${esc(ch.name)}${price}</span><span class="dot"></span></button>`;
+          }).join('') + '</div>';
+      }).join('')}
+    </div>
+    <div class="foot">
+      <span class="stepper"><button data-q="-1">−</button><span>${qty}</span><button data-q="1">+</button></span>
+      <button class="btn" id="addBtn" ${itemValid() ? '' : 'disabled'}>أضف للسلة · ${fmtIQD(unitPrice(it, sel) * qty)}</button>
+    </div>`;
+  const sh = $('itemSheet');
+  sh.querySelector('[data-close]').onclick = () => hide('itemBg');
+  sh.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { cur.qty = Math.max(1, Math.min(20, cur.qty + +b.dataset.q)); drawItem(); });
+  sh.querySelectorAll('button.opt').forEach(b => b.onclick = () => {
+    const gi = +b.dataset.g, ci = +b.dataset.c, g = it.options[gi];
+    let s = cur.sel[gi] || [];
+    if ((g.max || 1) === 1) s = s.some(p => p.i === ci) && !g.min ? [] : [{ i: ci, n: 1 }];
+    else if (s.some(p => p.i === ci)) s = s.filter(p => p.i !== ci);
+    else if (groupCount(s) < g.max) s = [...s, { i: ci, n: 1 }];
+    cur.sel[gi] = s; drawItem();
+  });
+  sh.querySelectorAll('.stepper [data-g]').forEach(b => b.onclick = () => {
+    const gi = +b.dataset.g, ci = +b.dataset.c, d = +b.dataset.d, g = it.options[gi];
+    let s = (cur.sel[gi] || []).map(p => ({ ...p }));
+    const pk = s.find(p => p.i === ci);
+    if (d > 0 && groupCount(s) >= g.max) return;
+    if (pk) pk.n += d; else if (d > 0) s.push({ i: ci, n: 1 });
+    cur.sel[gi] = s.filter(p => p.n > 0).sort((a, b) => a.i - b.i); drawItem();
+  });
+  $('addBtn').onclick = () => {
+    const key = it.id + ':' + JSON.stringify(cur.sel);
+    const ex = S.cart.find(l => l.key === key);
+    if (ex) ex.qty = Math.min(20, ex.qty + cur.qty); else S.cart.push({ key, id: it.id, qty: cur.qty, sel: cur.sel });
+    saveCart(); hide('itemBg'); renderCartBar();
+  };
+}
+function optLabel(it, sel) {
+  return it.options.map((g, gi) => (sel[gi] || []).map(p => (p.n > 1 ? p.n + '× ' : '') + g.choices[p.i].name).join('، ')).filter(Boolean).join(' / ');
+}
+
+// ---------- cart ----------
+function saveCart() { store.set('cart', S.cart); }
+function subtotal() { return S.cart.reduce((a, l) => { const it = itemById(l.id); return a + (it ? unitPrice(it, l.sel) * l.qty : 0); }, 0); }
+function renderCartBar() {
+  const n = S.cart.reduce((a, l) => a + l.qty, 0);
+  $('cartbar').style.display = n ? 'flex' : 'none';
+  $('cartCnt').textContent = n; $('cartTot').textContent = fmtIQD(subtotal());
+}
+$('cartbar').onclick = () => { drawCart(); show('cartBg'); };
+
+function quote() {
+  const s = S.settings, sub = subtotal();
+  if (S.type === 'pickup') return { fee: 0, ok: true };
+  if (!S.loc) return { fee: null, ok: false, need: true };
+  const d = haversine(s.rest_lat, s.rest_lng, S.loc.lat, S.loc.lng);
+  const fee = deliveryFee(s, d, sub);
+  return { fee, dist: d, ok: fee != null };
+}
+
+let map, marker;
+function drawCart() {
+  const s = S.settings, me = store.get('me', {});
+  const sub = subtotal(), q = quote();
+  const types = [s.delivery_enabled && ['delivery', 'توصيل'], s.pickup_enabled && ['pickup', 'استلام من المطعم']].filter(Boolean);
+  $('cartSheet').innerHTML = `
+    <div class="hd"><b>سلتك</b><button class="x" data-close>×</button></div>
+    <div class="pad">
+      ${S.cart.map((l, k) => { const it = itemById(l.id); return `<div class="line"><img src="${esc(it.image_url)}" alt="">
+        <div class="t"><b>${esc(it.name)}</b><small>${esc(optLabel(it, l.sel))}</small>
+          <div class="stepper" style="margin-top:6px"><button data-l="${k}" data-d="-1">−</button><span>${l.qty}</span><button data-l="${k}" data-d="1">+</button></div></div>
+        <div class="pr">${fmtIQD(unitPrice(it, l.sel) * l.qty)}</div></div>`; }).join('')}
+      ${types.length > 1 ? `<div class="seg" style="margin-top:16px">${types.map(([k, t]) => `<button data-t="${k}" class="${S.type === k ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
+      <label class="f">الاسم</label><input class="i" id="fName" autocomplete="name" value="${esc(me.name || '')}" placeholder="اسمك">
+      <label class="f">رقم الهاتف</label><input class="i" id="fPhone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" style="text-align:right" value="${esc(me.phone || '')}" placeholder="07XX XXX XXXX">
+      ${S.type === 'delivery' ? `
+        <label class="f">موقع التوصيل</label>
+        <button class="locbtn" id="locBtn">${S.loc ? '✓ تم تحديد موقعك (تگدر تحرك الدبوس)' : '📍 شارك موقعي'}</button>
+        <div id="map"></div>
+        <div class="hint" id="locHint">${S.loc ? (q.ok ? 'المسافة تقريباً ' + (q.dist / 1000).toFixed(1) + ' كم' : 'موقعك خارج منطقة التوصيل (' + (q.dist / 1000).toFixed(1) + ' كم)') : 'نحتاج موقعك حتى نحسب أجرة التوصيل ويوصلك الطلب بسرعة.'}</div>
+        <label class="f">أقرب نقطة دالة (اختياري)</label><input class="i" id="fAddr" value="${esc(me.addr || '')}" placeholder="مثلاً: قرب جامع ...، بيت بباب أسود">` : `
+        <div class="hint" style="margin-top:12px">📍 ${esc(s.address)}</div>`}
+      <label class="f">ملاحظات (اختياري)</label><textarea class="i" id="fNotes" rows="2" placeholder="مثلاً: بدون بصل، صوص زيادة"></textarea>
+      <div class="sum">
+        <div><span>المجموع</span><span>${fmtIQD(sub)}</span></div>
+        ${S.type === 'delivery' ? `<div><span>التوصيل</span><span>${q.need ? 'حدد موقعك' : q.ok ? (q.fee ? fmtIQD(q.fee) : 'مجاني') : '—'}</span></div>` : ''}
+        <div class="tot"><span>الكلي</span><span>${fmtIQD(sub + (q.ok ? q.fee : 0))}</span></div>
+      </div>
+      ${s.min_order && sub < s.min_order ? `<div class="err">أقل مبلغ للطلب ${fmtIQD(s.min_order)}</div>` : ''}
+      ${!s.is_open ? `<div class="closedmsg">المطعم مغلق هسه. نفتح الساعة ${to12(s.open_time)}</div>` : ''}
+      <div class="err" id="err"></div>
+    </div>
+    <div class="foot"><button class="btn g" id="sendBtn" ${!s.is_open || !q.ok || (s.min_order && sub < s.min_order) ? 'disabled' : ''}>إرسال الطلب على واتساب</button></div>`;
+  const sh = $('cartSheet');
+  sh.querySelector('[data-close]').onclick = () => hide('cartBg');
+  const keep = () => store.set('me', { name: $('fName').value, phone: $('fPhone').value, addr: $('fAddr') ? $('fAddr').value : (me.addr || '') });
+  ['fName', 'fPhone', 'fAddr'].forEach(id => $(id) && ($(id).oninput = keep));
+  sh.querySelectorAll('[data-l]').forEach(b => b.onclick = () => {
+    const l = S.cart[+b.dataset.l]; l.qty += +b.dataset.d;
+    if (l.qty <= 0) S.cart.splice(+b.dataset.l, 1);
+    saveCart(); renderCartBar();
+    if (!S.cart.length) return hide('cartBg');
+    const notes = $('fNotes').value; drawCart(); $('fNotes').value = notes;
+  });
+  sh.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { S.type = b.dataset.t; const n = $('fNotes').value; drawCart(); $('fNotes').value = n; });
+  if ($('locBtn')) { $('locBtn').onclick = getLocation; if (S.loc) initMap(); }
+  $('sendBtn').onclick = send;
+}
+
+function refreshQuote() {
+  const notes = $('fNotes').value, scroll = $('cartSheet').scrollTop;
+  map = null; drawCart(); $('fNotes').value = notes; $('cartSheet').scrollTop = scroll;
+}
+function getLocation() {
+  const btn = $('locBtn');
+  if (!navigator.geolocation) { initMap(true); return; }
+  btn.textContent = '... جاري تحديد موقعك';
+  navigator.geolocation.getCurrentPosition(p => {
+    S.loc = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+    refreshQuote();
+  }, () => {
+    btn.textContent = '📍 شارك موقعي';
+    $('locHint').textContent = 'ما گدرنا ناخذ موقعك. فعّل الموقع (GPS) بالموبايل، أو حرّك الدبوس على الخريطة لمكان بيتك.';
+    initMap(true);
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+}
+function initMap(manual) {
+  const el = $('map'); if (!el || !window.L) return;
+  el.style.display = 'block';
+  const s = S.settings, c = S.loc || { lat: s.rest_lat, lng: s.rest_lng };
+  map = L.map(el, { zoomControl: true, attributionControl: false }).setView([c.lat, c.lng], S.loc ? 16 : 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  marker = L.marker([c.lat, c.lng], { draggable: true }).addTo(map);
+  const set = ll => { S.loc = { lat: ll.lat, lng: ll.lng }; refreshQuote(); };
+  marker.on('dragend', () => set(marker.getLatLng()));
+  map.on('click', e => set(e.latlng));
+  if (manual) $('locHint').textContent += ' اضغط على الخريطة على مكانك.';
+}
+
+async function send() {
+  if (S.sending) return;
+  const err = $('err'); err.textContent = '';
+  const name = $('fName').value.trim(), phone = $('fPhone').value.replace(/\D/g, '');
+  if (name.length < 2) return err.textContent = 'اكتب اسمك';
+  if (!/^(07\d{9}|9647\d{9})$/.test(phone)) return err.textContent = 'رقم الهاتف لازم يكون مثل 07XXXXXXXXX';
+  const notes = $('fNotes').value.trim(), addr = $('fAddr') ? $('fAddr').value.trim() : '';
+  const payload = { name, phone, type: S.type, notes, address_note: addr, source: source(),
+    lat: S.type === 'delivery' ? S.loc.lat : null, lng: S.type === 'delivery' ? S.loc.lng : null,
+    items: S.cart.map(l => ({ id: l.id, qty: l.qty, sel: l.sel })) };
+  S.sending = true; $('sendBtn').disabled = true; $('sendBtn').textContent = '... جاري الإرسال';
+  try {
+    const r = await bunzApi.rpc('bunz_place_order', { p: payload });
+    if (r.error) throw r;
+    const msg = waText(r, payload);
+    const url = 'https://wa.me/' + r.whatsapp + '?text=' + encodeURIComponent(msg);
+    store.set('last', { no: r.order_no, url });
+    S.cart = []; saveCart(); renderCartBar();
+    done(r, url);
+    location.href = url;
+  } catch (e) {
+    const m = { closed: 'المطعم مغلق هسه.', phone: 'رقم الهاتف غير صحيح.', name: 'اكتب اسمك.', out_of_range: 'موقعك خارج منطقة التوصيل. تگدر تختار استلام من المطعم.',
+      item_unavailable: 'أحد الأيتمات خلص. حدّث الصفحة.', too_many: 'طلبات كثيرة من نفس الرقم. انتظر شوية.', min_order: 'المبلغ أقل من الحد الأدنى.', location: 'حدد موقعك.', option: 'اختار الخيارات المطلوبة.' };
+    err.textContent = (e && m[e.error]) || 'صار خلل. حاول مرة ثانية.';
+    $('sendBtn').disabled = false; $('sendBtn').textContent = 'إرسال الطلب على واتساب';
+    if (e && e.error === 'item_unavailable') load();
+    console.error(e);
+  } finally { S.sending = false; }
+}
+function waText(r, p) {
+  const L = [];
+  L.push('🍔 *طلب جديد #' + r.order_no + '* · 10 BUNZ');
+  L.push('👤 ' + p.name + '  📞 ' + p.phone);
+  L.push(p.type === 'delivery' ? '🛵 توصيل' : '🏃 استلام من المطعم');
+  L.push('━━━━━━━━━━');
+  r.lines.forEach(l => L.push(l.qty + '× ' + l.name + (l.options ? ' (' + l.options + ')' : '') + ' · ' + fmtIQD(l.line_total)));
+  L.push('━━━━━━━━━━');
+  L.push('المجموع: ' + fmtIQD(r.subtotal));
+  if (p.type === 'delivery') L.push('التوصيل (' + (r.distance_m / 1000).toFixed(1) + ' كم): ' + (r.delivery_fee ? fmtIQD(r.delivery_fee) : 'مجاني'));
+  L.push('*الكلي: ' + fmtIQD(r.total) + '*');
+  if (p.type === 'delivery') {
+    L.push('📍 الموقع: https://maps.google.com/?q=' + p.lat.toFixed(6) + ',' + p.lng.toFixed(6));
+    if (p.address_note) L.push('🏠 ' + p.address_note);
+  }
+  if (p.notes) L.push('📝 ' + p.notes);
+  return L.join('\n');
+}
+function done(r, url) {
+  $('cartSheet').innerHTML = `<div class="ok">
+    <div style="font-size:54px">✅</div>
+    <div style="font-weight:800">تم تسجيل طلبك</div>
+    <div class="num">#${r.order_no}</div>
+    <div style="color:var(--muted);margin:8px 0 20px">الكلي ${fmtIQD(r.total)}<br>اضغط <b>إرسال</b> بالواتساب حتى يوصلنا الطلب.</div>
+    <a class="btn g" style="display:block;text-decoration:none" href="${url}">فتح واتساب</a>
+    <button class="btn" style="margin-top:10px;background:var(--bg);color:var(--navy)" onclick="hide('cartBg')">رجوع للمنيو</button>
+  </div>`;
+}
+
+function show(id) { $(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
+function hide(id) { $(id).style.display = 'none'; document.body.style.overflow = ''; }
+['itemBg', 'cartBg'].forEach(id => $(id).addEventListener('click', e => { if (e.target.id === id) hide(id); }));
+load();
+setInterval(() => bunzApi.rpc('bunz_public_settings').then(s => { S.settings = s; renderHeader(); }).catch(() => {}), 120000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
