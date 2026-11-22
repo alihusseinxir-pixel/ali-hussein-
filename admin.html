@@ -318,7 +318,8 @@ function qr() {
   };
 }
 
-if (PIN) refresh().then(start).catch(() => logout());
+if (BUNZ.STATIC) { $('login').innerHTML = '<h2>لوحة التحكم</h2><div class="muted">لوحة التحكم تتفعل بعد ربط قاعدة البيانات. لحد ذاك، أي تعديل على الأسعار أو التوصيل أو الدوام يصير عن طريق Claude.</div>'; }
+else if (PIN) refresh().then(start).catch(() => logout());
 </script>
 </body>
 </html>

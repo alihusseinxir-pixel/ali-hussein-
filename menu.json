@@ -1,0 +1,1070 @@
+{
+ "settings": {
+  "store_name": "10 BUNZ",
+  "whatsapp": "9647755191049",
+  "phone_display": "07750801010",
+  "address": "كركوك، شارع القدس، مجاور O3",
+  "rest_lat": 35.4402666,
+  "rest_lng": 44.3779594,
+  "delivery_enabled": true,
+  "pickup_enabled": true,
+  "delivery_mode": "tiers",
+  "flat_fee": 2000,
+  "tiers": [
+   {
+    "upto_km": 1,
+    "fee": 1000
+   },
+   {
+    "upto_km": 3,
+    "fee": 2000
+   },
+   {
+    "upto_km": 5,
+    "fee": 3000
+   }
+  ],
+  "max_km": 8,
+  "free_delivery_above": 0,
+  "min_order": 0,
+  "open_time": "10:00",
+  "close_time": "03:00",
+  "open_override": "auto",
+  "announcement": ""
+ },
+ "categories": [
+  {
+   "id": 1,
+   "name": "بركر لحم",
+   "sort": 1,
+   "active": true
+  },
+  {
+   "id": 2,
+   "name": "وجبات بركر لحم",
+   "sort": 2,
+   "active": true
+  },
+  {
+   "id": 3,
+   "name": "بركر دجاج",
+   "sort": 3,
+   "active": true
+  },
+  {
+   "id": 4,
+   "name": "وجبات دجاج",
+   "sort": 4,
+   "active": true
+  },
+  {
+   "id": 5,
+   "name": "البوكسات",
+   "sort": 5,
+   "active": true
+  },
+  {
+   "id": 6,
+   "name": "فرايز",
+   "sort": 6,
+   "active": true
+  },
+  {
+   "id": 7,
+   "name": "سوفت درينك",
+   "sort": 7,
+   "active": true
+  },
+  {
+   "id": 8,
+   "name": "صوصات",
+   "sort": 8,
+   "active": true
+  }
+ ],
+ "items": [
+  {
+   "id": 1,
+   "category_id": 1,
+   "name": "هوم بركر",
+   "description": "",
+   "price": 6000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/4a01d8e8-2e6f-4c93-9944-bcbc6a0806a7.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 0,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 2,
+   "category_id": 1,
+   "name": "بركر 10 بنز",
+   "description": "",
+   "price": 6500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/70386d3c-7b73-48c4-bbf1-ac5d6c8db074.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 1,
+   "featured": true,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 3,
+   "category_id": 1,
+   "name": "اونيون بركر",
+   "description": "",
+   "price": 7000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/7e2871d4-ef7b-4b2a-958c-e2038a5272c1.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 2,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 4,
+   "category_id": 1,
+   "name": "بركر جيزي",
+   "description": "",
+   "price": 7000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/69de8ada-2589-4548-a251-06a2baa5aee3.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 3,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 5,
+   "category_id": 1,
+   "name": "بركر فاير سلايز",
+   "description": "",
+   "price": 7000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/ebfe3b57-39cb-40a1-96b2-1597170f9451.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 4,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 6,
+   "category_id": 1,
+   "name": "بركر سويس مشروم",
+   "description": "",
+   "price": 7500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/7b85d43a-3020-4bc5-ad08-95740b3c6e2d.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 5,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 7,
+   "category_id": 1,
+   "name": "بركر برسكت",
+   "description": "",
+   "price": 8500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/bb1ff9cd-aa93-4a26-ab85-a97482566c12.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 6,
+   "featured": true,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 8,
+   "category_id": 1,
+   "name": "بركر سويت جيلي",
+   "description": "",
+   "price": 7000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/e6a78f02-52de-48a5-9f07-582884506cc6.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 7,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 9,
+   "category_id": 1,
+   "name": "بركر 80S",
+   "description": "",
+   "price": 7500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/c7be61a8-ce60-4425-9b0e-ee91f7a43cf0.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 8,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 10,
+   "category_id": 2,
+   "name": "وجبة هوم بركر",
+   "description": "بركر + فرايز + مشروب",
+   "price": 8000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/676bf559-c09c-4bdc-8372-d625032565d4.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 0,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 11,
+   "category_id": 2,
+   "name": "وجبة 10 بنز بركر",
+   "description": "بركر + فرايز + مشروب",
+   "price": 8500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/a2b01af0-ecec-4e6b-b55a-f3ae5eede1c3.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 1,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 12,
+   "category_id": 2,
+   "name": "وجبة اونيون بركر",
+   "description": "بركر + فرايز + مشروب",
+   "price": 9000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/a622c0f0-17ba-41e2-a8b9-cd8e8683b752.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 2,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 13,
+   "category_id": 2,
+   "name": "وجبة جيزي بركر",
+   "description": "بركر + فرايز + مشروب",
+   "price": 9000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/353cec56-f639-4576-98c3-f7dc8aa3ad66.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 3,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 14,
+   "category_id": 2,
+   "name": "وجبة بركر فاير سلايز",
+   "description": "بركر + فرايز + مشروب",
+   "price": 9000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/9d26741e-cd43-427a-b995-ad0952353403.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 4,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 15,
+   "category_id": 2,
+   "name": "وجبة بركر سويس مشروم",
+   "description": "بركر + فرايز + مشروب",
+   "price": 9500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/ff09af41-cd23-4a50-a425-a6faa9864324.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 5,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 16,
+   "category_id": 2,
+   "name": "وجبة بركر برسكت",
+   "description": "بركر + فرايز + مشروب",
+   "price": 10500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/bca66030-d378-4f2e-ba39-6e8c0da9b234.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 6,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 17,
+   "category_id": 2,
+   "name": "وجبة بركر سويت جيلي",
+   "description": "بركر + فرايز + مشروب",
+   "price": 9000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/bfd48df9-8c50-4ab6-8262-cc0978bc9d1e.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 7,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 18,
+   "category_id": 2,
+   "name": "وجبة 80S بركر",
+   "description": "بركر + فرايز + مشروب",
+   "price": 9500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/c7be61a8-ce60-4425-9b0e-ee91f7a43cf0.webp",
+   "options": [
+    {
+     "name": "اختر نوع اللحم",
+     "min": 1,
+     "max": 1,
+     "mode": "single",
+     "choices": [
+      {
+       "name": "سماش",
+       "price": 0
+      },
+      {
+       "name": "كلاسيك",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 8,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 19,
+   "category_id": 2,
+   "name": "كومبو 80S",
+   "description": "كومبو",
+   "price": 13750,
+   "image_url": "https://api.foodifypos.com/rificafe/images/c7be61a8-ce60-4425-9b0e-ee91f7a43cf0.webp",
+   "options": [],
+   "sort": 9,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 20,
+   "category_id": 3,
+   "name": "كلاسك 10 بنز دجاج",
+   "description": "",
+   "price": 6500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/c410e597-7cb7-4a0b-9b79-ccebdceb1cac.webp",
+   "options": [],
+   "sort": 0,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 21,
+   "category_id": 3,
+   "name": "اورجنال كولسلو دجاج",
+   "description": "",
+   "price": 6500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/12b959da-435c-4eb3-b4ca-03f0879feb82.webp",
+   "options": [],
+   "sort": 1,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 22,
+   "category_id": 3,
+   "name": "سبايسي 10 بنز دجاج",
+   "description": "",
+   "price": 6500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/0381fc8d-ffec-4eea-b769-d87e6883bd99.webp",
+   "options": [],
+   "sort": 2,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 23,
+   "category_id": 3,
+   "name": "سيزر كرانش بركر دجاج",
+   "description": "",
+   "price": 6500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/e9bf0616-9550-441b-8f2d-072908ba37d0.webp",
+   "options": [],
+   "sort": 3,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 24,
+   "category_id": 4,
+   "name": "وجبة كلاسك 10 بنز دجاج",
+   "description": "بركر + فرايز + مشروب",
+   "price": 8500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/6883eb91-ae26-41d5-a9ef-36db51436bd6.webp",
+   "options": [],
+   "sort": 0,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 25,
+   "category_id": 4,
+   "name": "وجبة اورجنال كولسلو دجاج",
+   "description": "بركر + فرايز + مشروب",
+   "price": 8500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/1da6286c-978a-49dd-bc9d-1af762a48ba3.webp",
+   "options": [],
+   "sort": 1,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 26,
+   "category_id": 4,
+   "name": "وجبة سبايسي 10 بنز دجاج",
+   "description": "بركر + فرايز + مشروب",
+   "price": 8500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/e6fbb9b0-0f8a-493d-a39c-2d05b4f304ff.webp",
+   "options": [],
+   "sort": 2,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 27,
+   "category_id": 4,
+   "name": "وجبة سيزر بركر دجاج",
+   "description": "بركر + فرايز + مشروب",
+   "price": 8500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/e9bf0616-9550-441b-8f2d-072908ba37d0.webp",
+   "options": [],
+   "sort": 3,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 28,
+   "category_id": 5,
+   "name": "بوكس الاصدقاء",
+   "description": "5 بركر (3 لحم + 2 دجاج) + كلاسك فنكر + بيبسي عائلي",
+   "price": 34750,
+   "image_url": "https://api.foodifypos.com/rificafe/images/6618daea-fbca-4b41-ae76-19bc025a805b.webp",
+   "options": [
+    {
+     "name": "اختر 3 بركر لحم",
+     "min": 3,
+     "max": 3,
+     "mode": "count",
+     "choices": [
+      {
+       "name": "سماش 10 بنز",
+       "price": 0
+      },
+      {
+       "name": "سماش سويت جيلي",
+       "price": 0
+      },
+      {
+       "name": "سماش سويس مشروم",
+       "price": 0
+      },
+      {
+       "name": "سماش هوم بركر",
+       "price": 0
+      },
+      {
+       "name": "سماش جيزي",
+       "price": 0
+      },
+      {
+       "name": "سماش اونيون",
+       "price": 0
+      },
+      {
+       "name": "سماش فاير سلايز",
+       "price": 0
+      }
+     ]
+    },
+    {
+     "name": "اختر 2 بركر دجاج",
+     "min": 2,
+     "max": 2,
+     "mode": "count",
+     "choices": [
+      {
+       "name": "اورجنال كولسلو دجاج",
+       "price": 0
+      },
+      {
+       "name": "كلاسك 10 بنز دجاج",
+       "price": 0
+      },
+      {
+       "name": "سبايسي 10 بنز دجاج",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 0,
+   "featured": true,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 29,
+   "category_id": 5,
+   "name": "بوكس الاصدقاء (برسكت)",
+   "description": "5 بركر (3 لحم + 2 دجاج) + كلاسك فنكر + بيبسي عائلي",
+   "price": 35750,
+   "image_url": "https://api.foodifypos.com/rificafe/images/f9e91ba4-f58a-45b3-96c0-83dfa271a96e.webp",
+   "options": [
+    {
+     "name": "اختر 3 بركر لحم",
+     "min": 3,
+     "max": 3,
+     "mode": "count",
+     "choices": [
+      {
+       "name": "سماش 10 بنز",
+       "price": 0
+      },
+      {
+       "name": "سماش سويت جيلي",
+       "price": 0
+      },
+      {
+       "name": "سماش سويس مشروم",
+       "price": 0
+      },
+      {
+       "name": "سماش هوم بركر",
+       "price": 0
+      },
+      {
+       "name": "سماش جيزي",
+       "price": 0
+      },
+      {
+       "name": "سماش اونيون",
+       "price": 0
+      },
+      {
+       "name": "سماش فاير سلايز",
+       "price": 0
+      },
+      {
+       "name": "برسكت",
+       "price": 0
+      }
+     ]
+    },
+    {
+     "name": "اختر 2 بركر دجاج",
+     "min": 2,
+     "max": 2,
+     "mode": "count",
+     "choices": [
+      {
+       "name": "اورجنال كولسلو دجاج",
+       "price": 0
+      },
+      {
+       "name": "كلاسك 10 بنز دجاج",
+       "price": 0
+      },
+      {
+       "name": "سبايسي 10 بنز دجاج",
+       "price": 0
+      }
+     ]
+    }
+   ],
+   "sort": 1,
+   "featured": true,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 30,
+   "category_id": 6,
+   "name": "كرنشي جيزي كاب",
+   "description": "",
+   "price": 7750,
+   "image_url": "https://api.foodifypos.com/rificafe/images/32f1d92b-eedc-451b-9eac-6807d9c6b14c.webp",
+   "options": [],
+   "sort": 0,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 31,
+   "category_id": 6,
+   "name": "بيف فرايز كاب",
+   "description": "",
+   "price": 7750,
+   "image_url": "https://api.foodifypos.com/rificafe/images/1fa9bb28-ae94-49ec-96bf-0c5065e30dc6.webp",
+   "options": [],
+   "sort": 1,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 32,
+   "category_id": 6,
+   "name": "جيزي مني كاب",
+   "description": "",
+   "price": 7500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/6f25a034-0330-4587-8f54-346ae50939e4.webp",
+   "options": [],
+   "sort": 2,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 33,
+   "category_id": 6,
+   "name": "كلاسك فنكر",
+   "description": "",
+   "price": 3000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/b6418366-c52f-4b02-b5e8-453e567131f4.webp",
+   "options": [],
+   "sort": 3,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 34,
+   "category_id": 6,
+   "name": "وافل فنكر",
+   "description": "",
+   "price": 3000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/0512b6d6-785d-48ed-877b-31488d91a233.webp",
+   "options": [],
+   "sort": 4,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 35,
+   "category_id": 6,
+   "name": "كلاسك فنكر سمول",
+   "description": "",
+   "price": 2000,
+   "image_url": "https://api.foodifypos.com/rificafe/images/b6418366-c52f-4b02-b5e8-453e567131f4.webp",
+   "options": [],
+   "sort": 5,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 36,
+   "category_id": 7,
+   "name": "ببسي",
+   "description": "",
+   "price": 500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/eac4cfb0-0877-455a-af28-593918d93771.webp",
+   "options": [],
+   "sort": 0,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 37,
+   "category_id": 7,
+   "name": "بيبسي دايت",
+   "description": "",
+   "price": 500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/3178f92c-5812-461d-bb94-3026f727c89b.webp",
+   "options": [],
+   "sort": 1,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 38,
+   "category_id": 7,
+   "name": "بيبسي عائلي",
+   "description": "",
+   "price": 750,
+   "image_url": "https://api.foodifypos.com/rificafe/images/efa1c9b2-2812-4964-846d-cc26f3a44dc0.webp",
+   "options": [],
+   "sort": 2,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 39,
+   "category_id": 7,
+   "name": "مياه معدنية بنز",
+   "description": "",
+   "price": 500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/5f9ba10c-9ffb-422a-a793-d45a3a454ea6.webp",
+   "options": [],
+   "sort": 3,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 40,
+   "category_id": 8,
+   "name": "صوص هاني ماسترد",
+   "description": "",
+   "price": 500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/a2a8b24f-df9a-4ffc-aac2-3d77c1972647.webp",
+   "options": [],
+   "sort": 0,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 41,
+   "category_id": 8,
+   "name": "صوص باربيكيو",
+   "description": "",
+   "price": 500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/0d1158f5-9e4d-46ec-a083-50b3802ccaa3.webp",
+   "options": [],
+   "sort": 1,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 42,
+   "category_id": 8,
+   "name": "صوص تشيدر",
+   "description": "",
+   "price": 500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/433b986e-5e6f-4ecd-9d56-5f0a8cae7590.webp",
+   "options": [],
+   "sort": 2,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  },
+  {
+   "id": 43,
+   "category_id": 8,
+   "name": "صوص ثومية",
+   "description": "",
+   "price": 500,
+   "image_url": "https://api.foodifypos.com/rificafe/images/0e8bf972-6e00-4cfc-b291-265e371c6a4a.webp",
+   "options": [],
+   "sort": 3,
+   "featured": false,
+   "active": true,
+   "sold_out": false
+  }
+ ]
+}
