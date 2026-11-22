@@ -135,6 +135,7 @@ function orders() {
         <div class="row" style="margin-top:8px">
           <a class="btn g" style="text-decoration:none;padding:6px 12px" target="_blank" href="https://wa.me/964${o.phone.slice(1)}">واتساب ${esc(o.phone)}</a>
           <a class="btn s" style="text-decoration:none;padding:6px 12px" href="tel:${esc(o.phone)}">اتصال</a>
+          <a class="btn y" style="text-decoration:none;padding:6px 12px" target="_blank" href="r.html?t=${o.token}">🧾 الفاتورة</a>
           ${o.lat ? `<a class="btn s" style="text-decoration:none;padding:6px 12px" target="_blank" href="https://maps.google.com/?q=${o.lat},${o.lng}">الموقع 📍</a>` : ''}
         </div>
         <div class="row st" style="margin-top:10px">${Object.entries(ST).map(([k, v]) => `<button data-o="${o.id}" data-s="${k}" class="${o.status === k ? 'on' : ''}">${v}</button>`).join('')}</div>

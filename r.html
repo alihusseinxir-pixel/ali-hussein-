@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>فاتورة 10 BUNZ</title>
+<meta name="theme-color" content="#0a1440">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0a1440;--blue:#2d5bff;--yellow:#ffd23f;--bg:#f4f6fb;--line:#e3e7f2;--muted:#5b6585;--green:#1f9d55;--red:#e5484d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--navy);font-family:Cairo,system-ui,sans-serif}
+.wrap{max-width:480px;margin:0 auto;padding:16px 16px 40px}
+.rc{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 4px 20px #0a144014}
+.top{background:var(--navy);color:#fff;padding:18px 20px;display:flex;align-items:center;gap:12px}
+.top img{width:46px;height:46px;border-radius:12px;background:#fff;object-fit:cover}
+.top b{font-size:18px;font-weight:900;display:block}.top small{opacity:.8}
+.no{margin-right:auto;text-align:left}.no div{font-size:28px;font-weight:900;color:var(--yellow);line-height:1}
+.sec{padding:14px 20px;border-bottom:1px dashed var(--line)}
+.k{color:var(--muted);font-size:12px;font-weight:700}
+.v{font-weight:800;font-size:16px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+table{width:100%;border-collapse:collapse}td{padding:7px 0;font-size:14px;vertical-align:top}td:last-child{text-align:left;white-space:nowrap;font-weight:700}
+td small{color:var(--muted);display:block}
+.tot{font-size:22px;font-weight:900}
+.due{background:var(--yellow);border-radius:14px;padding:12px 14px;margin-top:10px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.btn{display:block;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:13px;font-weight:900;font-size:15px;background:var(--navy);color:#fff;font-family:inherit;cursor:pointer}
+.btn.g{background:#25d366}.btn.b{background:var(--blue)}.btn.s{background:var(--bg);color:var(--navy)}
+.qr{text-align:center;padding:16px}
+.qr canvas{width:150px;height:150px}
+.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;background:var(--bg)}
+.verified{color:var(--green);font-weight:800;font-size:13px;text-align:center;padding:10px}
+.msg{text-align:center;padding:60px 20px;color:var(--muted)}
+@media print{body{background:#fff}.wrap{padding:0;max-width:80mm}.rc{box-shadow:none;border-radius:0}.noprint{display:none!important}.top{background:#fff;color:#000;border-bottom:2px solid #000}.no div{color:#000}.due{background:#eee}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="msg">... جاري تحميل الفاتورة</div></div>
+<script src="config.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+const ST = { new: 'جديد', preparing: 'يتحضر', on_the_way: 'بالطريق', done: 'تم التسليم', cancelled: 'ملغي' };
+const t = new URLSearchParams(location.search).get('t');
+(async () => {
+  const app = document.getElementById('app');
+  if (!t || !/^[0-9a-f-]{36}$/i.test(t)) { app.innerHTML = '<div class="msg">رابط الفاتورة غير صحيح</div>'; return; }
+  let o;
+  try { o = await bunzApi.rpc('bunz_get_order', { t }); } catch (e) { app.innerHTML = '<div class="msg">صار خلل بالتحميل، حدّث الصفحة</div>'; return; }
+  if (!o) { app.innerHTML = '<div class="msg">❌ هاي الفاتورة غير موجودة</div>'; return; }
+  const d = new Date(o.created_at).toLocaleString('ar-IQ', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'numeric', year: 'numeric' });
+  const wa = '964' + o.phone.slice(1);
+  const nav = o.lat ? `https://www.google.com/maps/dir/?api=1&destination=${o.lat},${o.lng}&travelmode=driving` : '';
+  document.title = 'فاتورة #' + o.order_no + ' · 10 BUNZ';
+  app.innerHTML = `<div class="rc">
+    <div class="top"><img src="${BUNZ.LOGO}" alt=""><div><b>10 BUNZ</b><small>${d}</small></div><div class="no"><small>رقم الطلب</small><div>#${o.order_no}</div></div></div>
+    <div class="sec row"><div><div class="k">الزبون</div><div class="v">${esc(o.customer_name)}</div><div dir="ltr" style="text-align:right">${esc(o.phone)}</div></div>
+      <div style="text-align:left"><span class="pill">${o.order_type === 'delivery' ? '🛵 توصيل' : '🏃 استلام'}</span><br><span class="pill" style="margin-top:6px">${ST[o.status] || o.status}</span></div></div>
+    <div class="sec"><table>${o.items.map(l => `<tr><td>${l.qty}× ${esc(l.name)}${l.options ? `<small>${esc(l.options)}</small>` : ''}</td><td>${fmtIQD(l.line_total)}</td></tr>`).join('')}</table></div>
+    <div class="sec">
+      <div class="row"><span>المجموع</span><b>${fmtIQD(o.subtotal)}</b></div>
+      ${o.order_type === 'delivery' ? `<div class="row"><span>التوصيل (${(o.distance_m / 1000).toFixed(1)} كم)</span><b>${o.delivery_fee ? fmtIQD(o.delivery_fee) : 'مجاني'}</b></div>` : ''}
+      <div class="due row"><span style="font-weight:800">المبلغ المطلوب من الزبون</span><span class="tot">${fmtIQD(o.total)}</span></div>
+    </div>
+    ${o.order_type === 'delivery' ? `<div class="sec"><div class="k">العنوان</div>
+      ${o.location_label ? `<div class="v">📍 ${esc(o.location_label)}</div>` : ''}${o.address_note ? `<div>🏠 ${esc(o.address_note)}</div>` : ''}
+      <div class="btns noprint"><a class="btn b" href="${nav}" target="_blank">🧭 ابدأ التوصيل</a><a class="btn s" href="https://maps.google.com/?q=${o.lat},${o.lng}" target="_blank">📍 الخريطة</a></div></div>` : ''}
+    ${o.notes ? `<div class="sec"><div class="k">ملاحظات</div><div class="v">📝 ${esc(o.notes)}</div></div>` : ''}
+    <div class="sec noprint"><div class="btns"><a class="btn" href="tel:${esc(o.phone)}">📞 اتصال بالزبون</a><a class="btn g" href="https://wa.me/${wa}" target="_blank">واتساب الزبون</a></div></div>
+    <div class="qr"><canvas id="qr"></canvas><div class="k">امسح الـQR لفتح الفاتورة</div></div>
+    <div class="verified">✓ فاتورة رسمية من نظام 10 BUNZ. المعتمد هو المبلغ بهذي الصفحة فقط.</div>
+  </div>
+  <button class="btn s noprint" style="width:100%;margin-top:12px" onclick="print()">🖨️ طباعة الفاتورة</button>`;
+  const q = qrcode(0, 'M'); q.addData(location.href); q.make();
+  const n = q.getModuleCount(), c = document.getElementById('qr'), sc = 8, m = 2; c.width = c.height = (n + m * 2) * sc;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#0a1440';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect((k + m) * sc, (r + m) * sc, sc, sc);
+})();
+</script>
+</body>
+</html>

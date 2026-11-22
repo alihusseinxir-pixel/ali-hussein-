@@ -22,7 +22,7 @@ window.bunzApi = {
 
 // STATIC mode: menu + settings come from menu.json and the order goes straight to WhatsApp.
 // Switch STATIC to false once the database is connected (orders get saved + admin panel works).
-BUNZ.STATIC = true;
+BUNZ.STATIC = false;
 if (BUNZ.STATIC) {
   const data = fetch('menu.json', { cache: 'no-cache' }).then(r => r.json());
   const isOpen = s => {

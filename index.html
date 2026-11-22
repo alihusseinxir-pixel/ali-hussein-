@@ -393,7 +393,7 @@ async function send() {
   if (name.length < 2) return err.textContent = 'اكتب اسمك';
   if (!/^(07\d{9}|9647\d{9})$/.test(phone)) return err.textContent = 'رقم الهاتف لازم يكون مثل 07XXXXXXXXX';
   const notes = $('fNotes').value.trim(), addr = $('fAddr') ? $('fAddr').value.trim() : '';
-  const payload = { name, phone, type: S.type, notes, address_note: addr, source: source(),
+  const payload = { name, phone, type: S.type, notes, address_note: addr, source: source(), location_label: S.type === 'delivery' && S.loc ? (S.loc.label || '') : '',
     lat: S.type === 'delivery' ? S.loc.lat : null, lng: S.type === 'delivery' ? S.loc.lng : null,
     items: S.cart.map(l => ({ id: l.id, qty: l.qty, sel: l.sel })) };
   S.sending = true; $('sendBtn').disabled = true; $('sendBtn').textContent = '... جاري الإرسال';
@@ -415,7 +415,12 @@ async function send() {
     console.error(e);
   } finally { S.sending = false; }
 }
+function receiptUrl(r) { return location.origin + location.pathname.replace(/index\.html$/, '') + 'r.html?t=' + r.token; }
 function waText(r, p) {
+  if (r.token) {
+    return ['🍔 *طلب جديد #' + r.order_no + '* · 10 BUNZ', '👤 ' + p.name, '*الكلي: ' + fmtIQD(r.total) + '*', '',
+      '🧾 الفاتورة الرسمية (الأيتمات، المبلغ، الموقع):', receiptUrl(r), '', '⚠️ المعتمد هو الفاتورة بالرابط فقط'].join('\n');
+  }
   const L = [];
   L.push('🍔 *طلب جديد #' + r.order_no + '* · 10 BUNZ');
   L.push('👤 ' + p.name + '  📞 ' + p.phone);
