@@ -83,8 +83,18 @@ h2.sec{font-size:19px;font-weight:900;margin:22px 0 10px;scroll-margin-top:64px}
 label.f{display:block;font-weight:800;font-size:14px;margin:12px 0 6px}
 input.i,textarea.i{width:100%;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;color:var(--text)}
 input.i:focus,textarea.i:focus{outline:none;border-color:var(--blue)}
-.locbtn{width:100%;border:1.5px dashed var(--blue);background:#2d5bff0d;color:var(--blue);border-radius:14px;padding:13px;font-weight:900}
-#map{height:220px;border-radius:14px;margin-top:10px;display:none;z-index:1}
+.mapbox{position:relative;height:230px;border-radius:16px;overflow:hidden;border:1.5px solid var(--line)}
+#map{position:absolute;inset:0;z-index:1}
+.pin{position:absolute;left:50%;top:50%;z-index:5;transform:translate(-50%,-100%);pointer-events:none;transition:transform .15s}
+.pinshadow{position:absolute;left:50%;top:50%;width:14px;height:5px;margin:-2px 0 0 -7px;border-radius:50%;background:#0006;z-index:4;pointer-events:none}
+.mapbox.moving .pin{transform:translate(-50%,-118%)}
+.locate{position:absolute;bottom:10px;left:10px;z-index:6;width:42px;height:42px;border-radius:50%;border:0;background:#fff;color:var(--blue);font-size:24px;box-shadow:0 3px 12px #0003}
+.maptip{position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:6;background:#0a1440dd;color:#fff;font-size:12px;font-weight:700;padding:5px 12px;border-radius:99px;white-space:nowrap;max-width:92%;overflow:hidden;text-overflow:ellipsis}
+.addr{margin-top:10px;background:var(--bg);border-radius:14px;padding:10px 14px;font-size:14px;min-height:44px;display:flex;flex-direction:column;justify-content:center}
+.addr small{color:var(--muted);font-size:12px}
+.hint.bad{color:var(--red);font-weight:700}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:rot .8s linear infinite;vertical-align:-2px}
+@keyframes rot{to{transform:rotate(360deg)}}
 .hint{font-size:12px;color:var(--muted);margin-top:6px}
 .sum{background:var(--bg);border-radius:16px;padding:12px 14px;margin-top:16px}
 .sum div{display:flex;justify-content:space-between;padding:4px 0;font-size:14px}
@@ -281,22 +291,23 @@ function drawCart() {
       <label class="f">رقم الهاتف</label><input class="i" id="fPhone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" style="text-align:right" value="${esc(me.phone || '')}" placeholder="07XX XXX XXXX">
       ${S.type === 'delivery' ? `
         <label class="f">موقع التوصيل</label>
-        <button class="locbtn" id="locBtn">${S.loc ? '✓ تم تحديد موقعك (تگدر تحرك الدبوس)' : '📍 شارك موقعي'}</button>
-        <div id="map"></div>
-        <div class="hint" id="locHint">${S.loc ? (q.ok ? 'المسافة تقريباً ' + (q.dist / 1000).toFixed(1) + ' كم' : 'موقعك خارج منطقة التوصيل (' + (q.dist / 1000).toFixed(1) + ' كم)') : 'نحتاج موقعك حتى نحسب أجرة التوصيل ويوصلك الطلب بسرعة.'}</div>
+        <div class="mapbox"><div id="map"></div><div class="pin"><svg viewBox="0 0 24 36" width="34" height="50"><path d="M12 0C5.4 0 0 5.3 0 11.9 0 20.8 12 36 12 36s12-15.2 12-24.1C24 5.3 18.6 0 12 0z" fill="#e5484d"/><circle cx="12" cy="12" r="4.6" fill="#fff"/></svg></div><div class="pinshadow"></div>
+          <button class="locate" id="locate" title="موقعي">◎</button><div class="maptip" id="mapTip">حرّك الخريطة حتى يصير الدبوس على باب بيتك</div></div>
+        <div class="addr" id="addrLine"><span class="spin"></span> جاري تحديد موقعك...</div>
+        <div class="hint" id="locHint"></div>
         <label class="f">أقرب نقطة دالة (اختياري)</label><input class="i" id="fAddr" value="${esc(me.addr || '')}" placeholder="مثلاً: قرب جامع ...، بيت بباب أسود">` : `
         <div class="hint" style="margin-top:12px">📍 ${esc(s.address)}</div>`}
       <label class="f">ملاحظات (اختياري)</label><textarea class="i" id="fNotes" rows="2" placeholder="مثلاً: بدون بصل، صوص زيادة"></textarea>
       <div class="sum">
         <div><span>المجموع</span><span>${fmtIQD(sub)}</span></div>
-        ${S.type === 'delivery' ? `<div><span>التوصيل</span><span>${q.need ? 'حدد موقعك' : q.ok ? (q.fee ? fmtIQD(q.fee) : 'مجاني') : '—'}</span></div>` : ''}
-        <div class="tot"><span>الكلي</span><span>${fmtIQD(sub + (q.ok ? q.fee : 0))}</span></div>
+        ${S.type === 'delivery' ? `<div><span>التوصيل</span><span id="sumDel"></span></div>` : ''}
+        <div class="tot"><span>الكلي</span><span id="sumTot"></span></div>
       </div>
       ${s.min_order && sub < s.min_order ? `<div class="err">أقل مبلغ للطلب ${fmtIQD(s.min_order)}</div>` : ''}
       ${!s.is_open ? `<div class="closedmsg">المطعم مغلق هسه. نفتح الساعة ${to12(s.open_time)}</div>` : ''}
       <div class="err" id="err"></div>
     </div>
-    <div class="foot"><button class="btn g" id="sendBtn" ${!s.is_open || !q.ok || (s.min_order && sub < s.min_order) ? 'disabled' : ''}>إرسال الطلب على واتساب</button></div>`;
+    <div class="foot"><button class="btn g" id="sendBtn" disabled>إرسال الطلب على واتساب</button></div>`;
   const sh = $('cartSheet');
   sh.querySelector('[data-close]').onclick = () => hide('cartBg');
   const keep = () => store.set('me', { name: $('fName').value, phone: $('fPhone').value, addr: $('fAddr') ? $('fAddr').value : (me.addr || '') });
@@ -309,38 +320,70 @@ function drawCart() {
     const notes = $('fNotes').value; drawCart(); $('fNotes').value = notes;
   });
   sh.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { S.type = b.dataset.t; const n = $('fNotes').value; drawCart(); $('fNotes').value = n; });
-  if ($('locBtn')) { $('locBtn').onclick = getLocation; if (S.loc) initMap(); }
+  if ($('map')) initMap();
   $('sendBtn').onclick = send;
+  updateTotals();
+}
+function updateTotals() {
+  const s = S.settings, sub = subtotal(), q = quote();
+  if ($('sumDel')) $('sumDel').textContent = q.need ? 'حدد موقعك' : q.ok ? (q.fee ? fmtIQD(q.fee) : 'مجاني') : 'خارج المنطقة';
+  $('sumTot').textContent = fmtIQD(sub + (q.ok ? q.fee : 0));
+  if ($('locHint')) {
+    $('locHint').className = 'hint' + (S.loc && !q.ok ? ' bad' : '');
+    $('locHint').textContent = !S.loc ? '' : q.ok ? 'المسافة من المطعم ' + (q.dist / 1000).toFixed(1) + ' كم · أجرة التوصيل ' + (q.fee ? fmtIQD(q.fee) : 'مجاني')
+      : 'هذا الموقع بعيد ' + (q.dist / 1000).toFixed(1) + ' كم، نوصل لحد ' + s.max_km + ' كم. تگدر تختار استلام من المطعم.';
+  }
+  $('sendBtn').disabled = !s.is_open || !q.ok || (s.min_order && sub < s.min_order);
 }
 
-function refreshQuote() {
-  const notes = $('fNotes').value, scroll = $('cartSheet').scrollTop;
-  map = null; drawCart(); $('fNotes').value = notes; $('cartSheet').scrollTop = scroll;
+let geoTimer, geoSeq = 0;
+function setAddr(html) { if ($('addrLine')) $('addrLine').innerHTML = html; }
+function reverseGeocode(lat, lng) {
+  clearTimeout(geoTimer);
+  const seq = ++geoSeq;
+  geoTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=17&accept-language=ar&lat=${lat}&lon=${lng}`);
+      const j = await r.json(); if (seq !== geoSeq) return;
+      const a = j.address || {};
+      const parts = [a.road, a.neighbourhood || a.suburb || a.quarter || a.residential, a.city || a.town || a.county].filter(Boolean);
+      S.loc.label = parts.join('، ');
+      setAddr('📍 <b>' + esc(parts[0] || 'موقعك المحدد') + '</b>' + (parts.length > 1 ? '<small>' + esc(parts.slice(1).join('، ')) + '</small>' : ''));
+    } catch { if (seq === geoSeq) setAddr('📍 <b>موقعك المحدد على الخريطة</b>'); }
+  }, 500);
 }
-function getLocation() {
-  const btn = $('locBtn');
-  if (!navigator.geolocation) { initMap(true); return; }
-  btn.textContent = '... جاري تحديد موقعك';
+function onLoc(lat, lng, acc) {
+  S.loc = { lat, lng, acc, fresh: true };
+  store.set('loc', { lat, lng, at: Date.now() });
+  updateTotals(); reverseGeocode(lat, lng);
+}
+function locate(auto) {
+  if (!navigator.geolocation) return locFail();
+  setAddr('<span class="spin"></span> جاري تحديد موقعك...');
   navigator.geolocation.getCurrentPosition(p => {
-    S.loc = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
-    refreshQuote();
-  }, () => {
-    btn.textContent = '📍 شارك موقعي';
-    $('locHint').textContent = 'ما گدرنا ناخذ موقعك. فعّل الموقع (GPS) بالموبايل، أو حرّك الدبوس على الخريطة لمكان بيتك.';
-    initMap(true);
-  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+    if (map) map.setView([p.coords.latitude, p.coords.longitude], 17, { animate: !auto });
+    onLoc(p.coords.latitude, p.coords.longitude, p.coords.accuracy);
+    if (p.coords.accuracy > 150 && $('mapTip')) $('mapTip').textContent = 'الموقع تقريبي، حرّك الخريطة حتى يصير الدبوس على بيتك بالضبط';
+  }, locFail, { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 });
 }
-function initMap(manual) {
-  const el = $('map'); if (!el || !window.L) return;
-  el.style.display = 'block';
-  const s = S.settings, c = S.loc || { lat: s.rest_lat, lng: s.rest_lng };
-  map = L.map(el, { zoomControl: true, attributionControl: false }).setView([c.lat, c.lng], S.loc ? 16 : 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-  marker = L.marker([c.lat, c.lng], { draggable: true }).addTo(map);
-  const set = ll => { S.loc = { lat: ll.lat, lng: ll.lng }; refreshQuote(); };
-  marker.on('dragend', () => set(marker.getLatLng()));
-  map.on('click', e => set(e.latlng));
-  if (manual) $('locHint').textContent += ' اضغط على الخريطة على مكانك.';
+function locFail() {
+  if (S.loc) return reverseGeocode(S.loc.lat, S.loc.lng);
+  setAddr('<b style="color:var(--red)">ما گدرنا نحدد موقعك تلقائياً</b><small>فعّل الموقع (GPS) واضغط ◎، أو حرّك الخريطة لمكان بيتك</small>');
+}
+function initMap() {
+  const s = S.settings, saved = store.get('loc');
+  map = null;
+  if (!window.L) { $('locate').onclick = () => locate(false); if (S.loc && S.loc.fresh) reverseGeocode(S.loc.lat, S.loc.lng); else locate(true); return; }
+  if (!S.loc && saved && Date.now() - saved.at < 3 * 864e5) S.loc = { lat: saved.lat, lng: saved.lng };
+  const c = S.loc || { lat: s.rest_lat, lng: s.rest_lng };
+  map = L.map('map', { zoomControl: false, attributionControl: false }).setView([c.lat, c.lng], S.loc ? 17 : 13);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+  const box = $('map').parentElement;
+  map.on('movestart', () => box.classList.add('moving'));
+  map.on('moveend', e => { box.classList.remove('moving'); if (map._userMoved) { const m = map.getCenter(); onLoc(m.lat, m.lng); } });
+  map.on('dragstart zoomstart', () => { map._userMoved = true; });
+  $('locate').onclick = () => { map._userMoved = false; locate(false); };
+  if (S.loc && S.loc.fresh) reverseGeocode(S.loc.lat, S.loc.lng); else locate(true);
 }
 
 async function send() {
@@ -385,6 +428,7 @@ function waText(r, p) {
   L.push('*الكلي: ' + fmtIQD(r.total) + '*');
   if (p.type === 'delivery') {
     L.push('📍 الموقع: https://maps.google.com/?q=' + p.lat.toFixed(6) + ',' + p.lng.toFixed(6));
+    if (S.loc && S.loc.label) L.push('🗺️ ' + S.loc.label);
     if (p.address_note) L.push('🏠 ' + p.address_note);
   }
   if (p.notes) L.push('📝 ' + p.notes);
