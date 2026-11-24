@@ -66,13 +66,13 @@ details summary{cursor:pointer;font-weight:800;color:var(--blue);font-size:13px;
   <header><b>10 BUNZ · لوحة التحكم</b><span id="openState" class="pill"></span><a href="./" target="_blank" style="color:#fff;font-size:13px">الموقع ↗</a></header>
   <nav class="tabs" id="tabs">
     <button data-t="orders" class="on">الطلبات</button><button data-t="menu">المنيو والأسعار</button>
-    <button data-t="delivery">التوصيل</button><button data-t="settings">الدوام والإعدادات</button><button data-t="qr">روابط وQR</button>
+    <button data-t="delivery">التوصيل</button><button data-t="settings">الدوام والإعدادات</button><button data-t="qr">روابط وQR</button><button data-t="calls" id="callsTab">📞 اتصلوا بيه والإشعارات</button>
   </nav>
   <main id="view"></main>
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="config.js?v=3"></script>
+<script src="config.js?v=4"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
@@ -93,10 +93,10 @@ $('pin').onkeydown = e => { if (e.key === 'Enter') $('loginBtn').click(); };
 async function refresh() { D = await call('bunz_admin_data'); $('openState').textContent = D.settings.is_open ? '● مفتوح' : '● مغلق'; $('openState').style.color = D.settings.is_open ? '#1f9d55' : '#e5484d'; }
 async function start() {
   $('login').style.display = 'none'; $('app').style.display = 'block';
-  await loadOrders(true); render();
-  poll = setInterval(async () => { await loadOrders(); if (TAB === 'orders') render(); }, 15000);
+  await loadOrders(true); await loadCalls(true); render();
+  poll = setInterval(async () => { await loadOrders(); await loadCalls(); if (TAB === 'orders') render(); }, 15000);
 }
-$('tabs').onclick = async e => { const t = e.target.dataset.t; if (!t) return; TAB = t; $('tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); await refresh(); render(); };
+$('tabs').onclick = async e => { const t = e.target.dataset.t; if (!t) return; TAB = t; $('tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); await refresh(); if (t === 'calls') await loadCalls(true); render(); };
 
 function beep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); [0, .25, .5].forEach(t => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.3, a.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + t + .2); o.start(a.currentTime + t); o.stop(a.currentTime + t + .2); }); } catch {} }
 async function loadOrders(first) {
@@ -106,7 +106,58 @@ async function loadOrders(first) {
   if (!first && max > lastMaxId) { beep(); toast('🔔 طلب جديد #' + ORDERS[0].order_no); document.title = '🔔 طلب جديد'; }
   lastMaxId = max; localStorage.setItem('bunz_last_seen', max);
 }
-function render() { ({ orders, menu, delivery, settings, qr })[TAB](); }
+function render() { ({ orders, menu, delivery, settings, qr, calls })[TAB](); }
+
+// ---------- callbacks + push ----------
+let CBS = [], PUSHN = 0, lastCb = +localStorage.getItem('bunz_last_cb') || 0;
+async function loadCalls(first) {
+  try {
+    const r = await bunzApi.rpc('bunz_admin_callbacks', { pin: PIN });
+    if (!r || r.error) return;
+    CBS = r.callbacks; PUSHN = r.push_count;
+    const max = CBS.length ? CBS[0].id : 0;
+    if (!first && max > lastCb && !CBS[0].done) { beep(); toast('📞 زبون يريد نتصل بيه: ' + CBS[0].phone); document.title = '📞 اتصلوا بيه'; }
+    lastCb = Math.max(lastCb, max); localStorage.setItem('bunz_last_cb', lastCb);
+    const open = CBS.filter(c => !c.done).length;
+    $('callsTab').textContent = '📞 اتصلوا بيه والإشعارات' + (open ? ' (' + open + ')' : '');
+  } catch (e) { }
+}
+function calls() {
+  $('view').innerHTML = `
+    <div class="card"><h2>📞 زبائن يريدون نتصل بيهم</h2>
+      <div class="muted">من زر "اتصلوا بيه" بالموقع. اتصل بيه، سجّل طلبه، واضغط "تم".</div>
+      <div id="cbl" style="margin-top:10px"></div></div>
+    <div class="card"><h2>🔔 إرسال إشعار للزبائن</h2>
+      <div class="muted">يوصل لكل زبون فعّل الإشعارات (عددهم هسه: <b>${PUSHN}</b>). يطلع على شاشة موبايله مثل التطبيقات.</div>
+      <label>العنوان</label><input class="i" id="pt" maxlength="60" value="عرض الليلة 🔥">
+      <label>النص</label><textarea class="i" id="pb" rows="2" maxlength="160" placeholder="مثلاً: اطلب هسه من الموقع وخذ فنكر مجاني 🍟 لحد الساعة 12"></textarea>
+      <label>الرابط اللي يفتح (اختياري، مثلاً رابط أيتم)</label><input class="i" id="pu" dir="ltr" placeholder="${esc(location.origin)}/">
+      <button class="btn y" id="ps" style="margin-top:10px;width:100%;padding:12px">إرسال الإشعار</button>
+      <div class="muted" id="pr" style="margin-top:8px"></div></div>`;
+  const draw = () => {
+    $('cbl').innerHTML = CBS.length ? '<table>' + CBS.map(c => `<tr style="${c.done ? 'opacity:.45' : ''}">
+      <td>${new Date(c.created_at).toLocaleString('ar-IQ', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'numeric' })}</td>
+      <td><b>${esc(c.name || '-')}</b><br><span dir="ltr">${esc(c.phone)}</span></td>
+      <td><a class="btn s" style="text-decoration:none;padding:5px 10px" href="tel:${esc(c.phone)}">اتصال</a></td>
+      <td>${c.done ? '✓ تم' : `<button class="btn" data-cbd="${c.id}" style="padding:5px 10px">تم</button>`}</td></tr>`).join('') + '</table>' : '<div class="muted">ماكو طلبات اتصال.</div>';
+    $('cbl').querySelectorAll('[data-cbd]').forEach(b => b.onclick = async () => { await call('bunz_admin_callback_done', { cb_id: +b.dataset.cbd }); CBS.find(c => c.id == b.dataset.cbd).done = true; draw(); loadCalls(true); });
+  };
+  draw();
+  $('ps').onclick = async () => {
+    const title = $('pt').value.trim(), body = $('pb').value.trim(), url = $('pu').value.trim();
+    if (!title || !body) return toast('اكتب العنوان والنص');
+    if (!confirm('ترسل الإشعار لـ ' + PUSHN + ' زبون؟')) return;
+    $('ps').disabled = true; $('pr').textContent = '... جاري الإرسال (أول مرة ممكن ياخذ دقيقة)';
+    try {
+      const r = await fetch(BUNZ.PUSH_URL + '/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pin: PIN, title, body, url }) });
+      const j = await r.json();
+      if (j.error) throw new Error(j.error);
+      $('pr').textContent = '✓ وصل لـ ' + j.sent + ' زبون' + (j.removed ? ' (انحذف ' + j.removed + ' جهاز قديم)' : '');
+      loadCalls(true);
+    } catch (e) { $('pr').textContent = 'ما انرسل: ' + e.message; }
+    $('ps').disabled = false;
+  };
+}
 
 // ---------- orders ----------
 function orders() {
@@ -187,7 +238,7 @@ function itemRow(i) {
         <div class="row" style="margin-bottom:6px"><button class="btn s" data-preset="meat">خيار سماش/كلاسيك</button><button class="btn s" data-preset="none">بدون خيارات</button></div>
         <textarea class="i" data-f="options" dir="ltr" rows="4" style="font-family:monospace;font-size:12px">${esc(JSON.stringify(i.options, null, 1))}</textarea>
       </details>
-      <div class="row" style="margin-top:10px"><button class="btn" data-save>حفظ</button><button class="btn r" data-del>حذف</button></div>
+      <div class="row" style="margin-top:10px"><button class="btn" data-save>حفظ</button><button class="btn s" data-link>🔗 نسخ رابط الأيتم (للستوري والإعلان)</button><button class="btn r" data-del>حذف</button></div>
     </div></div>`;
 }
 function bindItems() {
@@ -203,6 +254,7 @@ function bindItems() {
       toast('انحفظ ✓'); await refresh();
     };
     ['sold_out', 'active'].forEach(n => f(n).onchange = async () => { await call('bunz_admin_save_item', { v: { id, [n]: f(n).checked } }); toast('انحفظ ✓'); });
+    el.querySelector('[data-link]').onclick = () => { const u = location.origin + location.pathname.replace(/admin\.html$/, '') + '?item=' + id; navigator.clipboard.writeText(u).then(() => toast('انسخ ✓ ' + u), () => prompt('انسخ الرابط:', u)); };
     el.querySelector('[data-del]').onclick = async () => { if (!confirm('متأكد تحذف هذا الأيتم؟')) return; await call('bunz_admin_save_item', { v: { id, delete: true } }); await refresh(); menu(); };
   });
 }
@@ -273,6 +325,9 @@ function settings() {
       <label>حالة الطلبات</label>
       <select class="i" id="ov"><option value="auto">تلقائي حسب الدوام</option><option value="open">مفتوح الآن (تجاهل الدوام)</option><option value="closed">مسدود الآن (مثلاً المطبخ ضاغط)</option></select>
     </div>
+    <div class="card"><h2>وقت التوصيل الظاهر للزبون</h2>
+      <div class="muted">يطلع فوق: "🛵 يوصلك خلال ..."، غيّره وقت الضغط.</div>
+      <input class="i" id="eta" maxlength="40" value="${esc(s.eta_text || '30–40 دقيقة')}"></div>
     <div class="card"><h2>شريط العروض</h2>
       <div class="muted">يطلع فوق المنيو بالأصفر. مثلاً: "اطلب من هنا واحصل على فنكر مجاني 🍟"</div>
       <input class="i" id="ann" value="${esc(s.announcement)}">
@@ -286,6 +341,7 @@ function settings() {
     const np = $('np').value.trim(); if (np && np.length < 6) return toast('الرمز لازم 6 أرقام أو أكثر');
     await call('bunz_admin_save_settings', { v: { whatsapp: wa, phone_display: $('ph').value, address: $('addr').value, open_time: $('ot').value, close_time: $('ct').value, open_override: $('ov').value, announcement: $('ann').value, new_pin: np || null } });
     if (np) { PIN = np; sessionStorage.setItem('bunz_pin', np); }
+    if ($('eta').value.trim() && $('eta').value.trim() !== (s.eta_text || '')) await call('bunz_admin_set_eta', { eta: $('eta').value.trim() });
     toast('انحفظ ✓'); await refresh(); settings();
   };
 }

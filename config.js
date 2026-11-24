@@ -1,7 +1,9 @@
 window.BUNZ = {
   SUPABASE_URL: 'https://dycjowdipzchxdwekirh.supabase.co',
   SUPABASE_KEY: 'sb_publishable_2ta0kL29MbXmDt9DF0HZUg_5JpxoE4r',
-  LOGO: 'https://api.foodifypos.com/rificafe/images/03eb78b5-bb65-44a8-b107-29526a3ec380.webp'
+  LOGO: 'https://api.foodifypos.com/rificafe/images/03eb78b5-bb65-44a8-b107-29526a3ec380.webp',
+  VAPID_PUBLIC: 'BFfIQulPcRq6NoQFbQXQIvOZe-jJDef_aqKM66cPNNz20SuRccFfbOMnoPr2yCC2rGG1s9HTbKz7LbrEDky8TDY',
+  PUSH_URL: 'https://one0bunz-push.onrender.com'
 };
 
 window.bunzApi = {

@@ -36,14 +36,14 @@ main{max-width:900px;margin:0 auto;padding:6px 16px 120px}
 h2.sec{font-size:19px;font-weight:900;margin:22px 0 10px;scroll-margin-top:64px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
 @media(min-width:680px){.grid{grid-template-columns:repeat(3,1fr)}}
-.card{background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 2px 10px #0a14400d;display:flex;flex-direction:column;border:0;padding:0;text-align:right;color:inherit}
+.card{cursor:pointer;background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 2px 10px #0a14400d;display:flex;flex-direction:column;border:0;padding:0;text-align:right;color:inherit}
 .card img{width:100%;aspect-ratio:1/1;object-fit:cover;background:#e9edf7}
 .card .b{padding:10px 12px 12px;display:flex;flex-direction:column;gap:4px;flex:1}
 .card .n{font-weight:800;font-size:15px;line-height:1.35}
 .card .d{font-size:12px;color:var(--muted)}
 .card .f{display:flex;align-items:center;justify-content:space-between;margin-top:auto;padding-top:6px}
 .card .p{font-weight:900;color:var(--blue);font-size:15px}
-.add{width:34px;height:34px;border-radius:12px;background:var(--navy);color:#fff;border:0;font-size:22px;line-height:1;display:grid;place-items:center}
+.add{width:34px;height:34px;border-radius:12px;background:var(--navy);color:#fff;border:0;font-size:22px;line-height:1;display:grid;place-items:center;padding:0;flex:none}
 .card.out{opacity:.5}.card.out .add{background:#999}
 .tag{position:absolute;top:8px;right:8px;background:var(--yellow);color:var(--navy);font-size:11px;font-weight:800;padding:3px 8px;border-radius:99px}
 .imgw{position:relative}
@@ -105,6 +105,21 @@ input.i:focus,textarea.i:focus{outline:none;border-color:var(--blue)}
 .closedmsg{background:#fff0f0;color:var(--red);border-radius:14px;padding:12px;font-weight:800;text-align:center;margin-top:12px}
 .skel{height:220px;border-radius:18px;background:linear-gradient(90deg,#e9edf7,#f6f8fc,#e9edf7);background-size:200% 100%;animation:sk 1.2s infinite}
 @keyframes sk{to{background-position:-200% 0}}
+.hrow{max-width:900px;margin:12px auto 0;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.eta{background:#ffffff1f;border-radius:99px;padding:6px 12px;font-weight:800;font-size:14px}
+.cbb{border:0;background:#fff;color:var(--navy);border-radius:99px;padding:6px 14px;font-weight:800;font-size:14px}
+.toastc{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#0a1440f0;color:#fff;padding:10px 16px;border-radius:14px;font-weight:700;font-size:14px;z-index:60;display:none;max-width:92%;text-align:center;box-shadow:0 8px 24px #0004}
+.cartbar.pop{animation:pop .35s}
+@keyframes pop{50%{transform:scale(1.04)}}
+.edit{border:0;background:none;color:var(--blue);font-weight:800;font-size:12px;padding:0 6px}
+.appcard{background:#fff;border:1.5px solid var(--line);border-radius:18px;padding:12px 14px;margin:14px 0 0;display:flex;gap:12px;align-items:center}
+.appcard img{width:44px;height:44px;border-radius:12px}
+.appcard .t{flex:1;font-size:13px;color:var(--muted)}.appcard .t b{display:block;color:var(--navy);font-size:15px}
+.appcard .bs{display:flex;flex-direction:column;gap:6px}
+.appcard .bs button{border:0;border-radius:11px;padding:7px 12px;font-weight:800;font-size:13px;background:var(--navy);color:#fff;white-space:nowrap}
+.appcard .bs button.y{background:var(--yellow);color:var(--navy)}
+.appcard .xx{border:0;background:none;color:var(--muted);font-size:18px;align-self:flex-start}
+.best .card .n{font-size:14px}
 footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30px}
 </style>
 </head>
@@ -119,6 +134,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30p
     <span class="badge" id="openBadge"></span>
   </div>
   <div class="perk" id="perk"></div>
+  <div class="hrow"><span class="eta" id="eta" style="display:none"></span><button class="cbb" id="cbBtn">📞 اتصلوا بيه</button></div>
 </header>
 <nav class="cats"><div class="row" id="cats"></div></nav>
 <main id="menu"><div class="grid"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div></main>
@@ -127,9 +143,11 @@ footer{text-align:center;color:var(--muted);font-size:12px;padding:10px 16px 30p
 <button class="cartbar" id="cartbar"><span><span class="cnt" id="cartCnt">0</span>عرض السلة</span><span id="cartTot"></span></button>
 
 <div class="sheet-bg" id="itemBg"><div class="sheet" id="itemSheet"></div></div>
+<div class="sheet-bg" id="cbBg"><div class="sheet" id="cbSheet"></div></div>
+<div class="toastc" id="toast"></div>
 <div class="sheet-bg" id="cartBg"><div class="sheet" id="cartSheet"></div></div>
 
-<script src="config.js?v=3"></script>
+<script src="config.js?v=4"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const S = { settings: null, cats: [], items: [], cart: [], type: 'delivery', loc: null, sending: false };
@@ -154,7 +172,8 @@ async function load() {
     S.settings = settings; S.cats = cats; S.items = items;
     S.cart = S.cart.filter(l => items.some(i => i.id === l.id && !i.sold_out));
     if (!settings.delivery_enabled) S.type = 'pickup';
-    renderHeader(); renderMenu(); renderCartBar();
+    renderHeader(); renderMenu(); renderCartBar(); renderAppCard();
+    const iid = +qs.get('item'); if (iid && !load.did) { load.did = 1; openItem(iid); }
   } catch (e) {
     $('menu').innerHTML = '<div class="closedmsg">صار خلل بالتحميل. حدّث الصفحة.</div>';
     console.error(e);
@@ -168,24 +187,39 @@ function renderHeader() {
   $('openBadge').className = 'badge ' + (s.is_open ? 'open' : 'closed');
   $('openBadge').innerHTML = '<i></i>' + (s.is_open ? 'مفتوح' : 'مغلق');
   $('hours').textContent = 'الدوام من ' + to12(s.open_time) + ' إلى ' + to12(s.close_time);
+  if (s.delivery_enabled) { $('eta').style.display = ''; $('eta').textContent = '🛵 يوصلك خلال ' + (s.eta_text || '30–40 دقيقة'); } else $('eta').style.display = 'none';
   if (s.announcement) { $('perk').style.display = 'block'; $('perk').textContent = s.announcement; }
   $('foot').innerHTML = esc(s.address) + (s.phone_display ? ' · <a href="tel:' + esc(s.phone_display) + '">' + esc(s.phone_display) + '</a>' : '');
 }
 
 function itemById(id) { return S.items.find(i => i.id === id); }
 
+function bestsellers() {
+  const ok = i => i && !i.sold_out, out = [];
+  const push = i => { if (ok(i) && !out.includes(i) && out.length < 4) out.push(i); };
+  (S.settings.bestsellers || []).forEach(id => push(itemById(id)));
+  S.items.filter(i => i.featured).forEach(push);
+  S.items.forEach(push);
+  return out;
+}
+function cardHtml(i, tag) {
+  return `<div class="card${i.sold_out ? ' out' : ''}" data-i="${i.id}" role="button">
+        <div class="imgw"><img loading="lazy" src="${esc(i.image_url)}" alt="${esc(i.name)}" onerror="this.style.visibility='hidden'">${i.sold_out ? '<span class="tag">نفد اليوم</span>' : tag ? `<span class="tag">${tag}</span>` : ''}</div>
+        <div class="b"><div class="n">${esc(i.name)}</div>${i.description ? `<div class="d">${esc(i.description)}</div>` : ''}
+        <div class="f"><span class="p">${fmtIQD(i.price)}</span><button class="add" data-add="${i.id}" aria-label="أضف">+</button></div></div>
+      </div>`;
+}
 function renderMenu() {
   const cats = S.cats.filter(c => S.items.some(i => i.category_id === c.id));
-  $('cats').innerHTML = cats.map((c, k) => `<button class="chip${k ? '' : ' on'}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
-  $('menu').innerHTML = cats.map(c => `<h2 class="sec" id="c${c.id}">${esc(c.name)}</h2><div class="grid">` +
-    S.items.filter(i => i.category_id === c.id).map(i => `
-      <button class="card${i.sold_out ? ' out' : ''}" data-i="${i.id}">
-        <div class="imgw"><img loading="lazy" src="${esc(i.image_url)}" alt="${esc(i.name)}" onerror="this.style.visibility='hidden'">${i.sold_out ? '<span class="tag">نفد اليوم</span>' : i.featured ? '<span class="tag">الأكثر طلباً</span>' : ''}</div>
-        <div class="b"><div class="n">${esc(i.name)}</div>${i.description ? `<div class="d">${esc(i.description)}</div>` : ''}
-        <div class="f"><span class="p">${fmtIQD(i.price)}</span><span class="add">+</span></div></div>
-      </button>`).join('') + '</div>').join('');
+  const best = bestsellers();
+  $('cats').innerHTML = (best.length ? '<button class="chip on" data-c="best">🔥 الأكثر طلباً</button>' : '') +
+    cats.map((c, k) => `<button class="chip${k || best.length ? '' : ' on'}" data-c="${c.id}">${esc(c.name)}</button>`).join('');
+  $('menu').innerHTML = '<div id="appCard"></div>' +
+    (best.length ? `<h2 class="sec" id="cbest">🔥 الأكثر طلباً</h2><div class="grid best">${best.map(i => cardHtml(i, '🔥 الأشهر')).join('')}</div>` : '') +
+    cats.map(c => `<h2 class="sec" id="c${c.id}">${esc(c.name)}</h2><div class="grid">` +
+    S.items.filter(i => i.category_id === c.id).map(i => cardHtml(i, i.featured ? 'مميز' : '')).join('') + '</div>').join('');
   $('cats').querySelectorAll('.chip').forEach(b => b.onclick = () => { document.getElementById('c' + b.dataset.c).scrollIntoView({ behavior: 'smooth' }); });
-  $('menu').querySelectorAll('.card').forEach(b => b.onclick = () => openItem(+b.dataset.i));
+  $('menu').querySelectorAll('.card').forEach(b => b.onclick = e => { const a = e.target.closest('[data-add]'); if (a) quickAdd(+a.dataset.add); else openItem(+b.dataset.i); });
   const obs = new IntersectionObserver(es => es.forEach(e => {
     if (e.isIntersecting) { const id = e.target.id.slice(1); $('cats').querySelectorAll('.chip').forEach(c => { const on = c.dataset.c === id; c.classList.toggle('on', on); if (on) c.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); }); }
   }), { rootMargin: '-70px 0px -70% 0px' });
@@ -194,11 +228,36 @@ function renderMenu() {
 
 // ---------- item sheet ----------
 let cur = null;
-function openItem(id) {
+function openItem(id, edit) {
   const it = itemById(id); if (!it || it.sold_out) return;
-  cur = { it, qty: 1, sel: it.options.map(g => g.mode === 'single' && g.min >= 1 ? [] : []) };
+  const l = edit != null ? S.cart[edit] : null;
+  cur = l ? { it, qty: l.qty, sel: JSON.parse(JSON.stringify(l.sel)), edit } : { it, qty: 1, sel: defaultSel(it) || it.options.map(() => []), edit: null };
   drawItem(); show('itemBg');
 }
+// most popular choice for one-tap add: "سماش" if present, else the first choice of each required single group
+function defaultSel(it) {
+  const sel = [];
+  for (const g of it.options) {
+    if (!g.min) { sel.push([]); continue; }
+    if (g.mode === 'count' || (g.max || 1) > 1) return null;
+    let ci = g.choices.findIndex(c => /سماش/.test(c.name)); if (ci < 0) ci = 0;
+    sel.push([{ i: ci, n: 1 }]);
+  }
+  return sel;
+}
+function addLine(it, sel, qty) {
+  const key = it.id + ':' + JSON.stringify(sel);
+  const ex = S.cart.find(l => l.key === key);
+  if (ex) ex.qty = Math.min(20, ex.qty + qty); else S.cart.push({ key, id: it.id, qty, sel });
+}
+function quickAdd(id) {
+  const it = itemById(id); if (!it || it.sold_out) return;
+  const sel = defaultSel(it); if (!sel) return openItem(id);
+  addLine(it, sel, 1); saveCart(); renderCartBar();
+  const lbl = optLabel(it, sel);
+  toast('✓ انضاف ' + it.name + (lbl ? ' (' + lbl + ')' : '') + (lbl ? ' · تگدر تغيّره بالسلة' : ''));
+}
+function toast(t) { const x = $('toast'); x.textContent = t; x.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => x.style.display = 'none', 2600); }
 function unitPrice(it, sel) { let p = it.price; it.options.forEach((g, gi) => (sel[gi] || []).forEach(pk => p += (g.choices[pk.i].price || 0) * pk.n)); return p; }
 function groupCount(sel) { return (sel || []).reduce((a, p) => a + p.n, 0); }
 function itemValid() { return cur.it.options.every((g, gi) => { const c = groupCount(cur.sel[gi]); return c >= (g.min || 0) && c <= (g.max || 1); }); }
@@ -223,10 +282,10 @@ function drawItem() {
     </div>
     <div class="foot">
       <span class="stepper"><button data-q="-1">−</button><span>${qty}</span><button data-q="1">+</button></span>
-      <button class="btn" id="addBtn" ${itemValid() ? '' : 'disabled'}>أضف للسلة · ${fmtIQD(unitPrice(it, sel) * qty)}</button>
+      <button class="btn" id="addBtn" ${itemValid() ? '' : 'disabled'}>${cur.edit != null ? 'حفظ التعديل' : 'أضف للسلة'} · ${fmtIQD(unitPrice(it, sel) * qty)}</button>
     </div>`;
   const sh = $('itemSheet');
-  sh.querySelector('[data-close]').onclick = () => hide('itemBg');
+  sh.querySelector('[data-close]').onclick = () => { hide('itemBg'); if (cur.edit != null) { drawCart(); show('cartBg'); } };
   sh.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { cur.qty = Math.max(1, Math.min(20, cur.qty + +b.dataset.q)); drawItem(); });
   sh.querySelectorAll('button.opt').forEach(b => b.onclick = () => {
     const gi = +b.dataset.g, ci = +b.dataset.c, g = it.options[gi];
@@ -245,10 +304,11 @@ function drawItem() {
     cur.sel[gi] = s.filter(p => p.n > 0).sort((a, b) => a.i - b.i); drawItem();
   });
   $('addBtn').onclick = () => {
-    const key = it.id + ':' + JSON.stringify(cur.sel);
-    const ex = S.cart.find(l => l.key === key);
-    if (ex) ex.qty = Math.min(20, ex.qty + cur.qty); else S.cart.push({ key, id: it.id, qty: cur.qty, sel: cur.sel });
+    const editing = cur.edit != null;
+    if (editing) S.cart.splice(cur.edit, 1);
+    addLine(it, cur.sel, cur.qty);
     saveCart(); hide('itemBg'); renderCartBar();
+    if (editing) { drawCart(); show('cartBg'); } else toast('✓ انضاف للسلة');
   };
 }
 function optLabel(it, sel) {
@@ -262,6 +322,7 @@ function renderCartBar() {
   const n = S.cart.reduce((a, l) => a + l.qty, 0);
   $('cartbar').style.display = n ? 'flex' : 'none';
   $('cartCnt').textContent = n; $('cartTot').textContent = fmtIQD(subtotal());
+  $('cartbar').classList.remove('pop'); void $('cartbar').offsetWidth; $('cartbar').classList.add('pop');
 }
 $('cartbar').onclick = () => { drawCart(); show('cartBg'); };
 
@@ -283,7 +344,7 @@ function drawCart() {
     <div class="hd"><b>سلتك</b><button class="x" data-close>×</button></div>
     <div class="pad">
       ${S.cart.map((l, k) => { const it = itemById(l.id); return `<div class="line"><img src="${esc(it.image_url)}" alt="">
-        <div class="t"><b>${esc(it.name)}</b><small>${esc(optLabel(it, l.sel))}</small>
+        <div class="t"><b>${esc(it.name)}</b><small>${esc(optLabel(it, l.sel))}</small>${it.options.length ? `<button class="edit" data-edit="${k}">✏️ تغيير</button>` : ''}
           <div class="stepper" style="margin-top:6px"><button data-l="${k}" data-d="-1">−</button><span>${l.qty}</span><button data-l="${k}" data-d="1">+</button></div></div>
         <div class="pr">${fmtIQD(unitPrice(it, l.sel) * l.qty)}</div></div>`; }).join('')}
       ${types.length > 1 ? `<div class="seg" style="margin-top:16px">${types.map(([k, t]) => `<button data-t="${k}" class="${S.type === k ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
@@ -319,6 +380,7 @@ function drawCart() {
     if (!S.cart.length) return hide('cartBg');
     const notes = $('fNotes').value; drawCart(); $('fNotes').value = notes;
   });
+  sh.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { hide('cartBg'); openItem(S.cart[+b.dataset.edit].id, +b.dataset.edit); });
   sh.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { S.type = b.dataset.t; const n = $('fNotes').value; drawCart(); $('fNotes').value = n; });
   if ($('map')) initMap();
   $('sendBtn').onclick = send;
@@ -402,7 +464,7 @@ async function send() {
     if (r.error) throw r;
     const msg = waText(r, payload);
     const url = 'https://wa.me/' + r.whatsapp + '?text=' + encodeURIComponent(msg);
-    store.set('last', { no: r.order_no, url });
+    store.set('last', { no: r.order_no, url, phone, at: Date.now() });
     S.cart = []; saveCart(); renderCartBar();
     done(r, url);
     location.href = url;
@@ -447,15 +509,92 @@ function done(r, url) {
     <div style="color:var(--muted);margin:8px 0 20px">الكلي ${fmtIQD(r.total)}<br>اضغط <b>إرسال</b> بالواتساب حتى يوصلنا الطلب.</div>
     <a class="btn g" style="display:block;text-decoration:none" href="${url}">فتح واتساب</a>
     <button class="btn" style="margin-top:10px;background:var(--bg);color:var(--navy)" onclick="hide('cartBg')">رجوع للمنيو</button>
+    <div id="appCardDone"></div>
   </div>`;
+  renderAppCard('appCardDone');
 }
 
 function show(id) { $(id).style.display = 'flex'; document.body.style.overflow = 'hidden'; }
 function hide(id) { $(id).style.display = 'none'; document.body.style.overflow = ''; }
-['itemBg', 'cartBg'].forEach(id => $(id).addEventListener('click', e => { if (e.target.id === id) hide(id); }));
+['itemBg', 'cartBg', 'cbBg'].forEach(id => $(id).addEventListener('click', e => { if (e.target.id === id) hide(id); }));
+// ---------- "اتصلوا بيه" ----------
+$('cbBtn').onclick = () => {
+  const me = store.get('me', {}), s = S.settings || {};
+  $('cbSheet').innerHTML = `<div class="hd"><b>نتصل بيك ونسجّل طلبك</b><button class="x" data-close>×</button></div>
+    <div class="pad">
+      <div style="color:var(--muted);font-size:15px">اكتب رقمك بس، وواحد من فريق 10 BUNZ يتصل بيك خلال دقايق ويسجل طلبك.</div>
+      <label class="f">الاسم (اختياري)</label><input class="i" id="cbName" value="${esc(me.name || '')}" placeholder="اسمك">
+      <label class="f">رقم الهاتف</label><input class="i" id="cbPhone" type="tel" inputmode="tel" dir="ltr" style="text-align:right" value="${esc(me.phone || '')}" placeholder="07XX XXX XXXX">
+      ${s.is_open === false ? `<div class="closedmsg">المطعم مغلق هسه، نتصل بيك أول ما نفتح الساعة ${to12(s.open_time)}</div>` : ''}
+      <div class="err" id="cbErr"></div>
+      <button class="btn y" id="cbSend" style="margin-top:14px">📞 اتصلوا بيه</button>
+      ${s.phone_display ? `<a class="btn" style="display:block;text-decoration:none;text-align:center;margin-top:10px;background:var(--bg);color:var(--navy)" href="tel:${esc(s.phone_display)}">أو اتصل إنت هسه: <span dir="ltr">${esc(s.phone_display)}</span></a>` : ''}
+    </div>`;
+  $('cbSheet').querySelector('[data-close]').onclick = () => hide('cbBg');
+  $('cbSend').onclick = async () => {
+    const phone = $('cbPhone').value.replace(/\D/g, ''), name = $('cbName').value.trim();
+    if (!/^(07\d{9}|9647\d{9})$/.test(phone)) return $('cbErr').textContent = 'الرقم لازم يكون مثل 07XXXXXXXXX';
+    $('cbSend').disabled = true; $('cbSend').textContent = '... جاري الإرسال';
+    try {
+      const r = await bunzApi.rpc('bunz_request_callback', { p: { name, phone } });
+      if (r.error) throw r;
+      store.set('me', { ...store.get('me', {}), name: name || store.get('me', {}).name, phone });
+      $('cbSheet').innerHTML = `<div class="ok"><div style="font-size:54px">📞</div><div style="font-weight:900;font-size:20px">وصلنا رقمك</div>
+        <div style="color:var(--muted);margin:8px 0 20px">راح نتصل بيك على <b dir="ltr">${esc(phone)}</b> خلال دقايق.</div>
+        <button class="btn" onclick="hide('cbBg')">تمام</button></div>`;
+    } catch (e) {
+      $('cbErr').textContent = e && e.error === 'too_many' ? 'وصلنا طلبك قبل شوية، راح نتصل بيك.' : 'صار خلل، حاول مرة ثانية أو اتصل إنت مباشرة.';
+      $('cbSend').disabled = false; $('cbSend').textContent = '📞 اتصلوا بيه';
+    }
+  };
+  show('cbBg');
+};
+
+// ---------- add to home screen + push ----------
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; renderAppCard(); });
+window.addEventListener('appinstalled', () => { installEvt = null; renderAppCard(); });
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const pushOk = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && !!BUNZ.VAPID_PUBLIC && (!isIOS() || isStandalone());
+function renderAppCard(target) {
+  const el = $(target || 'appCard'); if (!el) return;
+  const ordered = !!store.get('last'), dismissed = Date.now() - (store.get('appx', 0)) < 5 * 864e5;
+  if (!ordered || (dismissed && !target)) { el.innerHTML = ''; return; }
+  const canInstall = !isStandalone() && (installEvt || isIOS());
+  const canPush = pushOk() && Notification.permission === 'default';
+  if (!canInstall && !canPush) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div class="appcard"><img src="icon-192.png" alt="">
+    <div class="t"><b>${canInstall ? 'ضيف 10 BUNZ لشاشتك' : 'خلّي توصلك عروضنا'}</b>${canInstall ? 'يفتح مثل التطبيق، وتطلب بثواني' : 'إشعار "عرض الليلة 🔥" يوصلك أول واحد'}</div>
+    <div class="bs">${canInstall ? '<button class="y" data-ins>📲 ضيف</button>' : ''}${canPush ? '<button data-push>🔔 فعّل العروض</button>' : ''}</div>
+    ${target ? '' : '<button class="xx" data-x>×</button>'}</div>`;
+  const ins = el.querySelector('[data-ins]'), pu = el.querySelector('[data-push]'), x = el.querySelector('[data-x]');
+  if (ins) ins.onclick = async () => {
+    if (installEvt) { installEvt.prompt(); await installEvt.userChoice.catch(() => {}); installEvt = null; renderAppCard(target); }
+    else alert('على الآيفون:\n1) اضغط زر المشاركة ⬆️ تحت الشاشة\n2) اختار "إضافة إلى الشاشة الرئيسية"\n3) اضغط "إضافة"\n\nبعدها افتح 10 BUNZ من الأيقونة وفعّل الإشعارات 🔔');
+  };
+  if (pu) pu.onclick = async () => { await subscribePush(true); renderAppCard(target); };
+  if (x) x.onclick = () => { store.set('appx', Date.now()); el.innerHTML = ''; };
+}
+function b64u(s) { const p = '='.repeat((4 - s.length % 4) % 4), b = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(b, c => c.charCodeAt(0)); }
+async function subscribePush(ask) {
+  try {
+    if (!pushOk()) return;
+    if (ask && Notification.permission === 'default') await Notification.requestPermission();
+    if (Notification.permission !== 'granted') return;
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(BUNZ.VAPID_PUBLIC) });
+    const j = sub.toJSON(), last = store.get('last', {});
+    if (!ask && store.get('pushsent') === j.endpoint) return;
+    await bunzApi.rpc('bunz_push_subscribe', { p: { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, phone: last.phone || store.get('me', {}).phone || '' } });
+    store.set('pushsent', j.endpoint);
+    if (ask) toast('🔔 تم! راح توصلك عروضنا');
+  } catch (e) { console.error(e); if (ask) toast('ما گدرنا نفعّل الإشعارات على هذا الجهاز'); }
+}
+
 load();
 setInterval(() => bunzApi.rpc('bunz_public_settings').then(s => { S.settings = s; renderHeader(); }).catch(() => {}), 120000);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').then(() => subscribePush(false)).catch(() => {});
 </script>
 </body>
 </html>
