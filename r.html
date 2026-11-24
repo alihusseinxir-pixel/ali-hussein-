@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>فاتورة 10 BUNZ</title>
-<meta name="theme-color" content="#0a1440">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#2c318b">
+<link rel="icon" href="favicon.png" type="image/png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root{--navy:#0a1440;--blue:#2d5bff;--yellow:#ffd23f;--bg:#f4f6fb;--line:#e3e7f2;--muted:#5b6585;--green:#1f9d55;--red:#e5484d}
+:root{--navy:#2c318b;--blue:#3b42c4;--yellow:#ffd23f;--bg:#f4f6fb;--line:#e3e7f2;--muted:#5b6585;--green:#1f9d55;--red:#e5484d}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--navy);font-family:Cairo,system-ui,sans-serif}
 .wrap{max-width:480px;margin:0 auto;padding:16px 16px 40px}
-.rc{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 4px 20px #0a144014}
+.rc{background:#fff;border-radius:22px;overflow:hidden;box-shadow:0 4px 20px #2c318b14}
 .top{background:var(--navy);color:#fff;padding:18px 20px;display:flex;align-items:center;gap:12px}
-.top img{width:46px;height:46px;border-radius:12px;background:#fff;object-fit:cover}
+.top img{width:auto;height:58px;object-fit:contain}
 .top b{font-size:18px;font-weight:900;display:block}.top small{opacity:.8}
 .no{margin-right:auto;text-align:left}.no div{font-size:28px;font-weight:900;color:var(--yellow);line-height:1}
 .sec{padding:14px 20px;border-bottom:1px dashed var(--line)}
@@ -34,12 +34,12 @@ td small{color:var(--muted);display:block}
 .pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:800;background:var(--bg)}
 .verified{color:var(--green);font-weight:800;font-size:13px;text-align:center;padding:10px}
 .msg{text-align:center;padding:60px 20px;color:var(--muted)}
-@media print{body{background:#fff}.wrap{padding:0;max-width:80mm}.rc{box-shadow:none;border-radius:0}.noprint{display:none!important}.top{background:#fff;color:#000;border-bottom:2px solid #000}.no div{color:#000}.due{background:#eee}}
+@media print{.top img{filter:invert(1) brightness(0)}body{background:#fff}.wrap{padding:0;max-width:80mm}.rc{box-shadow:none;border-radius:0}.noprint{display:none!important}.top{background:#fff;color:#000;border-bottom:2px solid #000}.no div{color:#000}.due{background:#eee}}
 </style>
 </head>
 <body>
 <div class="wrap" id="app"><div class="msg">... جاري تحميل الفاتورة</div></div>
-<script src="config.js?v=4"></script>
+<script src="config.js?v=5"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 const ST = { new: 'جديد', preparing: 'يتحضر', on_the_way: 'بالطريق', done: 'تم التسليم', cancelled: 'ملغي' };
@@ -55,7 +55,7 @@ const t = new URLSearchParams(location.search).get('t');
   const nav = o.lat ? `https://www.google.com/maps/dir/?api=1&destination=${o.lat},${o.lng}&travelmode=driving` : '';
   document.title = 'فاتورة #' + o.order_no + ' · 10 BUNZ';
   app.innerHTML = `<div class="rc">
-    <div class="top"><img src="${BUNZ.LOGO}" alt=""><div><b>10 BUNZ</b><small>${d}</small></div><div class="no"><small>رقم الطلب</small><div>#${o.order_no}</div></div></div>
+    <div class="top"><img src="logo-white.png" alt="10 BUNZ"><div><b>10 BUNZ</b><small>${d}</small></div><div class="no"><small>رقم الطلب</small><div>#${o.order_no}</div></div></div>
     <div class="sec row"><div><div class="k">الزبون</div><div class="v">${esc(o.customer_name)}</div><div dir="ltr" style="text-align:right">${esc(o.phone)}</div></div>
       <div style="text-align:left"><span class="pill">${o.order_type === 'delivery' ? '🛵 توصيل' : '🏃 استلام'}</span><br><span class="pill" style="margin-top:6px">${ST[o.status] || o.status}</span></div></div>
     <div class="sec"><table>${o.items.map(l => `<tr><td>${l.qty}× ${esc(l.name)}${l.options ? `<small>${esc(l.options)}</small>` : ''}</td><td>${fmtIQD(l.line_total)}</td></tr>`).join('')}</table></div>
@@ -75,7 +75,7 @@ const t = new URLSearchParams(location.search).get('t');
   <button class="btn s noprint" style="width:100%;margin-top:12px" onclick="print()">🖨️ طباعة الفاتورة</button>`;
   const q = qrcode(0, 'M'); q.addData(location.href); q.make();
   const n = q.getModuleCount(), c = document.getElementById('qr'), sc = 8, m = 2; c.width = c.height = (n + m * 2) * sc;
-  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#0a1440';
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#2c318b';
   for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect((k + m) * sc, (r + m) * sc, sc, sc);
 })();
 </script>

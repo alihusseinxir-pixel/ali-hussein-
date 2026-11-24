@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>10 BUNZ | لوحة التحكم</title>
-<meta name="theme-color" content="#0a1440">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#2c318b">
+<link rel="icon" href="favicon.png" type="image/png">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-:root{--navy:#0a1440;--blue:#2d5bff;--yellow:#ffd23f;--bg:#f4f6fb;--line:#e3e7f2;--muted:#5b6585;--red:#e5484d;--green:#1f9d55}
+:root{--navy:#2c318b;--blue:#3b42c4;--yellow:#ffd23f;--bg:#f4f6fb;--line:#e3e7f2;--muted:#5b6585;--red:#e5484d;--green:#1f9d55}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--navy);font-family:Cairo,system-ui,sans-serif}
 button,input,select,textarea{font-family:inherit;font-size:15px}
@@ -21,7 +21,7 @@ header b{font-size:18px;font-weight:900;flex:1}
 .tabs button{flex:none;border:0;background:var(--bg);padding:8px 14px;border-radius:99px;font-weight:800;color:var(--muted)}
 .tabs button.on{background:var(--navy);color:#fff}
 main{max-width:1000px;margin:0 auto;padding:16px}
-.card{background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 6px #0a14400b}
+.card{background:#fff;border-radius:16px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 6px #2c318b0b}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
 .stat{background:#fff;border-radius:14px;padding:12px 14px}.stat small{color:var(--muted);font-weight:700}.stat div{font-size:22px;font-weight:900}
@@ -72,7 +72,7 @@ details summary{cursor:pointer;font-weight:800;color:var(--blue);font-size:13px;
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="config.js?v=4"></script>
+<script src="config.js?v=5"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
@@ -363,7 +363,7 @@ function qr() {
       <div class="muted" dir="ltr" style="word-break:break-all">${esc(url)}</div>
       <div class="row" style="margin-top:6px"><button class="btn s" data-copy="${esc(url)}">نسخ</button><button class="btn s" data-dl="q_${s.code}" data-name="10bunz-qr-${s.code}">تنزيل QR</button><button class="btn r" data-rmsrc="${s.code}">حذف</button></div>
     </div></div></div>`; }).join('')}`;
-  const drawQR = (id, url) => { const q = qrcode(0, 'M'); q.addData(url); q.make(); const n = q.getModuleCount(), c = $(id), sc = 12, m = 4; c.width = c.height = (n + m * 2) * sc; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#0a1440'; for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect((k + m) * sc, (r + m) * sc, sc, sc); };
+  const drawQR = (id, url) => { const q = qrcode(0, 'M'); q.addData(url); q.make(); const n = q.getModuleCount(), c = $(id), sc = 12, m = 4; c.width = c.height = (n + m * 2) * sc; const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.fillStyle = '#2c318b'; for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (q.isDark(r, k)) x.fillRect((k + m) * sc, (r + m) * sc, sc, sc); };
   drawQR('q_main', base); D.sources.forEach(s => drawQR('q_' + s.code, base + '?src=' + s.code));
   document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => navigator.clipboard.writeText(b.dataset.copy).then(() => toast('انسخ ✓')));
   document.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => { const a = document.createElement('a'); a.href = $(b.dataset.dl).toDataURL('image/png'); a.download = b.dataset.name + '.png'; a.click(); });
