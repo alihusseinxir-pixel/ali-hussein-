@@ -2,7 +2,9 @@
 const http = require('http');
 const webpush = require('web-push');
 const { VAPID_PUBLIC, VAPID_PRIVATE, SUPABASE_URL, SUPABASE_KEY } = process.env;
-const ORIGIN = process.env.ALLOW_ORIGIN || 'https://one0bunz-order.onrender.com';
+const ORIGINS = (process.env.ALLOW_ORIGIN || 'https://one0bunz-order.onrender.com').split(',').map(x => x.trim());
+const ORIGIN = ORIGINS[0];
+let reqOrigin = ORIGIN;
 webpush.setVapidDetails(ORIGIN, VAPID_PUBLIC, VAPID_PRIVATE);
 
 async function rpc(fn, body) {
@@ -15,11 +17,12 @@ async function rpc(fn, body) {
 }
 
 function reply(res, code, obj) {
-  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': ORIGIN, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' });
+  res.writeHead(code, { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': reqOrigin, Vary: 'Origin', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' });
   res.end(JSON.stringify(obj));
 }
 
 http.createServer((req, res) => {
+  reqOrigin = ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGIN;
   if (req.method === 'OPTIONS') return reply(res, 204, {});
   if (req.method === 'GET') return reply(res, 200, { ok: true });
   if (req.method !== 'POST' || req.url !== '/send') return reply(res, 404, { error: 'not_found' });
@@ -31,7 +34,7 @@ http.createServer((req, res) => {
       if (!pin || !title || !body) return reply(res, 400, { error: 'missing' });
       const list = await rpc('bunz_admin_push_list', { pin: String(pin) });
       if (list.error) return reply(res, 401, { error: list.error });
-      const target = typeof url === 'string' && url.startsWith(ORIGIN) ? url : ORIGIN + '/';
+      const target = typeof url === 'string' && ORIGINS.some(o => url.startsWith(o)) ? url : ORIGIN + '/';
       const payload = JSON.stringify({ title: String(title).slice(0, 60), body: String(body).slice(0, 160), url: target });
       let sent = 0; const dead = [];
       for (let i = 0; i < list.subs.length; i += 50) {
