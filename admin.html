@@ -52,6 +52,21 @@ table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px so
 .muted{color:var(--muted);font-size:13px}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 18px;border-radius:12px;font-weight:800;display:none;z-index:99}
 h2{font-size:18px;margin:6px 0 12px}
+.ono{display:inline-block;background:var(--navy);color:#fff;border-radius:10px;padding:0 10px;margin-left:6px;font-weight:900}
+.order.ready{border-color:var(--green)}
+.hb{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:760px){.hb{grid-template-columns:1fr}}
+.col h3{margin:0 0 8px;font-size:16px;display:flex;justify-content:space-between}
+.tile{background:#fff;border-radius:16px;padding:12px 14px;margin-bottom:10px;box-shadow:0 1px 6px #2c318b14;border-right:6px solid var(--line)}
+.tile.ready{border-color:var(--green);background:#f3fcf6}.tile.on_the_way{border-color:#8b5cf6}.tile.preparing{border-color:var(--blue)}.tile.new{border-color:var(--yellow)}
+.tile .big{font-size:40px;font-weight:900;line-height:1;color:var(--navy)}
+.tile .btn{width:100%;margin-top:8px;padding:11px}
+.scanbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.scanbar .btn{font-size:17px;padding:14px 20px}
+.modal{position:fixed;inset:0;background:#1d2166cc;z-index:90;display:none;align-items:center;justify-content:center;padding:16px}
+.modal .box{background:#fff;border-radius:22px;max-width:440px;width:100%;padding:18px;text-align:center;max-height:94vh;overflow:auto}
+.modal video{width:100%;border-radius:14px;background:#000;aspect-ratio:1/1;object-fit:cover}
+.modal .huge{font-size:64px;font-weight:900;color:var(--navy);line-height:1.1}
 details summary{cursor:pointer;font-weight:800;color:var(--blue);font-size:13px;margin-top:8px}
 </style>
 </head>
@@ -65,21 +80,22 @@ details summary{cursor:pointer;font-weight:800;color:var(--blue);font-size:13px;
 <div id="app" style="display:none">
   <header><b>10 BUNZ · لوحة التحكم</b><span id="openState" class="pill"></span><a href="./" target="_blank" style="color:#fff;font-size:13px">الموقع ↗</a></header>
   <nav class="tabs" id="tabs">
-    <button data-t="orders" class="on">الطلبات</button><button data-t="menu">المنيو والأسعار</button>
+    <button data-t="handover">🛵 التسليم</button><button data-t="orders" class="on">الطلبات</button><button data-t="menu">المنيو والأسعار</button>
     <button data-t="delivery">التوصيل</button><button data-t="settings">الدوام والإعدادات</button><button data-t="qr">روابط وQR</button><button data-t="calls" id="callsTab">📞 اتصلوا بيه والإشعارات</button>
   </nav>
   <main id="view"></main>
 </div>
 <div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="box" id="mbox"></div></div>
 
-<script src="config.js?v=5"></script>
+<script src="config.js?v=6"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 let PIN = sessionStorage.getItem('bunz_pin') || '';
 let D = null, ORDERS = [], TAB = 'orders', lastMaxId = +localStorage.getItem('bunz_last_seen') || 0, poll;
-const ST = { new: 'جديد', preparing: 'يتحضر', on_the_way: 'بالطريق', done: 'تم', cancelled: 'ملغي' };
+const ST = { new: 'جديد', preparing: 'يتحضر', ready: 'جاهز ✅', on_the_way: 'بالطريق', done: 'تم', cancelled: 'ملغي' };
 function toast(t) { $('toast').textContent = t; $('toast').style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(() => $('toast').style.display = 'none', 2200); }
 async function call(fn, body) {
   const r = await bunzApi.rpc(fn, { pin: PIN, ...body });
@@ -94,7 +110,7 @@ async function refresh() { D = await call('bunz_admin_data'); $('openState').tex
 async function start() {
   $('login').style.display = 'none'; $('app').style.display = 'block';
   await loadOrders(true); await loadCalls(true); render();
-  poll = setInterval(async () => { await loadOrders(); await loadCalls(); if (TAB === 'orders') render(); }, 15000);
+  poll = setInterval(async () => { await loadOrders(); await loadCalls(); if (TAB === 'orders' || TAB === 'handover') render(); }, 15000);
 }
 $('tabs').onclick = async e => { const t = e.target.dataset.t; if (!t) return; TAB = t; $('tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); await refresh(); if (t === 'calls') await loadCalls(true); render(); };
 
@@ -106,7 +122,109 @@ async function loadOrders(first) {
   if (!first && max > lastMaxId) { beep(); toast('🔔 طلب جديد #' + ORDERS[0].order_no); document.title = '🔔 طلب جديد'; }
   lastMaxId = max; localStorage.setItem('bunz_last_seen', max);
 }
-function render() { ({ orders, menu, delivery, settings, qr, calls })[TAB](); }
+function render() { ({ orders, menu, delivery, settings, qr, calls, handover })[TAB](); }
+
+// ---------- drivers / handover ----------
+const DRV = () => (D && D.settings.drivers) || [];
+const siteBase = () => location.origin + location.pathname.replace(/admin\.html$/, '');
+const invUrl = o => siteBase() + 'r.html?t=' + o.token;
+async function setStatus(o, st) { await call('bunz_admin_set_status', { order_id: o.id, new_status: st }); o.status = st; }
+function driverText(o) {
+  const line = '━━━━━━━━━━━━━━';
+  return ['🛵 *توصيلة جديدة · 10 BUNZ*', line, '🔢 رقم الطلب:  *#' + o.order_no + '*', '💰 تستلم من الزبون:  *' + fmtIQD(o.total) + '*',
+    '📍 ' + (o.location_label || 'الموقع بالفاتورة') + ' · ' + (o.distance_m / 1000).toFixed(1) + ' كم', line,
+    '🧾 الفاتورة + الموقع + QR الاستلام:', invUrl(o), line, '✅ بالمطعم: ورّي الـQR أو گول رقم الطلب للكاشير'].join('\n');
+}
+function sendToDriver(o, d) {
+  if (!d) return;
+  let ph = String(d.phone || '').replace(/\D/g, ''); if (ph.startsWith('0')) ph = '964' + ph.slice(1);
+  window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(driverText(o)), '_blank');
+  call('bunz_admin_assign_driver', { order_id: o.id, d_name: d.name, d_phone: d.phone }).then(() => { o.driver_name = d.name; o.driver_phone = d.phone; if (TAB !== 'settings') render(); }).catch(() => {});
+}
+function pickDriver(sel) {
+  const v = sel.value; if (v === '') return null;
+  if (v === 'other') { const name = prompt('اسم الدلفري'); if (!name) return null; const phone = prompt('رقم الدلفري (07...)'); if (!phone) return null; return { name, phone }; }
+  return DRV()[+v];
+}
+function driverSelect(o) {
+  return `<select class="i" data-drv="${o.id}" style="width:auto;min-width:140px"><option value="">اختار الدلفري</option>${DRV().map((d, k) => `<option value="${k}" ${d.name === o.driver_name ? 'selected' : ''}>${esc(d.name)}</option>`).join('')}<option value="other">دلفري آخر...</option></select>`;
+}
+function bindDriverControls(root) {
+  root.querySelectorAll('[data-senddrv]').forEach(b => b.onclick = () => {
+    const o = ORDERS.find(x => x.id == b.dataset.senddrv), sel = root.querySelector(`[data-drv="${o.id}"]`);
+    const d = pickDriver(sel); if (!d) return toast('اختار الدلفري أول'); sendToDriver(o, d);
+  });
+  root.querySelectorAll('[data-label]').forEach(b => b.onclick = () => printLabel(ORDERS.find(x => x.id == b.dataset.label)));
+}
+function printLabel(o) {
+  const q = qrcode(0, 'M'); q.addData(invUrl(o)); q.make();
+  const w = window.open('', '_blank'); if (!w) return toast('اسمح بالنوافذ المنبثقة');
+  w.document.write(`<!doctype html><html dir="rtl"><head><meta charset="utf-8"><title>#${o.order_no}</title><style>@page{size:80mm auto;margin:3mm}body{font-family:Cairo,Arial,sans-serif;margin:0;text-align:center;width:74mm}
+    img.l{height:42px;filter:invert(1) brightness(0)}.n{font-size:54px;font-weight:900;line-height:1;margin:4px 0;border:3px solid #000;border-radius:10px;padding:4px}
+    .q img{width:42mm;height:42mm}b{font-size:16px}div{margin:2px 0}</style></head><body>
+    <img class="l" src="${siteBase()}logo-white.png"><div class="n">#${o.order_no}</div>
+    <div><b>${esc(o.customer_name)}</b></div><div>${o.order_type === 'delivery' ? '🛵 توصيل · ' + esc(o.location_label || '') : '🏃 استلام'}</div>
+    <div><b>${fmtIQD(o.total)}</b> · ${o.items.reduce((a, l) => a + l.qty, 0)} قطعة</div>
+    <div class="q">${q.createImgTag(4, 0)}</div><div style="font-size:11px">امسح لفتح الفاتورة</div>
+    <script>onload=()=>setTimeout(()=>print(),300)<\/script></body></html>`);
+  w.document.close();
+}
+function showModal(html) { $('mbox').innerHTML = html; $('modal').style.display = 'flex'; }
+function closeModal() { stopScan(); $('modal').style.display = 'none'; }
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+let scanStream = null, scanTimer = null;
+function stopScan() { clearInterval(scanTimer); scanTimer = null; if (scanStream) scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+async function loadJsQR() { if (window.jsQR) return; await new Promise((ok, no) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js'; s.onload = ok; s.onerror = no; document.head.appendChild(s); }); }
+async function openScanner() {
+  showModal(`<h2>📷 امسح QR الدلفري</h2><video id="cam" playsinline muted></video><div class="muted" style="margin:8px 0">خلّي الدلفري يفتح الفاتورة بموبايله ويوجّه الـQR للكاميرا</div><button class="btn s" onclick="closeModal()" style="width:100%">إلغاء</button>`);
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const v = $('cam'); v.srcObject = scanStream; await v.play();
+    const det = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+    if (!det) await loadJsQR();
+    const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    scanTimer = setInterval(async () => {
+      if (!v.videoWidth) return;
+      let text = null;
+      if (det) { const r = await det.detect(v).catch(() => []); if (r[0]) text = r[0].rawValue; }
+      else { cv.width = v.videoWidth; cv.height = v.videoHeight; cx.drawImage(v, 0, 0); const img = cx.getImageData(0, 0, cv.width, cv.height); const r = jsQR(img.data, img.width, img.height); if (r) text = r.data; }
+      if (text) { const m = text.match(/[?&]t=([0-9a-f-]{36})/i); if (m) { stopScan(); foundOrder(ORDERS.find(o => o.token === m[1]), m[1]); } }
+    }, 250);
+  } catch (e) { $('mbox').innerHTML = '<h2>ما گدرت أفتح الكاميرا</h2><div class="muted">اسمح للموقع يستخدم الكاميرا، أو اكتب رقم الطلب.</div><button class="btn" onclick="closeModal()" style="width:100%;margin-top:10px">تمام</button>'; }
+}
+function foundOrder(o) {
+  if (!o) return showModal('<div style="font-size:50px">❌</div><h2>هذا الطلب مو موجود بالطلبات الحالية</h2><button class="btn" onclick="closeModal()" style="width:100%">رجوع</button>');
+  const del = o.order_type === 'delivery', target = del ? 'on_the_way' : 'done';
+  const warn = ['on_the_way', 'done'].includes(o.status) ? `<div style="background:#fdecec;color:var(--red);border-radius:12px;padding:8px;font-weight:800;margin:8px 0">⚠️ هذا الطلب حالته "${ST[o.status]}"، يعني انسلّم قبل</div>` : o.status === 'cancelled' ? '<div style="color:var(--red);font-weight:800">⚠️ هذا الطلب ملغي</div>' : '';
+  showModal(`<div class="muted">رقم الطلب</div><div class="huge">#${o.order_no}</div>
+    <div style="font-weight:800;font-size:17px">${esc(o.customer_name)} · ${del ? '🛵 توصيل' : '🏃 استلام'}</div>
+    <div class="muted">${o.items.reduce((a, l) => a + l.qty, 0)} قطعة · ${fmtIQD(o.total)}${o.driver_name ? ' · الدلفري: ' + esc(o.driver_name) : ''}</div>
+    <ul style="text-align:right">${o.items.map(l => `<li>${l.qty}× ${esc(l.name)}${l.options ? ' <span class="muted">(' + esc(l.options) + ')</span>' : ''}</li>`).join('')}</ul>${warn}
+    ${o.status !== 'cancelled' ? `<button class="btn g" id="handBtn" style="width:100%;padding:16px;font-size:18px">✅ ${del ? 'سلّمت الطلب للدلفري' : 'سلّمت الطلب للزبون'}</button>` : ''}
+    <button class="btn s" onclick="closeModal()" style="width:100%;margin-top:8px">رجوع</button>`);
+  if ($('handBtn')) $('handBtn').onclick = async () => { await setStatus(o, target); closeModal(); toast('✓ الطلب #' + o.order_no + ' انسلّم'); render(); };
+}
+function handover() {
+  const act = ORDERS.filter(o => !['done', 'cancelled'].includes(o.status));
+  const cols = [['🔥 يتحضر', act.filter(o => ['new', 'preparing'].includes(o.status))], ['✅ جاهز للاستلام', act.filter(o => o.status === 'ready')], ['🛵 بالطريق', act.filter(o => o.status === 'on_the_way')]];
+  const tile = o => {
+    const del = o.order_type === 'delivery';
+    const next = ['new', 'preparing'].includes(o.status) ? ['ready', 'جاهز ✅'] : o.status === 'ready' ? [del ? 'on_the_way' : 'done', del ? 'سلّم للدلفري 🛵' : 'سلّم للزبون'] : ['done', 'تم التوصيل ✓'];
+    return `<div class="tile ${o.status}"><div class="row" style="justify-content:space-between"><div class="big">#${o.order_no}</div><div style="text-align:left"><b>${fmtIQD(o.total)}</b><div class="muted">${del ? '🛵 توصيل' : '🏃 استلام'}</div></div></div>
+      <div style="font-weight:800;margin-top:4px">${esc(o.customer_name)} <span class="muted">· ${o.items.reduce((a, l) => a + l.qty, 0)} قطعة${o.driver_name ? ' · 🛵 ' + esc(o.driver_name) : ''}</span></div>
+      ${del && o.status !== 'on_the_way' ? `<div class="row" style="margin-top:6px">${driverSelect(o)}<button class="btn g" data-senddrv="${o.id}" style="padding:7px 10px;width:auto;margin:0">إرسال للدلفري</button></div>` : ''}
+      <button class="btn${o.status === 'ready' ? ' g' : ''}" data-next="${o.id}" data-st="${next[0]}">${next[1]}</button></div>`;
+  };
+  $('view').innerHTML = `<div class="scanbar"><button class="btn y" id="scanBtn">📷 امسح QR الدلفري</button>
+      <input class="i" id="findNo" inputmode="numeric" placeholder="أو اكتب رقم الطلب" style="width:180px"><button class="btn s" id="findBtn">بحث</button></div>
+    <div class="hb">${cols.map(([t, l]) => `<div class="col"><h3><span>${t}</span><span class="pill">${l.length}</span></h3>${l.map(tile).join('') || '<div class="muted">لا شيء</div>'}</div>`).join('')}</div>
+    <div class="muted" style="margin-top:14px">الطريقة: الطلب يجهز ← اضغط "جاهز" ← اختار الدلفري واضغط "إرسال للدلفري" (يوصله رقم الطلب والفاتورة بواتساب) ← الدلفري يوصل ويورّيك الـQR ← تمسحه وتسلّمه الكيس اللي عليه نفس الرقم.</div>`;
+  $('scanBtn').onclick = openScanner;
+  const find = () => { const n = +$('findNo').value.replace(/\D/g, ''); foundOrder(ORDERS.find(o => +o.order_no === n)); };
+  $('findBtn').onclick = find; $('findNo').onkeydown = e => { if (e.key === 'Enter') find(); };
+  $('view').querySelectorAll('[data-next]').forEach(b => b.onclick = async () => { await setStatus(ORDERS.find(o => o.id == b.dataset.next), b.dataset.st); handover(); });
+  bindDriverControls($('view'));
+}
 
 // ---------- callbacks + push ----------
 let CBS = [], PUSHN = 0, lastCb = +localStorage.getItem('bunz_last_cb') || 0;
@@ -177,7 +295,7 @@ function orders() {
     const list = ORDERS.filter(o => f === 'all' || !['done', 'cancelled'].includes(o.status));
     $('olist').innerHTML = list.length ? list.map(o => `
       <div class="card order ${o.status}">
-        <div class="row" style="justify-content:space-between"><h3>#${o.order_no} · ${esc(o.customer_name)}</h3><b>${fmtIQD(o.total)}</b></div>
+        <div class="row" style="justify-content:space-between"><h3><span class="ono">#${o.order_no}</span>${esc(o.customer_name)}</h3><b>${fmtIQD(o.total)}</b></div>
         <div class="meta">${new Date(o.created_at).toLocaleString('ar-IQ', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'numeric' })}
           · ${o.order_type === 'delivery' ? '🛵 توصيل ' + (o.distance_m / 1000).toFixed(1) + ' كم (' + fmtIQD(o.delivery_fee) + ')' : '🏃 استلام'}
           · المصدر: ${esc(srcName(o.source))} · ${o.customer_order_count > 1 ? 'زبون راجع (طلب رقم ' + o.customer_order_count + ')' : '⭐ زبون جديد'}</div>
@@ -188,10 +306,13 @@ function orders() {
           <a class="btn s" style="text-decoration:none;padding:6px 12px" href="tel:${esc(o.phone)}">اتصال</a>
           <a class="btn y" style="text-decoration:none;padding:6px 12px" target="_blank" href="r.html?t=${o.token}">🧾 الفاتورة</a>
           ${o.lat ? `<a class="btn s" style="text-decoration:none;padding:6px 12px" target="_blank" href="https://maps.google.com/?q=${o.lat},${o.lng}">الموقع 📍</a>` : ''}
+          <button class="btn s" style="padding:6px 12px" data-label="${o.id}">🏷️ ستيكر الكيس</button>
         </div>
+        ${o.order_type === 'delivery' && !['done', 'cancelled'].includes(o.status) ? `<div class="row" style="margin-top:8px">${driverSelect(o)}<button class="btn g" data-senddrv="${o.id}" style="padding:6px 12px">إرسال للدلفري بواتساب</button>${o.driver_name ? `<span class="pill">🛵 ${esc(o.driver_name)}</span>` : ''}</div>` : ''}
         <div class="row st" style="margin-top:10px">${Object.entries(ST).map(([k, v]) => `<button data-o="${o.id}" data-s="${k}" class="${o.status === k ? 'on' : ''}">${v}</button>`).join('')}</div>
       </div>`).join('') : '<div class="card muted">ماكو طلبات هسه.</div>';
     $('olist').querySelectorAll('[data-s]').forEach(b => b.onclick = async () => { await call('bunz_admin_set_status', { order_id: +b.dataset.o, new_status: b.dataset.s }); ORDERS.find(o => o.id == b.dataset.o).status = b.dataset.s; draw(); });
+    bindDriverControls($('olist'));
   };
   $('fil').value = sessionStorage.getItem('bunz_fil') || 'active';
   $('fil').onchange = () => { sessionStorage.setItem('bunz_fil', $('fil').value); draw(); };
@@ -333,7 +454,14 @@ function settings() {
       <input class="i" id="ann" value="${esc(s.announcement)}">
     </div>
     <div class="card"><h2>تغيير الرمز السري</h2><input class="i" id="np" type="password" inputmode="numeric" placeholder="رمز جديد (6 أرقام أو أكثر)، اتركه فارغ إذا ما تريد تغيّره"></div>
+    <div class="card"><h2>🛵 الدلفرية</h2><div class="muted">تختارهم بالطلب، ويوصلهم رقم الطلب والفاتورة بواتساب.</div>
+      <div id="drvList"></div><button class="btn s" id="addDrv" style="margin-top:8px">+ دلفري</button></div>
     <button class="btn y" id="saveSet" style="width:100%;padding:14px">حفظ</button>`;
+  let drv = JSON.parse(JSON.stringify(DRV()));
+  const drawDrv = () => { $('drvList').innerHTML = drv.map((d, k) => `<div class="row" style="margin-top:8px"><input class="i" style="flex:1" placeholder="الاسم" value="${esc(d.name)}" data-dk="${k}" data-dx="name"><input class="i" style="flex:1" dir="ltr" placeholder="07..." value="${esc(d.phone ? '0' + String(d.phone).replace(/^964/, '') : '')}" data-dk="${k}" data-dx="phone"><button class="btn r" data-drm="${k}">×</button></div>`).join('') || '<div class="muted" style="margin-top:8px">ماكو دلفرية بعد.</div>';
+    $('drvList').querySelectorAll('input').forEach(x => x.oninput = () => drv[+x.dataset.dk][x.dataset.dx] = x.value);
+    $('drvList').querySelectorAll('[data-drm]').forEach(b => b.onclick = () => { drv.splice(+b.dataset.drm, 1); drawDrv(); }); };
+  drawDrv(); $('addDrv').onclick = () => { drv.push({ name: '', phone: '' }); drawDrv(); };
   $('ov').value = s.open_override;
   $('saveSet').onclick = async () => {
     let wa = $('wa').value.replace(/\D/g, ''); if (wa.startsWith('0')) wa = '964' + wa.slice(1);
@@ -341,6 +469,7 @@ function settings() {
     const np = $('np').value.trim(); if (np && np.length < 6) return toast('الرمز لازم 6 أرقام أو أكثر');
     await call('bunz_admin_save_settings', { v: { whatsapp: wa, phone_display: $('ph').value, address: $('addr').value, open_time: $('ot').value, close_time: $('ct').value, open_override: $('ov').value, announcement: $('ann').value, new_pin: np || null } });
     if (np) { PIN = np; sessionStorage.setItem('bunz_pin', np); }
+    await call('bunz_admin_save_drivers', { d: drv.filter(d => d.name.trim()).map(d => { let p = String(d.phone || '').replace(/\D/g, ''); if (p.startsWith('0')) p = '964' + p.slice(1); return { name: d.name.trim(), phone: p }; }) });
     if ($('eta').value.trim() && $('eta').value.trim() !== (s.eta_text || '')) await call('bunz_admin_set_eta', { eta: $('eta').value.trim() });
     toast('انحفظ ✓'); await refresh(); settings();
   };

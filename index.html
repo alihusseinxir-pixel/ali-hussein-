@@ -161,7 +161,7 @@ footer a{color:var(--navy);font-weight:800}
 <div class="toastc" id="toast"></div>
 <div class="sheet-bg" id="cartBg"><div class="sheet" id="cartSheet"></div></div>
 
-<script src="config.js?v=5"></script>
+<script src="config.js?v=6"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const S = { settings: null, cats: [], items: [], cart: [], type: 'delivery', loc: null, sending: false };
@@ -493,8 +493,18 @@ async function send() {
 function receiptUrl(r) { return location.origin + location.pathname.replace(/index\.html$/, '') + 'r.html?t=' + r.token; }
 function waText(r, p) {
   if (r.token) {
-    return ['🍔 *طلب جديد #' + r.order_no + '* · 10 BUNZ', '👤 ' + p.name, '*الكلي: ' + fmtIQD(r.total) + '*', '',
-      '🧾 الفاتورة الرسمية (الأيتمات، المبلغ، الموقع):', receiptUrl(r), '', '⚠️ المعتمد هو الفاتورة بالرابط فقط'].join('\n');
+    const line = '━━━━━━━━━━━━━━', n = r.lines.reduce((a, l) => a + l.qty, 0);
+    return [line, '🍔 *10 BUNZ* · طلب جديد', line,
+      '🔢 رقم الطلب:  *#' + r.order_no + '*',
+      '👤 ' + p.name,
+      p.type === 'delivery' ? '🛵 توصيل · ' + (r.distance_m / 1000).toFixed(1) + ' كم' + (S.loc && S.loc.label ? '\n📍 ' + S.loc.label.split('،')[0] : '') : '🏃 استلام من المطعم',
+      '',
+      '🧺 الطلب (' + n + ' قطعة):',
+      ...r.lines.map(l => '▫️ ' + l.qty + '× ' + l.name + (l.options ? ' (' + l.options + ')' : '')),
+      '',
+      '💰 المبلغ الكلي:  *' + fmtIQD(r.total) + '*',
+      line, '🧾 الفاتورة الرسمية + QR الاستلام:', receiptUrl(r), line,
+      '⚠️ المعتمد هو المبلغ بالفاتورة فقط'].join('\n');
   }
   const L = [];
   L.push('🍔 *طلب جديد #' + r.order_no + '* · 10 BUNZ');
