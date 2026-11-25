@@ -562,9 +562,15 @@ $('cbBtn').onclick = () => {
       const r = await bunzApi.rpc('bunz_request_callback', { p: { name, phone } });
       if (r.error) throw r;
       store.set('me', { ...store.get('me', {}), name: name || store.get('me', {}).name, phone });
+      const line = '━━━━━━━━━━━━━━', t = new Date().toLocaleTimeString('ar-IQ', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: '2-digit' });
+      const msg = [line, '📞 *طلب اتصال · 10 BUNZ*', line, '👤 الاسم:  *' + (name || 'بدون اسم') + '*', '📱 الرقم:  *' + phone + '*', '🕒 الوقت: ' + t, line,
+        '✅ اتصلوا بيه وسجّلوا طلبه', 'tel:' + phone].join('\n');
+      const wa = 'https://wa.me/' + s.whatsapp + '?text=' + encodeURIComponent(msg);
       $('cbSheet').innerHTML = `<div class="ok"><div style="font-size:54px">📞</div><div style="font-weight:900;font-size:20px">وصلنا رقمك</div>
-        <div style="color:var(--muted);margin:8px 0 20px">راح نتصل بيك على <b dir="ltr">${esc(phone)}</b> خلال دقايق.</div>
-        <button class="btn" onclick="hide('cbBg')">تمام</button></div>`;
+        <div style="color:var(--muted);margin:8px 0 20px">اضغط <b>إرسال</b> بالواتساب حتى يوصلنا طلبك، وراح نتصل بيك على <b dir="ltr">${esc(phone)}</b> خلال دقايق.</div>
+        <a class="btn g" style="display:block;text-decoration:none;text-align:center" href="${wa}">فتح واتساب</a>
+        <button class="btn" style="margin-top:10px;background:var(--bg);color:var(--navy)" onclick="hide('cbBg')">تمام</button></div>`;
+      if (s.whatsapp) location.href = wa;
     } catch (e) {
       $('cbErr').textContent = e && e.error === 'too_many' ? 'وصلنا طلبك قبل شوية، راح نتصل بيك.' : 'صار خلل، حاول مرة ثانية أو اتصل إنت مباشرة.';
       $('cbSend').disabled = false; $('cbSend').textContent = '📞 اتصلوا بيه';
