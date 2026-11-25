@@ -81,7 +81,7 @@ details summary{cursor:pointer;font-weight:800;color:var(--blue);font-size:13px;
   <header><b>10 BUNZ · لوحة التحكم</b><span id="openState" class="pill"></span><a href="./" target="_blank" style="color:#fff;font-size:13px">الموقع ↗</a></header>
   <nav class="tabs" id="tabs">
     <button data-t="handover">🛵 التسليم</button><button data-t="orders" class="on">الطلبات</button><button data-t="menu">المنيو والأسعار</button>
-    <button data-t="delivery">التوصيل</button><button data-t="settings">الدوام والإعدادات</button><button data-t="qr">روابط وQR</button><button data-t="calls" id="callsTab">📞 اتصلوا بيه والإشعارات</button>
+    <button data-t="delivery">التوصيل</button><button data-t="settings">الدوام والإعدادات</button><button data-t="qr">روابط وQR</button><button data-t="crm">👥 الزبائن والحملات</button><button data-t="calls" id="callsTab">📞 اتصلوا بيه والإشعارات</button>
   </nav>
   <main id="view"></main>
 </div>
@@ -112,7 +112,7 @@ async function start() {
   await loadOrders(true); await loadCalls(true); render();
   poll = setInterval(async () => { await loadOrders(); await loadCalls(); if (TAB === 'orders' || TAB === 'handover') render(); }, 15000);
 }
-$('tabs').onclick = async e => { const t = e.target.dataset.t; if (!t) return; TAB = t; $('tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); await refresh(); if (t === 'calls') await loadCalls(true); render(); };
+$('tabs').onclick = async e => { const t = e.target.dataset.t; if (!t) return; TAB = t; $('tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); await refresh(); if (t === 'calls') await loadCalls(true); if (t === 'crm') CUS = null; render(); };
 
 function beep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); [0, .25, .5].forEach(t => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.3, a.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + t + .2); o.start(a.currentTime + t); o.stop(a.currentTime + t + .2); }); } catch {} }
 async function loadOrders(first) {
@@ -122,7 +122,96 @@ async function loadOrders(first) {
   if (!first && max > lastMaxId) { beep(); toast('🔔 طلب جديد #' + ORDERS[0].order_no); document.title = '🔔 طلب جديد'; }
   lastMaxId = max; localStorage.setItem('bunz_last_seen', max);
 }
-function render() { ({ orders, menu, delivery, settings, qr, calls, handover })[TAB](); }
+function render() { ({ orders, menu, delivery, settings, qr, calls, handover, crm })[TAB](); }
+
+// ---------- customers + WhatsApp campaigns ----------
+let CUS = null, CBX = [];
+const daysAgo = d => Math.floor((Date.now() - new Date(d)) / 864e5);
+const agoTxt = d => { const n = daysAgo(d); return n === 0 ? 'اليوم' : n === 1 ? 'أمس' : 'قبل ' + n + ' يوم'; };
+const SEG = {
+  all: ['الكل', c => true],
+  new: ['⭐ جدد (طلب واحد)', c => c.orders == 1],
+  loyal: ['💎 دائمين (3 طلبات أو أكثر)', c => c.orders >= 3],
+  top: ['💰 أعلى صرف (أفضل 20%)', null],
+  sleep: ['😴 ما طلبوا من 14 يوم', c => daysAgo(c.last_at) >= 14],
+  week: ['🔥 طلبوا هذا الأسبوع', c => daysAgo(c.last_at) <= 7],
+  calls: ['📞 طلبوا اتصال وما طلبوا', null]
+};
+function segList(k, q) {
+  let l;
+  if (k === 'calls') l = CBX.map(c => ({ phone: c.phone, name: c.name, orders: 0, spent: 0, last_at: c.at, favorites: [], last_items: [] }));
+  else if (k === 'top') { const s = [...CUS].sort((a, b) => b.spent - a.spent); l = s.slice(0, Math.max(1, Math.ceil(s.length * .2))); }
+  else l = CUS.filter(SEG[k][1]);
+  if (q) l = l.filter(c => (c.name || '').includes(q) || c.phone.includes(q) || (c.area || '').includes(q) || JSON.stringify(c.favorites || []).includes(q));
+  return l;
+}
+const intl = p => { p = String(p).replace(/\D/g, ''); return p.startsWith('0') ? '964' + p.slice(1) : p; };
+const fill = (t, c) => t.replace(/\{الاسم\}/g, (c.name || '').split(' ')[0] || 'حبيبنا');
+async function crm() {
+  if (!CUS) { $('view').innerHTML = '<div class="card muted">... جاري التحميل</div>'; const r = await call('bunz_admin_customers'); CUS = r.customers; CBX = r.callbacks; }
+  const seg = sessionStorage.getItem('bunz_seg') || 'all';
+  const tot = CUS.reduce((a, c) => a + +c.spent, 0), rep = CUS.filter(c => c.orders > 1).length;
+  $('view').innerHTML = `
+    <div class="stats">
+      <div class="stat"><small>عدد الزبائن</small><div>${CUS.length}</div></div>
+      <div class="stat"><small>رجعوا طلبوا مرة ثانية</small><div>${CUS.length ? Math.round(rep / CUS.length * 100) : 0}%</div></div>
+      <div class="stat"><small>معدل صرف الزبون</small><div>${fmtIQD(CUS.length ? tot / CUS.length : 0)}</div></div>
+      <div class="stat"><small>مفعّلين الإشعارات</small><div>${CUS.filter(c => c.has_push).length}</div></div>
+    </div>
+    <div class="card"><div class="row"><select class="i" id="seg" style="width:auto">${Object.entries(SEG).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')}</select>
+      <input class="i" id="q" placeholder="بحث: اسم، رقم، منطقة، أيتم" style="flex:1;min-width:160px"></div>
+      <div id="cl" style="margin-top:10px;overflow:auto"></div></div>
+    <div class="card"><h2>📣 حملة واتساب للمجموعة المختارة</h2>
+      <div class="muted">اكتب الرسالة، و<b>{الاسم}</b> يتبدل باسم كل زبون.</div>
+      <textarea class="i" id="cm" rows="4" style="margin-top:8px">هلا {الاسم} 👋
+عرض الليلة من 10 BUNZ 🔥
+اطلب من هنا: ${esc(siteBase())}</textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="btn g" id="seq">▶️ إرسال واحد بعد الثاني</button>
+        <button class="btn s" id="vcf">📇 تنزيل الأرقام (لقائمة البث)</button>
+        <button class="btn s" id="csv">📊 تنزيل Excel</button>
+      </div>
+      <details><summary>شنو الفرق بين الطرق؟</summary><div class="muted" style="line-height:1.9;margin-top:6px">
+        <b>إرسال واحد بعد الثاني:</b> مجاني. يفتح واتساب لكل زبون والرسالة جاهزة باسمه، تضغط إرسال وترجع تضغط "التالي". مناسب لحد ~50 زبون.<br>
+        <b>قائمة البث (Broadcast):</b> مجاني. نزّل ملف الأرقام وافتحه بالموبايل حتى تنحفظ، وبعدها بواتساب بزنس: القائمة ← قائمة بث جديدة ← اختار الزبائن (لحد 256). الرسالة توصل بس للي حافظين رقم المطعم.<br>
+        <b>إشعار الموقع 🔔:</b> مجاني وبضغطة وحدة، من تبويب "اتصلوا بيه والإشعارات"، للي فعّلوا الإشعارات.<br>
+        <b>إرسال تلقائي للكل بضغطة وحدة:</b> يحتاج WhatsApp Business API من Meta، وهو مدفوع لكل رسالة ويحتاج توثيق حساب. إذا تريده أجهزه.</div></details>
+    </div>`;
+  $('seg').value = seg;
+  const draw = () => {
+    const l = segList($('seg').value, $('q').value.trim());
+    $('cl').innerHTML = `<div class="muted" style="margin-bottom:6px">${l.length} زبون</div>` + (l.length ? `<table><tr><th>الزبون</th><th>الطلبات</th><th>آخر طلب</th><th>يحب</th><th></th></tr>` + l.slice(0, 300).map(c => `<tr>
+      <td><b>${esc(c.name || '-')}</b>${c.has_push ? ' 🔔' : ''}<br><span dir="ltr" class="muted">${esc(c.phone)}</span>${c.area ? `<br><span class="muted">📍 ${esc(c.area)}</span>` : ''}</td>
+      <td><b>${c.orders}</b><br><span class="muted">${fmtIQD(c.spent)}</span></td>
+      <td>${agoTxt(c.last_at)}<br><span class="muted">${(c.last_items || []).map(esc).join('، ')}</span></td>
+      <td class="muted">${(c.favorites || []).map(esc).join('، ')}</td>
+      <td><a class="btn g" style="text-decoration:none;padding:5px 10px" target="_blank" href="https://wa.me/${intl(c.phone)}">واتساب</a></td></tr>`).join('') + '</table>' : '<div class="muted">ماكو زبائن بهذي المجموعة.</div>');
+    return l;
+  };
+  $('seg').onchange = () => { sessionStorage.setItem('bunz_seg', $('seg').value); draw(); };
+  $('q').oninput = draw; draw();
+  const dl = (name, text, type) => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click(); };
+  $('vcf').onclick = () => dl('10bunz-customers.vcf', draw().map(c => `BEGIN:VCARD\nVERSION:3.0\nFN:${(c.name || 'زبون').replace(/[\n;]/g, ' ')} · 10BUNZ\nTEL;TYPE=CELL:+${intl(c.phone)}\nEND:VCARD`).join('\n'), 'text/vcard');
+  $('csv').onclick = () => dl('10bunz-customers.csv', '﻿' + [['الاسم', 'الرقم', 'عدد الطلبات', 'مجموع الصرف', 'أول طلب', 'آخر طلب', 'المنطقة', 'يحب'].join(','),
+    ...draw().map(c => [c.name, c.phone, c.orders, c.spent, (c.first_at || '').slice(0, 10), (c.last_at || '').slice(0, 10), c.area || '', (c.favorites || []).join(' / ')].map(v => '"' + String(v ?? '').replace(/"/g, '""') + '"').join(','))].join('\n'), 'text/csv');
+  $('seq').onclick = () => {
+    const l = draw(), msg = $('cm').value.trim(); if (!msg) return toast('اكتب الرسالة');
+    if (!l.length) return toast('ماكو زبائن');
+    let i = 0;
+    const step = () => {
+      if (i >= l.length) return showModal('<div style="font-size:50px">✅</div><h2>خلصت الحملة</h2><div class="muted">انرسلت لـ ' + l.length + ' زبون</div><button class="btn" onclick="closeModal()" style="width:100%;margin-top:10px">تمام</button>');
+      const c = l[i];
+      showModal(`<div class="muted">${i + 1} من ${l.length}</div><h2>${esc(c.name || '-')}</h2><div dir="ltr">${esc(c.phone)}</div>
+        <div style="background:var(--bg);border-radius:12px;padding:10px;margin:10px 0;text-align:right;white-space:pre-wrap">${esc(fill(msg, c))}</div>
+        <a class="btn g" id="go" style="display:block;text-decoration:none;padding:14px;font-size:17px" target="_blank" href="https://wa.me/${intl(c.phone)}?text=${encodeURIComponent(fill(msg, c))}">📤 فتح واتساب وإرسال</a>
+        <div class="row" style="margin-top:8px"><button class="btn s" id="skip" style="flex:1">تخطي</button><button class="btn" id="next" style="flex:1">التالي ←</button></div>
+        <button class="btn s" onclick="closeModal()" style="width:100%;margin-top:8px">إيقاف</button>`);
+      $('go').onclick = () => setTimeout(() => $('next').focus(), 300);
+      $('next').onclick = $('skip').onclick = () => { i++; step(); };
+    };
+    step();
+  };
+}
 
 // ---------- drivers / handover ----------
 const DRV = () => (D && D.settings.drivers) || [];
