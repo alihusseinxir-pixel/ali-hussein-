@@ -288,7 +288,7 @@ function foundOrder(o) {
   showModal(`<div class="muted">رقم الطلب</div><div class="huge">#${o.order_no}</div>
     <div style="font-weight:800;font-size:17px">${esc(o.customer_name)} · ${del ? '🛵 توصيل' : '🏃 استلام'}</div>
     <div class="muted">${o.items.reduce((a, l) => a + l.qty, 0)} قطعة · ${fmtIQD(o.total)}${o.driver_name ? ' · الدلفري: ' + esc(o.driver_name) : ''}</div>
-    <ul style="text-align:right">${o.items.map(l => `<li>${l.qty}× ${esc(l.name)}${l.options ? ' <span class="muted">(' + esc(l.options) + ')</span>' : ''}</li>`).join('')}</ul>${warn}
+    <ul style="text-align:right">${o.items.map(l => `<li>${l.qty}× ${esc(l.name)}${l.options ? ' <span class="muted">(' + esc(l.options) + ')</span>' : ''}${l.note ? '<br><b style="color:var(--red)">📝 ' + esc(l.note) + '</b>' : ''}</li>`).join('')}</ul>${warn}
     ${o.status !== 'cancelled' ? `<button class="btn g" id="handBtn" style="width:100%;padding:16px;font-size:18px">✅ ${del ? 'سلّمت الطلب للدلفري' : 'سلّمت الطلب للزبون'}</button>` : ''}
     <button class="btn s" onclick="closeModal()" style="width:100%;margin-top:8px">رجوع</button>`);
   if ($('handBtn')) $('handBtn').onclick = async () => { await setStatus(o, target); closeModal(); toast('✓ الطلب #' + o.order_no + ' انسلّم'); render(); };
@@ -388,7 +388,7 @@ function orders() {
         <div class="meta">${new Date(o.created_at).toLocaleString('ar-IQ', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'numeric' })}
           · ${o.order_type === 'delivery' ? '🛵 توصيل ' + (o.distance_m / 1000).toFixed(1) + ' كم (' + fmtIQD(o.delivery_fee) + ')' : '🏃 استلام'}
           · المصدر: ${esc(srcName(o.source))} · ${o.customer_order_count > 1 ? 'زبون راجع (طلب رقم ' + o.customer_order_count + ')' : '⭐ زبون جديد'}</div>
-        <ul>${o.items.map(l => `<li>${l.qty}× ${esc(l.name)}${l.options ? ' <span class="muted">(' + esc(l.options) + ')</span>' : ''}</li>`).join('')}</ul>
+        <ul>${o.items.map(l => `<li>${l.qty}× ${esc(l.name)}${l.options ? ' <span class="muted">(' + esc(l.options) + ')</span>' : ''}${l.note ? '<br><b style="color:var(--red)">📝 ' + esc(l.note) + '</b>' : ''}</li>`).join('')}</ul>
         ${o.address_note ? `<div class="muted">🏠 ${esc(o.address_note)}</div>` : ''}${o.notes ? `<div>📝 ${esc(o.notes)}</div>` : ''}
         <div class="row" style="margin-top:8px">
           <a class="btn g" style="text-decoration:none;padding:6px 12px" target="_blank" href="https://wa.me/964${o.phone.slice(1)}">واتساب ${esc(o.phone)}</a>

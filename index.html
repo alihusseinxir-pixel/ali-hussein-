@@ -244,7 +244,7 @@ let cur = null;
 function openItem(id, edit) {
   const it = itemById(id); if (!it || it.sold_out) return;
   const l = edit != null ? S.cart[edit] : null;
-  cur = l ? { it, qty: l.qty, sel: JSON.parse(JSON.stringify(l.sel)), edit } : { it, qty: 1, sel: defaultSel(it) || it.options.map(() => []), edit: null };
+  cur = l ? { it, qty: l.qty, sel: JSON.parse(JSON.stringify(l.sel)), edit, note: l.note || '' } : { it, qty: 1, sel: defaultSel(it) || it.options.map(() => []), edit: null, note: '' };
   drawItem(); show('itemBg');
 }
 // most popular choice for one-tap add: "سماش" if present, else the first choice of each required single group
@@ -258,10 +258,11 @@ function defaultSel(it) {
   }
   return sel;
 }
-function addLine(it, sel, qty) {
-  const key = it.id + ':' + JSON.stringify(sel);
+function addLine(it, sel, qty, note) {
+  note = (note || '').trim().slice(0, 120);
+  const key = it.id + ':' + JSON.stringify(sel) + ':' + note;
   const ex = S.cart.find(l => l.key === key);
-  if (ex) ex.qty = Math.min(20, ex.qty + qty); else S.cart.push({ key, id: it.id, qty, sel });
+  if (ex) ex.qty = Math.min(20, ex.qty + qty); else S.cart.push({ key, id: it.id, qty, sel, note });
 }
 function quickAdd(id) {
   const it = itemById(id); if (!it || it.sold_out) return;
@@ -292,12 +293,15 @@ function drawItem() {
             return `<button class="opt${pk ? ' on' : ''}" data-g="${gi}" data-c="${ci}"><span>${esc(ch.name)}${price}</span><span class="dot"></span></button>`;
           }).join('') + '</div>';
       }).join('')}
+      <label class="f">📝 ملاحظة على هذا الأيتم <span style="color:var(--muted);font-weight:600">(اختياري)</span></label>
+      <textarea class="i" id="itemNote" rows="2" maxlength="120" placeholder="مثلاً: بدون بصل، صوص زيادة، مستوية زين">${esc(cur.note || '')}</textarea>
     </div>
     <div class="foot">
       <span class="stepper"><button data-q="-1">−</button><span>${qty}</span><button data-q="1">+</button></span>
       <button class="btn" id="addBtn" ${itemValid() ? '' : 'disabled'}>${cur.edit != null ? 'حفظ التعديل' : 'أضف للسلة'} · ${fmtIQD(unitPrice(it, sel) * qty)}</button>
     </div>`;
   const sh = $('itemSheet');
+  $('itemNote').oninput = e => { cur.note = e.target.value; };
   sh.querySelector('[data-close]').onclick = () => { hide('itemBg'); if (cur.edit != null) { drawCart(); show('cartBg'); } };
   sh.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { cur.qty = Math.max(1, Math.min(20, cur.qty + +b.dataset.q)); drawItem(); });
   sh.querySelectorAll('button.opt').forEach(b => b.onclick = () => {
@@ -319,7 +323,7 @@ function drawItem() {
   $('addBtn').onclick = () => {
     const editing = cur.edit != null;
     if (editing) S.cart.splice(cur.edit, 1);
-    addLine(it, cur.sel, cur.qty);
+    addLine(it, cur.sel, cur.qty, cur.note);
     saveCart(); hide('itemBg'); renderCartBar();
     if (editing) { drawCart(); show('cartBg'); } else toast('✓ انضاف للسلة');
   };
@@ -357,7 +361,7 @@ function drawCart() {
     <div class="hd"><b>سلتك</b><button class="x" data-close>×</button></div>
     <div class="pad">
       ${S.cart.map((l, k) => { const it = itemById(l.id); return `<div class="line"><img src="${esc(it.image_url)}" alt="">
-        <div class="t"><b>${esc(it.name)}</b><small>${esc(optLabel(it, l.sel))}</small>${it.options.length ? `<button class="edit" data-edit="${k}">✏️ تغيير</button>` : ''}
+        <div class="t"><b>${esc(it.name)}</b><small>${esc(optLabel(it, l.sel))}</small>${l.note ? `<small style="display:block;color:var(--navy)">📝 ${esc(l.note)}</small>` : ''}<button class="edit" data-edit="${k}">✏️ ${it.options.length ? 'تغيير / ملاحظة' : 'إضافة ملاحظة'}</button>
           <div class="stepper" style="margin-top:6px"><button data-l="${k}" data-d="-1">−</button><span>${l.qty}</span><button data-l="${k}" data-d="1">+</button></div></div>
         <div class="pr">${fmtIQD(unitPrice(it, l.sel) * l.qty)}</div></div>`; }).join('')}
       ${types.length > 1 ? `<div class="seg" style="margin-top:16px">${types.map(([k, t]) => `<button data-t="${k}" class="${S.type === k ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
@@ -470,7 +474,7 @@ async function send() {
   const notes = $('fNotes').value.trim(), addr = $('fAddr') ? $('fAddr').value.trim() : '';
   const payload = { name, phone, type: S.type, notes, address_note: addr, source: source(), location_label: S.type === 'delivery' && S.loc ? (S.loc.label || '') : '',
     lat: S.type === 'delivery' ? S.loc.lat : null, lng: S.type === 'delivery' ? S.loc.lng : null,
-    items: S.cart.map(l => ({ id: l.id, qty: l.qty, sel: l.sel })) };
+    items: S.cart.map(l => ({ id: l.id, qty: l.qty, sel: l.sel, note: l.note || '' })) };
   S.sending = true; $('sendBtn').disabled = true; $('sendBtn').textContent = '... جاري الإرسال';
   try {
     const r = await bunzApi.rpc('bunz_place_order', { p: payload });
@@ -500,7 +504,7 @@ function waText(r, p) {
       p.type === 'delivery' ? '🛵 توصيل · ' + (r.distance_m / 1000).toFixed(1) + ' كم' + (S.loc && S.loc.label ? '\n📍 ' + S.loc.label.split('،')[0] : '') : '🏃 استلام من المطعم',
       '',
       '🧺 الطلب (' + n + ' قطعة):',
-      ...r.lines.map(l => '▫️ ' + l.qty + '× ' + l.name + (l.options ? ' (' + l.options + ')' : '')),
+      ...r.lines.map(l => '▫️ ' + l.qty + '× ' + l.name + (l.options ? ' (' + l.options + ')' : '') + (l.note ? '\n      📝 ' + l.note : '')),
       '',
       '💰 المبلغ الكلي:  *' + fmtIQD(r.total) + '*',
       line, '🧾 الفاتورة الرسمية + QR الاستلام:', receiptUrl(r), line,

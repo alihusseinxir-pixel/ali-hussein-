@@ -93,7 +93,7 @@ async function load(first) {
     ${!['done', 'cancelled'].includes(o.status) ? `<div class="qrbox"><canvas id="qr"></canvas><b>رمز استلام الطلب #${o.order_no}</b><small>${del ? 'للدلفري: ورّي هذا الكود للكاشير بالمطعم حتى يسلّمك الطلب' : 'ورّي هذا الكود للكاشير وقت الاستلام'}</small></div>` : ''}
     <div class="sec row"><div><div class="k">الزبون</div><div class="v">${esc(o.customer_name)}</div><div dir="ltr" style="text-align:right;font-weight:700">${esc(o.phone)}</div></div>
       ${o.driver_name ? `<div style="text-align:left"><div class="k">الدلفري</div><div class="v">🛵 ${esc(o.driver_name)}</div></div>` : ''}</div>
-    <div class="sec"><div class="k">الطلب (${pieces} قطعة)</div><table>${o.items.map(l => `<tr><td><span class="qty">${l.qty}</span>${esc(l.name)}${l.options ? `<small>${esc(l.options)}</small>` : ''}</td><td>${fmtIQD(l.line_total)}</td></tr>`).join('')}</table></div>
+    <div class="sec"><div class="k">الطلب (${pieces} قطعة)</div><table>${o.items.map(l => `<tr><td><span class="qty">${l.qty}</span>${esc(l.name)}${l.options ? `<small>${esc(l.options)}</small>` : ''}${l.note ? `<small style="color:var(--deep);font-weight:800">📝 ${esc(l.note)}</small>` : ''}</td><td>${fmtIQD(l.line_total)}</td></tr>`).join('')}</table></div>
     <div class="sec">
       <div class="row"><span>المجموع</span><b>${fmtIQD(o.subtotal)}</b></div>
       ${del ? `<div class="row" style="margin-top:4px"><span>التوصيل (${(o.distance_m / 1000).toFixed(1)} كم)</span><b>${o.delivery_fee ? fmtIQD(o.delivery_fee) : 'مجاني'}</b></div>` : ''}
