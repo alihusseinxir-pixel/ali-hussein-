@@ -98,6 +98,7 @@ function fillProfile() {
   f.botEnabled.checked = t.botEnabled !== false;
   f.followupEnabled.checked = t.followupEnabled !== false;
   for (const [k] of KNOWLEDGE_FIELDS) f["k_" + k].value = t.knowledge?.[k] || "";
+  renderLearned(t);
   const c = $("#connectForm");
   c.ch_whatsapp.value = t.channels?.whatsapp || "";
   c.ch_messenger.value = t.channels?.messenger || "";
@@ -163,12 +164,35 @@ async function loadConversations() {
   document.querySelectorAll(".conv-item").forEach((el) => el.addEventListener("click", () => openConversation(el.dataset.id)));
 }
 
-function renderMessages(container, messages) {
+function renderMessages(container, messages, { correctable = false, onButton = null } = {}) {
   const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
   const label = { customer: "الزبون", bot: "🤖 الرد الآلي", staff: "👤 موظف", note: "" };
   container.innerHTML = messages
-    .map((m) => `<div class="msg ${m.role}">${esc(m.text)}<small>${label[m.role]} · ${fmtTime(m.at)}</small></div>`)
+    .map((m) => {
+      const img = m.media?.startsWith("image") ? '<div class="img-tag">🖼️ صورة</div>' : "";
+      const text = m.media?.startsWith("image") && m.text === "[صورة]" ? "" : esc(m.text);
+      const btns = m.buttons?.length
+        ? `<div class="chips">${m.buttons.map((b) => `<button type="button" class="chip" data-btn="${esc(b)}">${esc(b)}</button>`).join("")}</div>`
+        : "";
+      const fix = m.corrected
+        ? `<div class="fixed">✏️ التصحيح: ${esc(m.corrected)}</div>`
+        : correctable && m.role === "bot"
+          ? `<button type="button" class="link" data-fix="${m.id}">✏️ صحح هذا الرد</button>`
+          : "";
+      return `<div class="msg ${m.role}">${img}${text}${btns}${fix}<small>${label[m.role]} · ${fmtTime(m.at)}</small></div>`;
+    })
     .join("");
+  if (onButton) container.querySelectorAll("[data-btn]").forEach((b) => (b.onclick = () => onButton(b.dataset.btn)));
+  container.querySelectorAll("[data-fix]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        const text = prompt("اكتب الرد الصحيح. النظام راح يتعلمه للمرات الجاية (ما ينرسل للزبون):");
+        if (!text) return;
+        await api(`/conversations/${openConvId}/correct`, { method: "POST", body: { messageId: b.dataset.fix, text } });
+        openConversation(openConvId);
+        loadTenants();
+      })
+  );
   if (atBottom) container.scrollTop = container.scrollHeight;
 }
 
@@ -186,7 +210,7 @@ async function openConversation(id) {
     await api(`/conversations/${id}/mode`, { method: "POST", body: { mode: human ? "bot" : "human" } });
     openConversation(id);
   };
-  renderMessages($("#convMessages"), messages);
+  renderMessages($("#convMessages"), messages, { correctable: true });
   $("#staffForm").hidden = false;
   loadConversations();
 }
@@ -216,6 +240,52 @@ function profileLine(c) {
   return bits.length ? `<div class="profile-box">${bits.join(" · ")}</div>` : "";
 }
 
+function renderLearned(t) {
+  const list = t.learned || [];
+  $("#learnedList").innerHTML = list.length
+    ? list
+        .map(
+          (e) => `<div class="card"><div><strong>الزبون:</strong> ${esc(e.customer)}</div><div><strong>الرد الصحيح:</strong> ${esc(e.reply)}</div>
+        ${e.wrong ? `<div class="muted">بدل: ${esc(e.wrong)}</div>` : ""}<div class="actions"><span class="tag">${e.source === "correction" ? "تصحيح" : "رد موظف"}</span>
+        <button type="button" class="ghost small danger" data-del-ex="${e.id}">حذف</button></div></div>`
+        )
+        .join("")
+    : '<div class="empty">بعد ماكو. كل ما موظف يرد أو تصحح رد من المحادثات، يظهر هنا ويتعلمه النظام.</div>';
+  document.querySelectorAll("[data-del-ex]").forEach(
+    (b) =>
+      (b.onclick = async () => {
+        await api(`/tenants/${tenantId}/learned/${b.dataset.delEx}`, { method: "DELETE" });
+        await loadTenants();
+        fillProfile();
+      })
+  );
+}
+
+function renderReport(r) {
+  if (!r) return ($("#reportBox").innerHTML = '<div class="empty">ماكو تقرير بعد. التقرير يوصل كل يوم الساعة 9 بالليل، أو اضغط الزر.</div>');
+  const list = (title, items) => (items?.length ? `<h4>${title}</h4><ul>${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+  $("#reportBox").innerHTML = `<div class="card">
+    <div class="muted">${fmtTime(r.at)} · آخر ${r.hours} ساعة ${r.score ? `· التقييم ${r.score}/10` : ""}</div>
+    <p>${esc(r.summary)}</p>
+    ${list("✅ اللي نجح", r.wins)}
+    ${list("❌ زبائن ضاعوا", (r.lost || []).map((l) => `${l.customer}: ${l.reason}${l.fix ? ` ← ${l.fix}` : ""}`))}
+    ${list("❓ أسئلة ما عرفنا نجاوبها", r.unanswered)}
+    ${list("📝 أضف لمعلومات المحل", r.knowledge_suggestions)}
+  </div>`;
+}
+$("#reportBtn").addEventListener("click", async () => {
+  $("#reportBtn").disabled = true;
+  $("#reportBtn").textContent = "جاي يحلل المحادثات...";
+  try {
+    renderReport(await api("/report", { method: "POST", body: { tenantId, includeSimulator: $("#reportSim").checked } }));
+    await loadTenants();
+  } catch (e) {
+    alert(e.message);
+  }
+  $("#reportBtn").disabled = false;
+  $("#reportBtn").textContent = "سوي تقرير هسه";
+});
+
 // ---------- الإحصائيات ----------
 async function loadStats() {
   if (!tenantId) return;
@@ -234,6 +304,7 @@ async function loadStats() {
     ["تحويل لموظف", num(a.handoffs), ""],
     ["ردود النظام", num(a.botMessages), "رسائل ما احتاجت موظف"],
   ];
+  renderReport(tenant()?.reports?.[0]);
   $("#statsCards").innerHTML = cards
     .map(([l, v, h]) => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${h ? `<div class="h">${h}</div>` : ""}</div>`)
     .join("");
@@ -268,27 +339,44 @@ async function loadOrders() {
 // ---------- المحاكي ----------
 const simLog = [];
 function renderSim(typing) {
-  renderMessages($("#simMessages"), simLog);
+  renderMessages($("#simMessages"), simLog, { onButton: (b) => sendSim(b) });
   if (typing) $("#simMessages").insertAdjacentHTML("beforeend", '<div class="typing">جاي يكتب...</div>');
   $("#simMessages").scrollTop = $("#simMessages").scrollHeight;
 }
-$("#simForm").addEventListener("submit", async (e) => {
+$("#simForm").addEventListener("submit", (e) => {
   e.preventDefault();
   const text = $("#simText").value.trim();
-  if (!text || !tenantId) return;
   $("#simText").value = "";
-  simLog.push({ role: "customer", text, at: new Date().toISOString() });
+  if (text) sendSim(text);
+});
+$("#simImage").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = "";
+  if (!file) return;
+  if (file.size > 4.5 * 1024 * 1024) return alert("الصورة كبيرة، لازم أقل من 4.5MB");
+  const base64 = await new Promise((r) => {
+    const fr = new FileReader();
+    fr.onload = () => r(String(fr.result).split(",")[1]);
+    fr.readAsDataURL(file);
+  });
+  sendSim($("#simText").value.trim(), { base64, mediaType: file.type });
+  $("#simText").value = "";
+});
+async function sendSim(text, image) {
+  if (!tenantId) return;
+  simLog.push({ role: "customer", text: text || "[صورة]", media: image ? "image" : null, at: new Date().toISOString() });
   renderSim(true);
   try {
-    const r = await api("/simulate", { method: "POST", body: { tenantId, customerId: simCustomer, text } });
-    if (r.reply) simLog.push({ role: "bot", text: r.reply, at: new Date().toISOString() });
+    const r = await api("/simulate", { method: "POST", body: { tenantId, customerId: simCustomer, text, image } });
+    if (r.reply) simLog.push({ role: "bot", text: r.reply, buttons: r.buttons, at: new Date().toISOString() });
     for (const a of r.actions || [])
-      simLog.push({ role: "note", text: a.type === "order" ? `🧾 انسجل طلب: ${a.order.summary}` : `🔔 تحويل لموظف: ${a.reason}`, at: new Date().toISOString() });
+      if (a.type === "order" || a.type === "handoff")
+        simLog.push({ role: "note", text: a.type === "order" ? `🧾 انسجل طلب: ${a.order.summary}` : `🔔 تحويل لموظف: ${a.reason}`, at: new Date().toISOString() });
   } catch (err) {
     simLog.push({ role: "note", text: "⚠️ " + err.message, at: new Date().toISOString() });
   }
   renderSim(false);
-});
+}
 $("#simReset").addEventListener("click", () => {
   simCustomer = "sim-" + Math.random().toString(36).slice(2, 8);
   simLog.length = 0;
@@ -303,7 +391,7 @@ async function refresh() {
       await loadConversations();
       if (openConvId) {
         const { messages } = await api("/conversations/" + openConvId);
-        renderMessages($("#convMessages"), messages);
+        renderMessages($("#convMessages"), messages, { correctable: true });
       }
     } else {
       await loadConversations(); // حتى يتحدث عداد غير المقروء

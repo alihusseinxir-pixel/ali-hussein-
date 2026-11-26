@@ -48,6 +48,10 @@
     <section id="tab-stats" class="tab">
       <p class="muted">آخر 30 يوم، بدون محادثات التجربة.</p>
       <div id="statsCards" class="stats"></div>
+      <h3>التقرير اليومي</h3>
+      <div class="actions"><button id="reportBtn">سوي تقرير هسه</button>
+        <label class="check muted"><input type="checkbox" id="reportSim" /> شمّل محادثات التجربة</label></div>
+      <div id="reportBox" class="report"></div>
     </section>
 
     <!-- المحاكي -->
@@ -56,6 +60,7 @@
         <p class="muted">اكتب كأنك زبون. الرسائل تظهر بالمحادثات تحت قناة «تجربة» وما توصل لأي مكان.</p>
         <div id="simMessages" class="messages phone"></div>
         <form id="simForm" class="composer">
+          <label class="attach" title="دز صورة">📎<input type="file" id="simImage" accept="image/*" hidden /></label>
           <input id="simText" placeholder="مثلاً: شكد سعر التكة؟ توصلون للجادرية؟" autocomplete="off" />
           <button type="submit">إرسال</button>
         </form>
@@ -84,6 +89,9 @@
         </div>
         <p class="muted">كل شي تكتبه هنا هو المصدر الوحيد اللي يجاوب منه النظام. اكتب بشكل طبيعي، والأسعار بالدينار.</p>
         <div id="knowledgeFields"></div>
+        <h3>تعلمه النظام من موظفيك</h3>
+        <p class="muted">ردود الموظفين وتصحيحاتك تصير أمثلة يقلدها النظام (آخر 25).</p>
+        <div id="learnedList" class="cards"></div>
         <div class="actions">
           <button type="submit">حفظ</button>
           <span id="profileSaved" class="muted"></span>

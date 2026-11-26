@@ -162,9 +162,11 @@ export function listConversations(tenantId) {
 
 // ---------- الرسائل ----------
 /** role: customer | bot | staff | note (ملاحظة داخلية ما توصل للزبون) */
-export function addMessage({ conversationId, role, text, externalId }) {
+export function addMessage({ conversationId, role, text, externalId, media, buttons }) {
   if (externalId && state.messages.some((m) => m.externalId === externalId)) return null; // ميتا أحياناً تعيد نفس الرسالة
   const m = { id: newId("msg"), conversationId, role, text, externalId: externalId || null, at: now() };
+  if (media) m.media = media;
+  if (buttons?.length) m.buttons = buttons;
   state.messages.push(m);
   const c = getConversation(conversationId);
   if (c) {
@@ -230,4 +232,39 @@ export function analytics(tenantId, days = 30) {
     botMessages: msgs.filter((m) => m.role === "bot").length,
     byChannel,
   };
+}
+
+export function getMessage(id) {
+  return state.messages.find((m) => m.id === id) || null;
+}
+export function updateMessage(id, patch) {
+  const m = getMessage(id);
+  if (!m) return null;
+  Object.assign(m, patch);
+  persist();
+  return m;
+}
+
+// ---------- التعلم من الموظفين ----------
+const MAX_LEARNED = 25;
+/** يحفظ مثال (سؤال الزبون ← الرد الصحيح) حتى النظام يقلده */
+export function addLearnedExample(tenantId, example) {
+  const t = getTenant(tenantId);
+  if (!t || !example.customer || !example.reply) return null;
+  t.learned = [{ id: newId("ex"), at: now(), ...example }, ...(t.learned || [])].slice(0, MAX_LEARNED);
+  persist();
+  return t.learned[0];
+}
+export function removeLearnedExample(tenantId, exampleId) {
+  const t = getTenant(tenantId);
+  if (!t) return;
+  t.learned = (t.learned || []).filter((e) => e.id !== exampleId);
+  persist();
+}
+export function addReport(tenantId, report) {
+  const t = getTenant(tenantId);
+  if (!t) return null;
+  t.reports = [{ id: newId("rep"), at: now(), ...report }, ...(t.reports || [])].slice(0, 14);
+  persist();
+  return t.reports[0];
 }

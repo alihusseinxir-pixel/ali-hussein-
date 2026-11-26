@@ -2,6 +2,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import * as db from "./db.js";
 import { quote } from "./pricing.js";
+import { getImage } from "./media.js";
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const EFFORT = process.env.CLAUDE_EFFORT || "medium";
@@ -23,6 +24,11 @@ const BASE_RULES = `انت أفضل موظف مبيعات وخدمة زبائن 
 - رسائل قصيرة مثل الواتساب: جملتين لأربع جمل. المنيو والأسعار بسطور قصيرة بدون جداول وبدون ** أو #.
 - رحب بس ببداية المحادثة. إيموجي خفيف وقليل (🌹 👍 🔥).
 - سؤال واحد بكل رسالة، حتى الزبون يرد بسهولة.
+- أزرار سريعة: إذا جوابك ينتهي بخيارات واضحة (تأكيد طلب، توصيل لو استلام، اختيار وقت)، حط بآخر الرسالة لحد 3 أسطر بهذا الشكل بالضبط: [زر: النص]، وكل زر أقل من 20 حرف. مثال:
+[زر: ✅ أكد الطلب]
+[زر: ✏️ أغير شي]
+النظام يحولها أزرار يضغطها الزبون. لا تستخدمها بكل رسالة، بس لما تسهل القرار.
+- الصور: إذا الزبون دز صورة (سكرين شوت من المنيو، صورة منتج، صورة مشكلة بالطلب)، افهم شنو بيها وجاوب على أساسها. إذا الصورة لمنتج مو موجود بمعلوماتنا، گول بصراحة واقترح الأقرب. إذا صورة شكوى (أكل محروق، طلب ناقص)، اعتذر واستخدم handoff_to_human.
 
 أسلوب البيع (مهم جداً):
 1. افهم شنو يريد قبل ما تعرض: إذا سؤاله عام ("شنو عدكم؟")، لا تدز المنيو كله. اسأله سؤال واحد يساعدك تقترح (لكم شخص؟ شنو تحب أكثر؟ توصيل لو استلام؟ أي يوم يناسبك؟)، أو اقترح الأكثر طلباً مباشرة.
@@ -84,6 +90,15 @@ export function buildBusinessProfile(tenant) {
   const parts = [`اسم المحل: ${tenant.name}`, TYPE_HINTS[tenant.type] || TYPE_HINTS.other];
   for (const [key, label] of FIELD_LABELS) {
     if (k[key] && String(k[key]).trim()) parts.push(`## ${label}\n${String(k[key]).trim()}`);
+  }
+  const learned = (tenant.learned || []).slice(0, 25);
+  if (learned.length) {
+    parts.push(
+      "## ردود حقيقية من موظفينا (أهم مرجع للأسلوب والمعلومة، قلدها)\n" +
+        learned
+          .map((e) => `زبون: ${e.customer}\nاحنا: ${e.reply}${e.wrong ? `\n(لا ترد هيچ: ${e.wrong})` : ""}`)
+          .join("\n\n")
+    );
   }
   return `<معلومات_المحل>\n${parts.join("\n\n")}\n</معلومات_المحل>`;
 }
@@ -173,16 +188,40 @@ const TOOLS = [
 /** يحول سجل المحادثة لصيغة رسائل Claude (الزبون = user، النظام والموظف = assistant) */
 function toClaudeMessages(history) {
   const out = [];
-  for (const m of history) {
-    if (m.role === "note") continue;
+  // نرسل آخر 3 صور بس حتى الطلب ما يثقل
+  const visible = new Set(history.filter((m) => m.media === "image" && getImage(m.id)).slice(-3).map((m) => m.id));
+  history.forEach((m) => {
+    if (m.role === "note") return;
     const role = m.role === "customer" ? "user" : "assistant";
-    const text = m.role === "staff" ? `(رد من موظف المحل) ${m.text}` : m.text;
+    let text = m.role === "staff" ? `(رد من موظف المحل) ${m.text}` : m.text;
+    if (m.buttons?.length) text += "\n" + m.buttons.map((b) => `[زر: ${b}]`).join("\n");
+    const blocks = [];
+    const img = visible.has(m.id) ? getImage(m.id) : null;
+    if (img) {
+      blocks.push({ type: "image", source: { type: "base64", media_type: img.media_type, data: img.data } });
+      if (text === "[صورة]") text = "(الزبون دز صورة)";
+    } else if (m.media === "image" || m.media === "image-unavailable") {
+      text = text === "[صورة]" ? "(الزبون دز صورة ما تگدر تشوفها هسه، اطلب منه يوصفها)" : `(صورة مع تعليق) ${text}`;
+    }
+    blocks.push({ type: "text", text });
     const last = out[out.length - 1];
-    if (last && last.role === role) last.content += `\n${text}`;
-    else out.push({ role, content: text });
-  }
+    if (last && last.role === role) last.content.push(...blocks);
+    else out.push({ role, content: blocks });
+  });
   while (out.length && out[0].role !== "user") out.shift();
   return out;
+}
+
+/** يطلع الأزرار من آخر الرد: [زر: ...] */
+export function extractButtons(text) {
+  const buttons = [];
+  const clean = text
+    .replace(/^\s*\[زر:\s*(.+?)\]\s*$/gm, (_, b) => {
+      if (buttons.length < 3) buttons.push(b.trim().slice(0, 20));
+      return "";
+    })
+    .trim();
+  return { text: clean, buttons };
 }
 
 function nowText() {
@@ -267,7 +306,8 @@ export async function generateReply({ tenant, conversation }) {
 
     const toolUses = response.content.filter((b) => b.type === "tool_use");
     if (!toolUses.length || response.stop_reason !== "tool_use") {
-      return { reply: cleanForChat(textOf(response)), actions };
+      const { text, buttons } = extractButtons(cleanForChat(textOf(response)));
+      return { reply: text, buttons, actions };
     }
 
     messages.push({ role: "assistant", content: response.content });
@@ -393,7 +433,8 @@ function demoReply(tenant, history) {
   return {
     reply:
       `[وضع تجريبي بدون ذكاء اصطناعي] ` +
-      (reply || `هلا بيك بـ${tenant.name} 🌹 شلون أگدر أساعدك؟ تگدر تسأل عن المنيو، الدوام، الموقع، أو التوصيل.`),
+      (reply || `هلا بيك بـ${tenant.name} 🌹 شلون أگدر أساعدك؟`),
+    buttons: reply ? [] : ["📋 المنيو", "📍 الموقع", "🕒 الدوام"],
     actions: [],
   };
 }

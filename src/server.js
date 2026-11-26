@@ -9,12 +9,14 @@ import { handleIncoming, staffReply } from "./engine.js";
 import { aiEnabled } from "./brain.js";
 import { seedIfEmpty } from "./seed.js";
 import { runFollowups, startFollowupLoop } from "./followup.js";
+import { generateReport, runDailyReports } from "./report.js";
+import { correctBotReply } from "./engine.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
 
 // نحتفظ بالجسم الخام حتى نتحقق من توقيع Meta
-app.use(express.json({ limit: "2mb", verify: (req, _res, buf) => (req.rawBody = buf) }));
+app.use(express.json({ limit: "8mb", verify: (req, _res, buf) => (req.rawBody = buf) }));
 
 app.get("/health", (_req, res) => res.json({ ok: true, ai: aiEnabled() }));
 
@@ -46,12 +48,17 @@ app.post("/webhook", (req, res) => {
 
 // ================= المتابعة الدورية =================
 // السيرفر المجاني ينام، فمهمة مجدولة خارجية (Supabase cron) تنادي هذا الرابط كل 10 دقايق
-app.post("/cron/followups", async (req, res) => {
+function cronAuth(req, res, next) {
   const token = process.env.CRON_TOKEN;
   const given = req.get("x-cron-token") || "";
   if (!token || given.length !== token.length || !crypto.timingSafeEqual(Buffer.from(given), Buffer.from(token)))
     return res.sendStatus(401);
-  res.json({ sent: await runFollowups() });
+  next();
+}
+app.post("/cron/followups", cronAuth, async (_req, res) => res.json({ sent: await runFollowups() }));
+app.post("/cron/report", cronAuth, async (_req, res) => {
+  res.json({ started: true }); // التقرير ياخذ وقت، نرد فوراً ونكمل
+  runDailyReports().catch((e) => console.error("[report]", e));
 });
 
 // ================= لوحة التحكم =================
@@ -135,6 +142,25 @@ api.post("/conversations/:id/reply", async (req, res) => {
   }
 });
 
+api.post("/report", async (req, res) => {
+  try {
+    res.json(await generateReport(req.body?.tenantId, { hours: Number(req.body?.hours) || 24, includeSimulator: Boolean(req.body?.includeSimulator) }));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+api.post("/conversations/:id/correct", (req, res) => {
+  try {
+    res.json(correctBotReply(req.params.id, req.body?.messageId, String(req.body?.text || "").trim()));
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+api.delete("/tenants/:id/learned/:exId", (req, res) => {
+  db.removeLearnedExample(req.params.id, req.params.exId);
+  res.json({ ok: true });
+});
+
 api.get("/analytics", (req, res) => res.json(db.analytics(req.query.tenantId, Number(req.query.days) || 30)));
 
 api.get("/orders", (req, res) => res.json(db.listOrders(req.query.tenantId)));
@@ -145,11 +171,18 @@ api.put("/orders/:id", (req, res) => {
 
 // المحاكي: تجرب كأنك زبون بدون واتساب
 api.post("/simulate", async (req, res) => {
-  const { tenantId, customerId = "test-customer", text } = req.body || {};
-  if (!tenantId || !text) return res.status(400).json({ error: "tenantId و text مطلوبة" });
+  const { tenantId, customerId = "test-customer", text, image } = req.body || {};
+  if (!tenantId || (!text && !image)) return res.status(400).json({ error: "tenantId و text مطلوبة" });
   try {
-    const result = await handleIncoming({ channel: "simulator", tenantId, customerId, customerName: "زبون تجريبي", text });
-    res.json({ ok: true, reply: result?.reply || null, actions: result?.actions || [] });
+    const result = await handleIncoming({
+      channel: "simulator",
+      tenantId,
+      customerId,
+      customerName: "زبون تجريبي",
+      text: text || "[صورة]",
+      image: image?.base64 ? { base64: image.base64, mediaType: image.mediaType } : null,
+    });
+    res.json({ ok: true, reply: result?.reply || null, buttons: result?.buttons || [], actions: result?.actions || [] });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

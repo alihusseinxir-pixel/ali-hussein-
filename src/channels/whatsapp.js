@@ -19,7 +19,8 @@ export function parseWebhook(body) {
           text = msg.interactive?.button_reply?.title || msg.interactive?.list_reply?.title;
         else if (msg.type === "location")
           text = `📍 موقع الزبون: ${msg.location?.latitude},${msg.location?.longitude} ${msg.location?.address || ""}`;
-        else text = `[${msg.type}]`; // صوت/صورة: نضيف تحويل الصوت لنص بالمرحلة الجاية
+        else if (msg.type === "image") text = msg.image?.caption || "[صورة]";
+        else text = `[${msg.type}]`; // الصوت: نضيف تحويل الصوت لنص بالمرحلة الجاية
         out.push({
           channel: "whatsapp",
           accountId,
@@ -28,6 +29,7 @@ export function parseWebhook(body) {
           text,
           externalId: msg.id,
           mediaType: msg.type === "text" ? null : msg.type,
+          image: msg.type === "image" ? { mediaId: msg.image?.id } : null,
         });
       }
     }
@@ -35,17 +37,24 @@ export function parseWebhook(body) {
   return out;
 }
 
-export async function sendText({ accountId, customerId, text, token }) {
+export async function sendText({ accountId, customerId, text, token, buttons = [] }) {
+  // واتساب: لحد 3 أزرار، عنوان كل زر 20 حرف كحد أقصى، والنص 1024 حرف
+  const payload = buttons.length
+    ? {
+        type: "interactive",
+        interactive: {
+          type: "button",
+          body: { text: text.slice(0, 1024) },
+          action: {
+            buttons: buttons.slice(0, 3).map((b, i) => ({ type: "reply", reply: { id: `b${i}`, title: b.slice(0, 20) } })),
+          },
+        },
+      }
+    : { type: "text", text: { preview_url: false, body: text.slice(0, 4096) } };
   const res = await fetch(`${GRAPH()}/${accountId}/messages`, {
     method: "POST",
     headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: customerId,
-      type: "text",
-      text: { preview_url: false, body: text.slice(0, 4096) },
-    }),
+    body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: customerId, ...payload }),
   });
   if (!res.ok) throw new Error(`WhatsApp send failed ${res.status}: ${await res.text()}`);
   return res.json();

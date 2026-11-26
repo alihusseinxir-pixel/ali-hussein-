@@ -11,6 +11,7 @@ import fs from "node:fs";
 const claudeCalls = [];
 const sent = [];
 const rpcCalls = [];
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
 let script = []; // الردود الوهمية من Claude بالترتيب
 
 const mock = http.createServer((req, res) => {
@@ -19,6 +20,14 @@ const mock = http.createServer((req, res) => {
   req.on("end", () => {
     const json = body ? JSON.parse(body) : {};
     res.setHeader("content-type", "application/json");
+    if (req.method === "GET" && req.url === "/v23.0/MEDIA1") {
+      return res.end(JSON.stringify({ url: `http://127.0.0.1:${mock.address().port}/media/file`, mime_type: "image/png" }));
+    }
+    if (req.method === "GET" && req.url === "/media/file") {
+      if (req.headers.authorization !== "Bearer wa-token") return (res.statusCode = 401), res.end();
+      res.setHeader("content-type", "image/png");
+      return res.end(PNG);
+    }
     if (req.url.startsWith("/rest/v1/rpc/")) {
       rpcCalls.push({ fn: req.url.split("/").pop(), json, apikey: req.headers.apikey });
       if (json.p_token !== "store-token") return (res.statusCode = 401), res.end("{}");
@@ -175,7 +184,8 @@ test("رسائل متتالية تنجمع برد واحد", async () => {
   await waitFor(() => sent.length >= 1);
   await new Promise((r) => setTimeout(r, 150));
   assert.equal(claudeCalls.length - callsBefore, 1);
-  assert.equal(claudeCalls.at(-1).json.messages.at(-1).content, "هلو\nشوكت تفتحون؟");
+  const lastTurn = claudeCalls.at(-1).json.messages.at(-1);
+  assert.deepEqual(lastTurn.content.map((b) => b.text), ["هلو", "شوكت تفتحون؟"]);
 });
 
 test("المحلات ما تختلط: كل محل يشوف معلوماته بس", async () => {
@@ -247,4 +257,78 @@ test("البيع: حساب السعر، حفظ الزبون، السلة، وا�
 
 test("رابط المتابعة المجدولة محمي", async () => {
   assert.equal((await post("/cron/followups", {})).status, 401);
+});
+
+test("صورة من واتساب توصل لـ Claude كصورة، والرد بأزرار يوصل كأزرار", async () => {
+  sent.length = 0;
+  script = [{ stop_reason: "end_turn", content: [{ type: "text", text: "هذا مشكل المشويات، يكفي 3-4 بـ 30,000. أسجلك؟\n[زر: ✅ أكد الطلب]\n[زر: ✏️ أغير شي]" }] }];
+  await signed({
+    object: "whatsapp_business_account",
+    entry: [{ changes: [{ value: { metadata: { phone_number_id: "PN1" }, contacts: [], messages: [{ id: "wamid.IMG", from: "9647700000020", type: "image", image: { id: "MEDIA1", caption: "اريد هذا" } }] } }] }],
+  });
+  await waitFor(() => sent.length >= 1);
+  const userTurn = claudeCalls.at(-1).json.messages.at(-1).content;
+  assert.equal(userTurn[0].type, "image");
+  assert.equal(userTurn[0].source.media_type, "image/png");
+  assert.equal(userTurn[0].source.data, PNG.toString("base64"));
+  assert.equal(userTurn[1].text, "اريد هذا");
+
+  const out = sent.at(-1).json;
+  assert.equal(out.type, "interactive");
+  assert.equal(out.interactive.body.text, "هذا مشكل المشويات، يكفي 3-4 بـ 30,000. أسجلك؟");
+  assert.deepEqual(out.interactive.action.buttons.map((b) => b.reply.title), ["✅ أكد الطلب", "✏️ أغير شي"]);
+
+  // ضغطة الزر ترجع كنص عادي
+  script = [{ stop_reason: "end_turn", content: [{ type: "text", text: "تمام" }] }];
+  await signed({
+    object: "whatsapp_business_account",
+    entry: [{ changes: [{ value: { metadata: { phone_number_id: "PN1" }, contacts: [], messages: [{ id: "wamid.BTN", from: "9647700000020", type: "interactive", interactive: { type: "button_reply", button_reply: { id: "b0", title: "✅ أكد الطلب" } } }] } }] }],
+  });
+  await waitFor(() => sent.length >= 2);
+  const turn = claudeCalls.at(-1).json.messages.at(-1).content;
+  assert.equal(turn.at(-1).text, "✅ أكد الطلب");
+});
+
+test("النظام يتعلم من رد الموظف ومن التصحيح", async () => {
+  const convs = await json(await fetch(base + "/api/conversations"));
+  const conv = convs.find((c) => c.customerId === "9647700000020");
+  // تصحيح رد النظام
+  const msgs = (await json(await fetch(base + "/api/conversations/" + conv.id))).messages;
+  const botMsg = msgs.find((m) => m.role === "bot" && m.text.startsWith("هذا مشكل"));
+  const ex = await json(await post(`/api/conversations/${conv.id}/correct`, { messageId: botMsg.id, text: "هذا مشكل المشويات بـ 30,000، بس عرض العائلة أوفر لك بـ 35,000 وياه كبة وحمص وسلطة ومشروبات" }));
+  assert.equal(ex.customer, "اريد هذا");
+  assert.equal(ex.source, "correction");
+
+  // رد موظف
+  await post(`/api/conversations/${conv.id}/reply`, { text: "هلا عيني، الطلب طالع هسه 🌹" });
+  const [tenant] = await json(await fetch(base + "/api/tenants"));
+  assert.equal(tenant.learned[0].reply, "هلا عيني، الطلب طالع هسه 🌹");
+  assert.equal(tenant.learned[1].source, "correction");
+
+  // الأمثلة توصل للنموذج بالتعليمات
+  await post(`/api/conversations/${conv.id}/mode`, { mode: "bot" });
+  script = [{ stop_reason: "end_turn", content: [{ type: "text", text: "تدلل" }] }];
+  const before = claudeCalls.length;
+  await signed(waMsg("wamid.L1", "9647700000021", "شنو عندكم عروض؟"));
+  await waitFor(() => claudeCalls.length > before);
+  assert.match(claudeCalls.at(-1).json.system[0].text, /ردود حقيقية من موظفينا/);
+  assert.match(claudeCalls.at(-1).json.system[0].text, /عرض العائلة أوفر لك/);
+});
+
+test("التقرير اليومي يستخدم مخرجات منظمة وينحفظ", async () => {
+  const [tenant] = await json(await fetch(base + "/api/tenants"));
+  script = [
+    {
+      stop_reason: "end_turn",
+      content: [{ type: "text", text: JSON.stringify({ summary: "يوم زين", score: 8, wins: ["طلب تكة"], lost: [{ customer: "علي", reason: "ما رديت على صورة", fix: "" }], unanswered: ["عدكم بيتزا؟"], knowledge_suggestions: ["أضف البيتزا إذا موجودة"] }) }],
+    },
+  ];
+  const r = await json(await post("/api/report", { tenantId: tenant.id }));
+  assert.equal(r.score, 8);
+  assert.deepEqual(r.unanswered, ["عدكم بيتزا؟"]);
+  const req = claudeCalls.at(-1).json;
+  assert.equal(req.output_config.format.type, "json_schema");
+  assert.equal(req.output_config.format.schema.additionalProperties, false);
+  const [after] = await json(await fetch(base + "/api/tenants"));
+  assert.equal(after.reports[0].summary, "يوم زين");
 });
