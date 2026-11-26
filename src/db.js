@@ -201,3 +201,33 @@ export function updateOrder(id, patch) {
 export function _resetForTests() {
   state = empty();
 }
+
+// ---------- الإحصائيات ----------
+export function analytics(tenantId, days = 30) {
+  const since = Date.now() - days * 24 * 60 * 60 * 1000;
+  const convs = state.conversations.filter((c) => c.tenantId === tenantId && c.channel !== "simulator" && Date.parse(c.createdAt) >= since);
+  const orders = state.orders.filter((o) => o.tenantId === tenantId && o.channel !== "simulator" && Date.parse(o.createdAt) >= since && o.status !== "cancelled");
+  const convIds = new Set(convs.map((c) => c.id));
+  const orderedConvs = new Set(orders.map((o) => o.conversationId).filter((id) => convIds.has(id)));
+  const msgs = state.messages.filter((m) => convIds.has(m.conversationId));
+  const revenue = orders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+  const followups = convs.filter((c) => c.followupSentAt);
+  const byChannel = {};
+  for (const c of convs) byChannel[c.channel] = (byChannel[c.channel] || 0) + 1;
+  const returning = new Set(convs.filter((c) => (c.profile?.orderCount || 0) > 1).map((c) => c.id)).size;
+  return {
+    days,
+    conversations: convs.length,
+    orders: orders.length,
+    conversion: convs.length ? orderedConvs.size / convs.length : 0,
+    revenue,
+    avgOrder: orders.length ? Math.round(revenue / orders.length) : 0,
+    upsellRate: orders.length ? orders.filter((o) => o.upsell_accepted).length / orders.length : 0,
+    handoffs: convs.filter((c) => c.stage === "handoff" || c.mode === "human").length,
+    followupsSent: followups.length,
+    followupWins: orders.filter((o) => o.afterFollowup).length,
+    returningCustomers: returning,
+    botMessages: msgs.filter((m) => m.role === "bot").length,
+    byChannel,
+  };
+}

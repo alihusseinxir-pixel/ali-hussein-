@@ -71,3 +71,9 @@ details { margin: 12px 0; } summary { cursor: pointer; margin-bottom: 8px; }
   .row { grid-template-columns: 1fr; }
   .msg { max-width: 90%; }
 }
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+.stat .v { font-size: 26px; font-weight: 700; margin: 4px 0; font-variant-numeric: tabular-nums; }
+.stat .l { color: var(--muted); font-size: 14px; }
+.stat .h { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.profile-box { font-size: 13px; color: var(--muted); width: 100%; }

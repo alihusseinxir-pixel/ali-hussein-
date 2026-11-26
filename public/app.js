@@ -10,6 +10,8 @@ const KNOWLEDGE_FIELDS = [
   ["contact", "أرقام التواصل", ""],
   ["delivery", "التوصيل (المناطق والأسعار والوقت)", ""],
   ["menu", "المنيو / الخدمات والأسعار", "كل صنف بسطر: الاسم: السعر"],
+  ["bestsellers", "الأكثر طلباً (النظام يرشحها بثقة)", "1. تكة لحم: أكثر شي ينطلب..."],
+  ["upsell", "اقتراحات مكملة (شنو يقترح ويه شنو)", "ويه المشويات: حمص + لبن\nإذا 3 أشخاص أو أكثر: عرض العائلة"],
   ["offers", "العروض الحالية", ""],
   ["faq", "أسئلة متكررة وأجوبتها", "س: ...\nج: ..."],
   ["policies", "السياسات (الدفع، الإلغاء، الاسترجاع)", ""],
@@ -18,6 +20,7 @@ const KNOWLEDGE_FIELDS = [
 ];
 const CHANNEL_NAMES = { whatsapp: "واتساب", messenger: "ماسنجر", instagram: "انستغرام", simulator: "تجربة" };
 const ORDER_KINDS = { order: "طلب", appointment: "موعد", reservation: "حجز", other: "طلب" };
+const STAGES = { browsing: "يستفسر", quoted: "شاف السعر", ordered: "طلب ✓", handoff: "عند موظف" };
 const ORDER_STATUS = { new: "جديد", confirmed: "مؤكد", done: "منتهي", cancelled: "ملغي" };
 
 let tenants = [];
@@ -93,6 +96,7 @@ function fillProfile() {
   f.name.value = t.name;
   f.type.value = t.type || "other";
   f.botEnabled.checked = t.botEnabled !== false;
+  f.followupEnabled.checked = t.followupEnabled !== false;
   for (const [k] of KNOWLEDGE_FIELDS) f["k_" + k].value = t.knowledge?.[k] || "";
   const c = $("#connectForm");
   c.ch_whatsapp.value = t.channels?.whatsapp || "";
@@ -107,7 +111,7 @@ $("#profileForm").addEventListener("submit", async (e) => {
   e.preventDefault();
   const f = e.target;
   const knowledge = Object.fromEntries(KNOWLEDGE_FIELDS.map(([k]) => [k, f["k_" + k].value]));
-  await api("/tenants/" + tenantId, { method: "PUT", body: { name: f.name.value, type: f.type.value, botEnabled: f.botEnabled.checked, knowledge } });
+  await api("/tenants/" + tenantId, { method: "PUT", body: { name: f.name.value, type: f.type.value, botEnabled: f.botEnabled.checked, followupEnabled: f.followupEnabled.checked, knowledge } });
   await loadTenants();
   $("#profileSaved").textContent = "✓ انحفظ";
   setTimeout(() => ($("#profileSaved").textContent = ""), 2500);
@@ -150,6 +154,7 @@ async function loadConversations() {
           (c) => `<div class="conv-item ${c.id === openConvId ? "active" : ""}" data-id="${c.id}">
       <div class="top"><span>${esc(c.customerName || c.customerId)}</span>
         <span>${c.mode === "human" ? '<span class="tag human">موظف</span>' : ""} <span class="tag">${CHANNEL_NAMES[c.channel] || c.channel}</span>
+        ${c.stage && STAGES[c.stage] ? `<span class="tag">${STAGES[c.stage]}</span>` : ""}
         ${c.unread ? `<span class="badge">${c.unread}</span>` : ""}</span></div>
       <div class="last">${esc(c.lastMessage?.text || "")}</div></div>`
         )
@@ -175,7 +180,8 @@ async function openConversation(id) {
   $("#convHeader").innerHTML = `<strong>${esc(c.customerName || c.customerId)}</strong>
     <span class="tag">${CHANNEL_NAMES[c.channel] || c.channel}</span>
     ${human ? `<span class="tag human">موظف ماسك المحادثة</span> <span class="muted">${esc(c.handoffReason || "")}</span>` : '<span class="tag">الرد الآلي شغال</span>'}
-    <button class="ghost small" id="modeBtn" style="margin-inline-start:auto">${human ? "🤖 رجّع الرد الآلي" : "👤 استلم المحادثة"}</button>`;
+    <button class="ghost small" id="modeBtn" style="margin-inline-start:auto">${human ? "🤖 رجّع الرد الآلي" : "👤 استلم المحادثة"}</button>
+    ${profileLine(c)}`;
   $("#modeBtn").onclick = async () => {
     await api(`/conversations/${id}/mode`, { method: "POST", body: { mode: human ? "bot" : "human" } });
     openConversation(id);
@@ -197,6 +203,42 @@ $("#staffForm").addEventListener("submit", async (e) => {
   openConversation(openConvId);
 });
 
+function profileLine(c) {
+  const p = c.profile || {};
+  const bits = [
+    p.name && `👤 ${esc(p.name)}`,
+    p.phone && `📞 ${esc(p.phone)}`,
+    p.address && `📍 ${esc(p.address)}`,
+    p.preferences && `💡 ${esc(p.preferences)}`,
+    p.orderCount && `🧾 ${p.orderCount} طلب (${Number(p.totalSpent || 0).toLocaleString("en-US")} د.ع)`,
+    c.cart?.total && c.stage === "quoted" && `🛒 سلة: ${Number(c.cart.total).toLocaleString("en-US")} د.ع`,
+  ].filter(Boolean);
+  return bits.length ? `<div class="profile-box">${bits.join(" · ")}</div>` : "";
+}
+
+// ---------- الإحصائيات ----------
+async function loadStats() {
+  if (!tenantId) return;
+  const a = await api("/analytics?tenantId=" + tenantId);
+  const pct = (x) => Math.round(x * 100) + "%";
+  const num = (x) => Number(x).toLocaleString("en-US");
+  const cards = [
+    ["المحادثات", num(a.conversations), "زبائن تواصلوا"],
+    ["الطلبات", num(a.orders), "اللي سجلها النظام"],
+    ["نسبة التحويل", pct(a.conversion), "محادثات صارت طلب"],
+    ["الإيرادات", num(a.revenue) + " د.ع", "مجموع الطلبات"],
+    ["متوسط الطلب", num(a.avgOrder) + " د.ع", ""],
+    ["قبول الاقتراحات", pct(a.upsellRate), "طلبات زادت باقتراح من النظام"],
+    ["رسائل المتابعة", num(a.followupsSent), `${num(a.followupWins)} منها صارت طلب`],
+    ["زبائن راجعين", num(a.returningCustomers), "طلبوا أكثر من مرة"],
+    ["تحويل لموظف", num(a.handoffs), ""],
+    ["ردود النظام", num(a.botMessages), "رسائل ما احتاجت موظف"],
+  ];
+  $("#statsCards").innerHTML = cards
+    .map(([l, v, h]) => `<div class="stat"><div class="l">${l}</div><div class="v">${v}</div>${h ? `<div class="h">${h}</div>` : ""}</div>`)
+    .join("");
+}
+
 // ---------- الطلبات ----------
 async function loadOrders() {
   if (!tenantId) return;
@@ -205,7 +247,7 @@ async function loadOrders() {
     ? orders
         .map(
           (o) => `<div class="card"><h4><span>${ORDER_KINDS[o.kind] || "طلب"} · ${esc(o.customer_name)}</span><span class="tag">${ORDER_STATUS[o.status] || o.status}</span></h4>
-      <div class="sum">${esc(o.summary)}</div>
+      <div class="sum">${esc(o.summary)}</div>${o.total ? `<div><strong>${Number(o.total).toLocaleString("en-US")} د.ع</strong>${o.upsell_accepted ? ' <span class="tag">🔥 قبل اقتراح</span>' : ""}</div>` : ""}
       ${o.phone ? `<div>📞 ${esc(o.phone)}</div>` : ""}${o.address ? `<div>📍 ${esc(o.address)}</div>` : ""}${o.when ? `<div>🕒 ${esc(o.when)}</div>` : ""}${o.notes ? `<div>📝 ${esc(o.notes)}</div>` : ""}
       <div class="muted">${CHANNEL_NAMES[o.channel] || o.channel} · ${fmtTime(o.createdAt)}</div>
       <div class="actions">${Object.entries(ORDER_STATUS)
@@ -266,6 +308,7 @@ async function refresh() {
     } else {
       await loadConversations(); // حتى يتحدث عداد غير المقروء
       if (active === "orders") await loadOrders();
+      if (active === "stats") await loadStats();
     }
   } catch (e) {
     console.error(e);

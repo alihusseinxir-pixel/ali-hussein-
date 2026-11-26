@@ -17,6 +17,7 @@
   <nav id="tabs">
     <button data-tab="inbox" class="active">المحادثات <span id="unreadBadge" class="badge" hidden></span></button>
     <button data-tab="orders">الطلبات والحجوزات</button>
+    <button data-tab="stats">الإحصائيات</button>
     <button data-tab="sim">جرّب كزبون</button>
     <button data-tab="profile">معلومات المحل</button>
     <button data-tab="connect">الربط</button>
@@ -41,6 +42,12 @@
     <!-- الطلبات -->
     <section id="tab-orders" class="tab">
       <div id="ordersList" class="cards"></div>
+    </section>
+
+    <!-- الإحصائيات -->
+    <section id="tab-stats" class="tab">
+      <p class="muted">آخر 30 يوم، بدون محادثات التجربة.</p>
+      <div id="statsCards" class="stats"></div>
     </section>
 
     <!-- المحاكي -->
@@ -70,7 +77,10 @@
               <option value="other">غير ذلك</option>
             </select>
           </label>
-          <label class="check"><input type="checkbox" name="botEnabled" /> الرد الآلي شغال</label>
+          <div>
+            <label class="check"><input type="checkbox" name="botEnabled" /> الرد الآلي شغال</label>
+            <label class="check"><input type="checkbox" name="followupEnabled" /> متابعة تلقائية للي ما أكد طلبه</label>
+          </div>
         </div>
         <p class="muted">كل شي تكتبه هنا هو المصدر الوحيد اللي يجاوب منه النظام. اكتب بشكل طبيعي، والأسعار بالدينار.</p>
         <div id="knowledgeFields"></div>

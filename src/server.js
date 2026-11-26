@@ -8,6 +8,7 @@ import * as meta from "./channels/meta.js";
 import { handleIncoming, staffReply } from "./engine.js";
 import { aiEnabled } from "./brain.js";
 import { seedIfEmpty } from "./seed.js";
+import { runFollowups, startFollowupLoop } from "./followup.js";
 
 const app = express();
 const PORT = Number(process.env.PORT || 3000);
@@ -41,6 +42,16 @@ app.post("/webhook", (req, res) => {
   res.sendStatus(200); // Meta تريد رد سريع، والشغل يكمل بالخلفية
   const items = [...whatsapp.parseWebhook(req.body), ...meta.parseWebhook(req.body)];
   for (const it of items) handleIncoming(it).catch((e) => console.error("[webhook]", e));
+});
+
+// ================= المتابعة الدورية =================
+// السيرفر المجاني ينام، فمهمة مجدولة خارجية (Supabase cron) تنادي هذا الرابط كل 10 دقايق
+app.post("/cron/followups", async (req, res) => {
+  const token = process.env.CRON_TOKEN;
+  const given = req.get("x-cron-token") || "";
+  if (!token || given.length !== token.length || !crypto.timingSafeEqual(Buffer.from(given), Buffer.from(token)))
+    return res.sendStatus(401);
+  res.json({ sent: await runFollowups() });
 });
 
 // ================= لوحة التحكم =================
@@ -85,7 +96,7 @@ api.put("/tenants/:id", (req, res) => {
   const t = db.getTenant(req.params.id);
   if (!t) return res.sendStatus(404);
   const patch = {};
-  for (const k of ["name", "type", "knowledge", "channels", "botEnabled", "telegramChatId"])
+  for (const k of ["name", "type", "knowledge", "channels", "botEnabled", "followupEnabled", "telegramChatId"])
     if (k in (req.body || {})) patch[k] = req.body[k];
   if (req.body?.secrets) {
     // الحقل الفارغ يعني "لا تغيّر"
@@ -124,6 +135,8 @@ api.post("/conversations/:id/reply", async (req, res) => {
   }
 });
 
+api.get("/analytics", (req, res) => res.json(db.analytics(req.query.tenantId, Number(req.query.days) || 30)));
+
 api.get("/orders", (req, res) => res.json(db.listOrders(req.query.tenantId)));
 api.put("/orders/:id", (req, res) => {
   const o = db.updateOrder(req.params.id, { status: req.body?.status });
@@ -155,6 +168,7 @@ for (const sig of ["SIGINT", "SIGTERM"])
   });
 
 if (process.env.NODE_ENV !== "test") {
+  startFollowupLoop();
   app.listen(PORT, () => {
     console.log(`✅ السيرفر شغال: http://localhost:${PORT}`);
     console.log(aiEnabled() ? "🧠 Claude مفعل" : "⚠️  ماكو ANTHROPIC_API_KEY — النظام بالوضع التجريبي (ردود بسيطة)");

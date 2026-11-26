@@ -194,3 +194,57 @@ test("البيانات تنحفظ على Supabase", async () => {
   await waitFor(() => rpcCalls.some((c) => c.fn === "raddbot_save" && c.json.p_data.tenants.some((t) => t.name === "عيادة الشفاء")), 4000);
   assert.equal(rpcCalls.at(-1).apikey, "sb-key");
 });
+
+test("البيع: حساب السعر، حفظ الزبون، السلة، والمتابعة التلقائية", async () => {
+  const { runFollowups } = await import("../src/followup.js");
+  sent.length = 0;
+  script = [
+    {
+      stop_reason: "tool_use",
+      content: [
+        { type: "tool_use", id: "q1", name: "quote_order", input: { items: [{ name: "تكه لحم", qty: 2 }, { name: "حمص", qty: 1 }], delivery_fee: 2000 } },
+        { type: "tool_use", id: "r1", name: "remember_customer", input: { name: "مصطفى", phone: "", address: "الجادرية", preferences: "ما ياكل حار" } },
+      ],
+    },
+    { stop_reason: "end_turn", content: [{ type: "text", text: "المجموع 22,500 ويه التوصيل. أسجلك؟" }] },
+  ];
+  await signed(waMsg("wamid.S1", "9647700000009", "نفرين تكة وحمص للجادرية شكد؟"));
+  await waitFor(() => sent.length >= 1);
+  const toolResults = claudeCalls.at(-1).json.messages.at(-1).content;
+  assert.match(toolResults[0].content, /المجموع = 22,500 دينار/);
+
+  let conv = (await json(await fetch(base + "/api/conversations"))).find((c) => c.customerId === "9647700000009");
+  assert.equal(conv.stage, "quoted");
+  assert.equal(conv.cart.total, 22500);
+  assert.equal(conv.profile.preferences, "ما ياكل حار");
+  // معلومات الزبون توصل للنموذج بالمرة الجاية
+  assert.match(claudeCalls.at(-1).json.system[1].text, /مصطفى/);
+
+  // بعد ساعة بدون رد: متابعة وحدة بس
+  script = [{ stop_reason: "end_turn", content: [{ type: "text", text: "هلا مصطفى، بعدك تريد التكة؟ أسجلها هسه؟" }] }];
+  const later = Date.now() + 61 * 60 * 1000;
+  assert.equal(await runFollowups(later), 1);
+  assert.equal(sent.at(-1).json.text.body, "هلا مصطفى، بعدك تريد التكة؟ أسجلها هسه؟");
+  assert.equal(await runFollowups(later + 1000), 0, "المتابعة ما تتكرر");
+
+  // الزبون يأكد بعد المتابعة
+  script = [
+    { stop_reason: "tool_use", content: [{ type: "tool_use", id: "c1", name: "create_request", input: { kind: "order", summary: "2 تكة لحم + حمص", total: 22500, customer_name: "مصطفى", phone: "", address: "الجادرية", when: "", notes: "بدون حار", upsell_accepted: true } }] },
+    { stop_reason: "end_turn", content: [{ type: "text", text: "انسجل طلبك 🌹" }] },
+  ];
+  await signed(waMsg("wamid.S2", "9647700000009", "إي سجل"));
+  await waitFor(() => sent.at(-1).json.text.body === "انسجل طلبك 🌹");
+  conv = (await json(await fetch(base + "/api/conversations"))).find((c) => c.customerId === "9647700000009");
+  assert.equal(conv.stage, "ordered");
+  assert.equal(conv.profile.orderCount, 1);
+  assert.equal(conv.profile.totalSpent, 22500);
+
+  const a = await json(await fetch(`${base}/api/analytics?tenantId=${conv.tenantId}`));
+  assert.ok(a.revenue >= 22500);
+  assert.equal(a.followupWins, 1);
+  assert.ok(a.upsellRate > 0);
+});
+
+test("رابط المتابعة المجدولة محمي", async () => {
+  assert.equal((await post("/cron/followups", {})).status, 401);
+});
