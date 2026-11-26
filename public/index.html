@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة الرد الآلي</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">💬 لوحة الرد الآلي</div>
+    <select id="tenantSelect" aria-label="المحل"></select>
+    <button id="newTenantBtn" class="ghost">+ محل جديد</button>
+    <div id="statusBar" class="status"></div>
+  </header>
+
+  <nav id="tabs">
+    <button data-tab="inbox" class="active">المحادثات <span id="unreadBadge" class="badge" hidden></span></button>
+    <button data-tab="orders">الطلبات والحجوزات</button>
+    <button data-tab="sim">جرّب كزبون</button>
+    <button data-tab="profile">معلومات المحل</button>
+    <button data-tab="connect">الربط</button>
+  </nav>
+
+  <main>
+    <!-- المحادثات -->
+    <section id="tab-inbox" class="tab active">
+      <div class="inbox">
+        <aside id="convList" class="conv-list"></aside>
+        <div class="conv-view">
+          <div id="convHeader" class="conv-header muted">اختار محادثة من القائمة</div>
+          <div id="convMessages" class="messages"></div>
+          <form id="staffForm" class="composer" hidden>
+            <input id="staffText" placeholder="اكتب رد كموظف (يوقف الرد الآلي على هاي المحادثة)" autocomplete="off" />
+            <button type="submit">إرسال</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <!-- الطلبات -->
+    <section id="tab-orders" class="tab">
+      <div id="ordersList" class="cards"></div>
+    </section>
+
+    <!-- المحاكي -->
+    <section id="tab-sim" class="tab">
+      <div class="sim">
+        <p class="muted">اكتب كأنك زبون. الرسائل تظهر بالمحادثات تحت قناة «تجربة» وما توصل لأي مكان.</p>
+        <div id="simMessages" class="messages phone"></div>
+        <form id="simForm" class="composer">
+          <input id="simText" placeholder="مثلاً: شكد سعر التكة؟ توصلون للجادرية؟" autocomplete="off" />
+          <button type="submit">إرسال</button>
+        </form>
+        <button id="simReset" class="ghost small">محادثة جديدة</button>
+      </div>
+    </section>
+
+    <!-- معلومات المحل -->
+    <section id="tab-profile" class="tab">
+      <form id="profileForm" class="profile">
+        <div class="row">
+          <label>اسم المحل<input name="name" required /></label>
+          <label>النوع
+            <select name="type">
+              <option value="restaurant">مطعم</option>
+              <option value="clinic">عيادة</option>
+              <option value="salon">صالون</option>
+              <option value="store">متجر</option>
+              <option value="other">غير ذلك</option>
+            </select>
+          </label>
+          <label class="check"><input type="checkbox" name="botEnabled" /> الرد الآلي شغال</label>
+        </div>
+        <p class="muted">كل شي تكتبه هنا هو المصدر الوحيد اللي يجاوب منه النظام. اكتب بشكل طبيعي، والأسعار بالدينار.</p>
+        <div id="knowledgeFields"></div>
+        <div class="actions">
+          <button type="submit">حفظ</button>
+          <span id="profileSaved" class="muted"></span>
+          <button type="button" id="deleteTenantBtn" class="danger ghost">حذف المحل</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- الربط -->
+    <section id="tab-connect" class="tab">
+      <form id="connectForm" class="profile">
+        <h3>حسابات هذا المحل</h3>
+        <p class="muted">النظام يعرف أي محل وصلته الرسالة حسب الرقم أو الصفحة. تلگاها بلوحة Meta for Developers.</p>
+        <label>واتساب: Phone Number ID<input name="ch_whatsapp" dir="ltr" placeholder="1234567890" /></label>
+        <label>فيسبوك: Page ID<input name="ch_messenger" dir="ltr" /></label>
+        <label>انستغرام: Instagram Account ID<input name="ch_instagram" dir="ltr" /></label>
+        <label>تلغرام صاحب المحل (Chat ID) للإشعارات<input name="telegramChatId" dir="ltr" /></label>
+        <details>
+          <summary>توكنات خاصة بهذا المحل (اختياري)</summary>
+          <p class="muted">إذا المحل عنده حساب Meta مستقل. اتركها فارغة حتى يستخدم التوكن العام. القيم المحفوظة ما تنعرض.</p>
+          <label>WhatsApp Token<input name="sec_whatsappToken" dir="ltr" type="password" /></label>
+          <label>Page Token (ماسنجر/انستغرام)<input name="sec_pageToken" dir="ltr" type="password" /></label>
+        </details>
+        <div class="actions"><button type="submit">حفظ</button><span id="connectSaved" class="muted"></span></div>
+        <h3>رابط الـ Webhook</h3>
+        <p>حط هذا الرابط بإعدادات تطبيق Meta (واتساب + ماسنجر + انستغرام):</p>
+        <code id="webhookUrl" dir="ltr"></code>
+      </form>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+# نشر بضغطة وحدة على Render.com (فيه قرص دائم حتى ما تضيع البيانات)
+services:
+  - type: web
+    name: raddbot
+    runtime: node
+    plan: starter
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: META_VERIFY_TOKEN
+        generateValue: true
+      - key: META_APP_SECRET
+        sync: false
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
