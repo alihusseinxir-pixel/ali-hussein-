@@ -205,10 +205,12 @@ export function _resetForTests() {
 }
 
 // ---------- الإحصائيات ----------
+/** قنوات التجربة (من اللوحة ومن موقع البيع) ما تنحسب بالإحصائيات */
+export const TEST_CHANNELS = new Set(["simulator", "demo"]);
 export function analytics(tenantId, days = 30) {
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
-  const convs = state.conversations.filter((c) => c.tenantId === tenantId && c.channel !== "simulator" && Date.parse(c.createdAt) >= since);
-  const orders = state.orders.filter((o) => o.tenantId === tenantId && o.channel !== "simulator" && Date.parse(o.createdAt) >= since && o.status !== "cancelled");
+  const convs = state.conversations.filter((c) => c.tenantId === tenantId && !TEST_CHANNELS.has(c.channel) && Date.parse(c.createdAt) >= since);
+  const orders = state.orders.filter((o) => o.tenantId === tenantId && !TEST_CHANNELS.has(o.channel) && Date.parse(o.createdAt) >= since && o.status !== "cancelled");
   const convIds = new Set(convs.map((c) => c.id));
   const orderedConvs = new Set(orders.map((o) => o.conversationId).filter((id) => convIds.has(id)));
   const msgs = state.messages.filter((m) => convIds.has(m.conversationId));

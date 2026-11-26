@@ -20,7 +20,7 @@ function tokenFor(tenant, channel) {
 
 /** يرسل رسالة للزبون على قناته. القناة "simulator" ما ترسل لأي مكان (للتجربة من اللوحة). */
 export async function deliver(tenant, conversation, text, buttons = []) {
-  if (conversation.channel === "simulator") return;
+  if (db.TEST_CHANNELS.has(conversation.channel)) return;
   const send = senders[conversation.channel];
   const token = tokenFor(tenant, conversation.channel);
   if (!send || !token) throw new Error(`القناة ${conversation.channel} مو مربوطة (ناقص التوكن)`);

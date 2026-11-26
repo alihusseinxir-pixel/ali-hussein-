@@ -12,6 +12,7 @@ export function dueConversations(now = Date.now()) {
   for (const c of db.listConversations()) {
     const tenant = db.getTenant(c.tenantId);
     if (!tenant || tenant.botEnabled === false || tenant.followupEnabled === false) continue;
+    if (db.TEST_CHANNELS.has(c.channel)) continue;
     if (c.mode !== "bot" || c.stage !== "quoted" || c.followupSentAt || !c.quotedAt) continue;
     if (now - Date.parse(c.quotedAt) < AFTER_MIN() * 60 * 1000) continue;
     const msgs = db.listMessages(c.id, 50).filter((m) => m.role !== "note");

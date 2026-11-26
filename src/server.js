@@ -7,7 +7,8 @@ import * as whatsapp from "./channels/whatsapp.js";
 import * as meta from "./channels/meta.js";
 import { handleIncoming, staffReply } from "./engine.js";
 import { aiEnabled } from "./brain.js";
-import { seedIfEmpty } from "./seed.js";
+import { seedIfEmpty, demoTenant, salesTenant } from "./seed.js";
+import { notifyText } from "./notify.js";
 import { runFollowups, startFollowupLoop } from "./followup.js";
 import { generateReport, runDailyReports } from "./report.js";
 import { correctBotReply } from "./engine.js";
@@ -189,7 +190,71 @@ api.post("/simulate", async (req, res) => {
 });
 
 app.use("/api", api);
-app.use("/", adminAuth, express.static(path.resolve("public")));
+
+// ================= موقع البيع العام + التجربة الحية =================
+// حد للاستخدام حتى ما أحد يصرف رصيد Claude: لكل IP، ولكل يوم
+const hits = new Map();
+const DEMO_PER_IP_HOUR = Number(process.env.DEMO_PER_IP_HOUR || 25);
+const DEMO_PER_DAY = Number(process.env.DEMO_PER_DAY || 400);
+let dayKey = "", dayCount = 0;
+function demoLimit(req, res, next) {
+  const ip = (req.get("x-forwarded-for") || req.ip || "").split(",").pop().trim(); // آخر قيمة يضيفها Render، ما يگدر الزائر يزورها
+  const now = Date.now();
+  const list = (hits.get(ip) || []).filter((t) => now - t < 3600_000);
+  const today = new Date().toISOString().slice(0, 10);
+  if (today !== dayKey) (dayKey = today), (dayCount = 0);
+  if (list.length >= DEMO_PER_IP_HOUR || dayCount >= DEMO_PER_DAY)
+    return res.status(429).json({ error: "وصلت حد التجربة لهسه. اترك رقمك ونتواصل وياك 🌹" });
+  list.push(now);
+  hits.set(ip, list);
+  dayCount++;
+  if (hits.size > 5000) hits.clear();
+  next();
+}
+
+app.post("/demo/chat", demoLimit, async (req, res) => {
+  const { sessionId, text, mode } = req.body || {};
+  const clean = String(text || "").trim().slice(0, 500);
+  const sid = String(sessionId || "").replace(/[^a-z0-9]/gi, "").slice(0, 24);
+  const tenant = mode === "sales" ? salesTenant() : demoTenant();
+  if (!clean || !sid || !tenant) return res.status(400).json({ error: "رسالة فارغة" });
+  try {
+    const result = await handleIncoming({ channel: "demo", tenantId: tenant.id, customerId: `demo-${sid}`, customerName: "", text: clean });
+    res.json({ reply: result?.reply || "", buttons: result?.buttons || [] });
+  } catch (e) {
+    console.error("[demo]", e.message);
+    res.status(500).json({ error: "صار خطأ، جرب مرة ثانية" });
+  }
+});
+
+app.post("/demo/lead", demoLimit, async (req, res) => {
+  const b = req.body || {};
+  if (b.website) return res.json({ ok: true }); // فخ للبوتات
+  const field = (k, n = 120) => String(b[k] || "").trim().slice(0, n);
+  const lead = { name: field("name"), business: field("business"), type: field("type", 40), city: field("city", 60), phone: field("phone", 30), notes: field("notes", 500) };
+  if (!lead.name || !/^[+\d\s-]{7,20}$/.test(lead.phone)) return res.status(400).json({ error: "اكتب اسمك ورقم موبايل صحيح" });
+  const sales = salesTenant();
+  if (!sales) return res.status(500).json({ error: "غير متاح" });
+  const order = db.addOrder({
+    tenantId: sales.id,
+    channel: "website",
+    kind: "appointment",
+    summary: `طلب تجربة مجانية: ${lead.business || "محل"} (${lead.type || "؟"}) - ${lead.city || ""}`,
+    customer_name: lead.name,
+    phone: lead.phone,
+    address: lead.city,
+    when: "",
+    notes: lead.notes,
+    total: 0,
+    upsell_accepted: false,
+  });
+  notifyText(sales, `🎯 زبون محتمل جديد من الموقع\n${lead.name} · ${lead.phone}\n${order.summary}${lead.notes ? `\n${lead.notes}` : ""}`).catch(() => {});
+  res.json({ ok: true });
+});
+
+app.get("/admin", (req, res, next) => (req.originalUrl.split("?")[0] === "/admin" ? res.redirect("/admin/") : next()));
+app.use("/admin", adminAuth, express.static(path.resolve("public/admin")));
+app.use("/", express.static(path.resolve("public/site")));
 
 await db.init();
 seedIfEmpty();

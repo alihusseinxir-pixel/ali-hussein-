@@ -41,7 +41,7 @@ const SCHEMA = {
 function collect(tenantId, sinceMs, includeSimulator) {
   return db
     .listConversations(tenantId)
-    .filter((c) => (includeSimulator || c.channel !== "simulator") && Date.parse(c.updatedAt) >= sinceMs)
+    .filter((c) => (includeSimulator || !db.TEST_CHANNELS.has(c.channel)) && Date.parse(c.updatedAt) >= sinceMs)
     .slice(0, 40)
     .map((c) => {
       const msgs = db.listMessages(c.id, 40).filter((m) => Date.parse(m.at) >= sinceMs - 6 * 3600 * 1000);

@@ -120,7 +120,8 @@ src/
   channels/
     whatsapp.js      واتساب Cloud API
     meta.js          ماسنجر وانستغرام
-public/              لوحة التحكم
+public/site/         موقع البيع (الصفحة الرئيسية /) مع تجربة حية
+public/admin/        لوحة التحكم (/admin/)
 test/flow.test.js    اختبار كامل بدون إنترنت (npm test)
 ```
 
