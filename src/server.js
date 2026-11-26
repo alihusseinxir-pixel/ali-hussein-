@@ -145,8 +145,14 @@ api.post("/simulate", async (req, res) => {
 app.use("/api", api);
 app.use("/", adminAuth, express.static(path.resolve("public")));
 
+await db.init();
 seedIfEmpty();
-for (const sig of ["SIGINT", "SIGTERM"]) process.on(sig, () => (db.flush(), process.exit(0)));
+for (const sig of ["SIGINT", "SIGTERM"])
+  process.on(sig, async () => {
+    db.flush();
+    await db.flushRemote();
+    process.exit(0);
+  });
 
 if (process.env.NODE_ENV !== "test") {
   app.listen(PORT, () => {

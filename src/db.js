@@ -12,6 +12,50 @@ const empty = () => ({ tenants: [], conversations: [], messages: [], orders: [] 
 let state = load();
 let saveTimer = null;
 
+// ---------- تخزين دائم على Supabase (اختياري) ----------
+// السيرفرات المجانية تمسح الملفات كل ما تعيد التشغيل، فنحفظ نسخة بقاعدة بيانات Supabase.
+const SB_URL = process.env.SUPABASE_URL;
+const SB_KEY = process.env.SUPABASE_KEY;
+const SB_TOKEN = process.env.STORAGE_TOKEN;
+const remote = () => Boolean(SB_URL && SB_KEY && SB_TOKEN);
+
+async function rpc(fn, args) {
+  const res = await fetch(`${SB_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: { apikey: SB_KEY, Authorization: `Bearer ${SB_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_token: SB_TOKEN, ...args }),
+  });
+  if (!res.ok) throw new Error(`Supabase ${fn} ${res.status}: ${await res.text()}`);
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+/** يحمل البيانات من Supabase عند التشغيل (إذا مربوط) */
+export async function init() {
+  if (!remote()) return;
+  const data = await rpc("raddbot_load", {});
+  if (data) state = { ...empty(), ...data };
+  console.log(`☁️  البيانات محملة من Supabase (${state.tenants.length} محل، ${state.conversations.length} محادثة)`);
+}
+
+let remoteTimer = null;
+let remoteSaving = Promise.resolve();
+function persistRemote() {
+  if (!remote()) return;
+  clearTimeout(remoteTimer);
+  remoteTimer = setTimeout(() => {
+    remoteSaving = remoteSaving
+      .then(() => rpc("raddbot_save", { p_data: state }))
+      .catch((e) => console.error("[db] فشل الحفظ على Supabase:", e.message));
+  }, 1000);
+}
+export async function flushRemote() {
+  if (!remote()) return;
+  clearTimeout(remoteTimer);
+  await remoteSaving;
+  await rpc("raddbot_save", { p_data: state }).catch((e) => console.error("[db]", e.message));
+}
+
 function load() {
   try {
     return { ...empty(), ...JSON.parse(fs.readFileSync(DB_FILE, "utf8")) };
@@ -23,6 +67,7 @@ function load() {
 function persist() {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flush, 50);
+  persistRemote();
 }
 
 export function flush() {

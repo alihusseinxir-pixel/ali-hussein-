@@ -10,6 +10,7 @@ import fs from "node:fs";
 
 const claudeCalls = [];
 const sent = [];
+const rpcCalls = [];
 let script = []; // الردود الوهمية من Claude بالترتيب
 
 const mock = http.createServer((req, res) => {
@@ -18,6 +19,11 @@ const mock = http.createServer((req, res) => {
   req.on("end", () => {
     const json = body ? JSON.parse(body) : {};
     res.setHeader("content-type", "application/json");
+    if (req.url.startsWith("/rest/v1/rpc/")) {
+      rpcCalls.push({ fn: req.url.split("/").pop(), json, apikey: req.headers.apikey });
+      if (json.p_token !== "store-token") return (res.statusCode = 401), res.end("{}");
+      return res.end(req.url.endsWith("raddbot_load") ? "null" : "");
+    }
     if (req.url.startsWith("/v1/messages")) {
       claudeCalls.push({ json, headers: req.headers });
       const next = script.shift() || { content: [{ type: "text", text: "تدلل" }], stop_reason: "end_turn" };
@@ -48,6 +54,9 @@ before(async () => {
     META_APP_SECRET: SECRET,
     META_VERIFY_TOKEN: "verify-me",
     REPLY_DEBOUNCE_MS: "50",
+    SUPABASE_URL: mockUrl,
+    SUPABASE_KEY: "sb-key",
+    STORAGE_TOKEN: "store-token",
   });
   delete process.env.ADMIN_PASSWORD;
   app = (await import("../src/server.js")).default;
@@ -178,4 +187,10 @@ test("المحلات ما تختلط: كل محل يشوف معلوماته بس
   assert.doesNotMatch(sys, /بيت الكبة|تكة/);
   assert.match(sys, /ممنوع التشخيص/);
   assert.ok(clinic.id);
+});
+
+test("البيانات تنحفظ على Supabase", async () => {
+  assert.equal(rpcCalls[0].fn, "raddbot_load");
+  await waitFor(() => rpcCalls.some((c) => c.fn === "raddbot_save" && c.json.p_data.tenants.some((t) => t.name === "عيادة الشفاء")), 4000);
+  assert.equal(rpcCalls.at(-1).apikey, "sb-key");
 });
