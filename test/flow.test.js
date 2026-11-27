@@ -227,8 +227,8 @@ test("البيع: حساب السعر، حفظ الزبون، السلة، وا�
   assert.equal(conv.stage, "quoted");
   assert.equal(conv.cart.total, 22500);
   assert.equal(conv.profile.preferences, "ما ياكل حار");
-  // معلومات الزبون توصل للنموذج بالمرة الجاية
-  assert.match(claudeCalls.at(-1).json.system[1].text, /مصطفى/);
+  // داخل نفس الرد التعليمات ثابتة (كتل التفكير مربوطة بيها)، ومعلومات الزبون توصل بالرسالة الجاية
+  assert.deepEqual(claudeCalls.at(-1).json.system, claudeCalls.at(-2).json.system);
 
   // بعد ساعة بدون رد: متابعة وحدة بس
   script = [{ stop_reason: "end_turn", content: [{ type: "text", text: "هلا مصطفى، بعدك تريد التكة؟ أسجلها هسه؟" }] }];
@@ -244,6 +244,7 @@ test("البيع: حساب السعر، حفظ الزبون، السلة، وا�
   ];
   await signed(waMsg("wamid.S2", "9647700000009", "إي سجل"));
   await waitFor(() => sent.at(-1).json.text.body === "انسجل طلبك 🌹");
+  assert.match(claudeCalls.at(-2).json.system[1].text, /مصطفى/);
   conv = (await json(await fetch(base + "/api/conversations"))).find((c) => c.customerId === "9647700000009");
   assert.equal(conv.stage, "ordered");
   assert.equal(conv.profile.orderCount, 1);
