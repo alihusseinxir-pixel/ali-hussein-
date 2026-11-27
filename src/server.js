@@ -220,7 +220,8 @@ app.post("/demo/chat", demoLimit, async (req, res) => {
   if (!clean || !sid || !tenant) return res.status(400).json({ error: "رسالة فارغة" });
   try {
     const result = await handleIncoming({ channel: "demo", tenantId: tenant.id, customerId: `demo-${sid}`, customerName: "", text: clean });
-    res.json({ reply: result?.reply || "", buttons: result?.buttons || [] });
+    if (!result?.reply) return res.status(503).json({ error: "التجربة الحية متوقفة مؤقتاً، جرب بعد شوية أو اترك رقمك تحت ونتواصل وياك 🌹" });
+    res.json({ reply: result.reply, buttons: result.buttons || [] });
   } catch (e) {
     console.error("[demo]", e.message);
     res.status(500).json({ error: "صار خطأ، جرب مرة ثانية" });
