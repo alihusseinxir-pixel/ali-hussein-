@@ -21,10 +21,33 @@ function reply(res, code, obj) {
   res.end(JSON.stringify(obj));
 }
 
+// Restaurant devices: called by the database (new order / late order) with the shared secret.
+function staff(req, res) {
+  let raw = '';
+  req.on('data', c => { raw += c; if (raw.length > 4000) req.destroy(); });
+  req.on('end', async () => {
+    try {
+      const { secret, title, body, tag } = JSON.parse(raw || '{}');
+      if (!secret || !process.env.NOTIFY_SECRET || secret !== process.env.NOTIFY_SECRET) return reply(res, 401, { error: 'secret' });
+      const list = await rpc('bunz_staff_subs_for', { secret });
+      if (list.error) return reply(res, 401, { error: list.error });
+      const payload = JSON.stringify({ title: String(title || '').slice(0, 80), body: String(body || '').slice(0, 200), url: 'admin.html', tag: String(tag || 'order').slice(0, 40), staff: true });
+      const rs = await Promise.allSettled(list.subs.map(s => webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload, { TTL: 900, urgency: 'high' })));
+      const dead = list.subs.filter((s, k) => rs[k].status === 'rejected' && [404, 410].includes(rs[k].reason && rs[k].reason.statusCode)).map(s => s.endpoint);
+      if (dead.length) await rpc('bunz_staff_subs_remove', { secret, endpoints: dead });
+      reply(res, 200, { sent: rs.filter(r => r.status === 'fulfilled').length, total: list.subs.length });
+    } catch (e) {
+      console.error(e);
+      reply(res, 500, { error: 'server' });
+    }
+  });
+}
+
 http.createServer((req, res) => {
   reqOrigin = ORIGINS.includes(req.headers.origin) ? req.headers.origin : ORIGIN;
   if (req.method === 'OPTIONS') return reply(res, 204, {});
   if (req.method === 'GET') return reply(res, 200, { ok: true });
+  if (req.method === 'POST' && req.url === '/staff') return staff(req, res);
   if (req.method !== 'POST' || req.url !== '/send') return reply(res, 404, { error: 'not_found' });
   let raw = '';
   req.on('data', c => { raw += c; if (raw.length > 4000) req.destroy(); });
