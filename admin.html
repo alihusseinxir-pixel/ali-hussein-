@@ -7,6 +7,9 @@
 <title>10 BUNZ | لوحة التحكم</title>
 <meta name="theme-color" content="#2c318b">
 <link rel="icon" href="favicon.png" type="image/png">
+<link rel="manifest" href="admin-manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
@@ -67,6 +70,14 @@ h2{font-size:18px;margin:6px 0 12px}
 .modal .box{background:#fff;border-radius:22px;max-width:440px;width:100%;padding:18px;text-align:center;max-height:94vh;overflow:auto}
 .modal video{width:100%;border-radius:14px;background:#000;aspect-ratio:1/1;object-fit:cover}
 .modal .huge{font-size:64px;font-weight:900;color:var(--navy);line-height:1.1}
+.alertbar{display:none;background:var(--red);color:#fff;padding:12px 16px;font-weight:900;font-size:17px;align-items:center;gap:10px;justify-content:space-between;position:sticky;top:104px;z-index:39;animation:pulse 1s infinite alternate}
+.alertbar button{background:#fff;color:var(--red);border:0;border-radius:99px;padding:8px 14px;font-weight:900;font-family:inherit}
+@keyframes pulse{from{opacity:1}to{opacity:.8}}
+.age{display:inline-block;border-radius:99px;padding:2px 10px;font-weight:900;font-size:14px;background:#e8f7ee;color:#1f9d55}
+.age.warn{background:#fff6d6;color:#a16207}.age.late{background:var(--red);color:#fff}
+.qpos{display:inline-block;background:var(--navy);color:#fff;border-radius:99px;padding:1px 9px;font-size:13px;font-weight:900;margin-left:6px}
+.tile.islate{box-shadow:0 0 0 3px var(--red)}
+.enable{background:#fff6d6;border:2px dashed var(--yellow);border-radius:16px;padding:12px;margin-bottom:12px;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 details summary{cursor:pointer;font-weight:800;color:var(--blue);font-size:13px;margin-top:8px}
 </style>
 </head>
@@ -83,6 +94,7 @@ details summary{cursor:pointer;font-weight:800;color:var(--blue);font-size:13px;
     <button data-t="handover">🛵 التسليم</button><button data-t="orders" class="on">الطلبات</button><button data-t="menu">المنيو والأسعار</button>
     <button data-t="delivery">التوصيل</button><button data-t="settings">الدوام والإعدادات</button><button data-t="qr">روابط وQR</button><button data-t="crm">👥 الزبائن والحملات</button><button data-t="calls" id="callsTab">📞 اتصلوا بيه والإشعارات</button>
   </nav>
+  <div class="alertbar" id="alertBar"><span id="alertTxt"></span><button id="alertGo">افتح الطلبات</button></div>
   <main id="view"></main>
 </div>
 <div class="toast" id="toast"></div>
@@ -109,18 +121,64 @@ $('pin').onkeydown = e => { if (e.key === 'Enter') $('loginBtn').click(); };
 async function refresh() { D = await call('bunz_admin_data'); $('openState').textContent = D.settings.is_open ? '● مفتوح' : '● مغلق'; $('openState').style.color = D.settings.is_open ? '#1f9d55' : '#e5484d'; }
 async function start() {
   $('login').style.display = 'none'; $('app').style.display = 'block';
-  await loadOrders(true); await loadCalls(true); render();
+  await loadOrders(true); await loadCalls(true); render(); keepAwake(); staffState();
   poll = setInterval(async () => { await loadOrders(); await loadCalls(); if (TAB === 'orders' || TAB === 'handover') render(); }, 15000);
 }
+$('alertGo').onclick = () => $('tabs').querySelector('[data-t="handover"]').click();
 $('tabs').onclick = async e => { const t = e.target.dataset.t; if (!t) return; TAB = t; $('tabs').querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); await refresh(); if (t === 'calls') await loadCalls(true); if (t === 'crm') CUS = null; render(); };
 
-function beep() { try { const a = new (window.AudioContext || window.webkitAudioContext)(); [0, .25, .5].forEach(t => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.3, a.currentTime + t); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + t + .2); o.start(a.currentTime + t); o.stop(a.currentTime + t + .2); }); } catch {} }
+let AC = null;
+function tone(freqs, step, vol) { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); freqs.forEach((f, i) => { const t = AC.currentTime + i * step, o = AC.createOscillator(), g = AC.createGain(); o.type = 'square'; o.frequency.value = f; o.connect(g); g.connect(AC.destination); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.001, t + step * .9); o.start(t); o.stop(t + step); }); } catch {} }
+function beep() { tone([880, 880, 880], .25, .3); }
+function alarm() { tone([988, 784, 988, 784, 988, 784], .22, .5); if (navigator.vibrate) navigator.vibrate([300, 150, 300]); }
+document.addEventListener('click', () => { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); AC.resume(); } catch {} }, { once: true });
+
+// ---------- timing: nothing gets late ----------
+const AL = () => ({ accept: (D && D.settings.alert_accept_min) || 3, ready: (D && D.settings.alert_ready_min) || 20, pickup: (D && D.settings.alert_pickup_min) || 10 });
+const mins = d => Math.max(0, Math.floor((Date.now() - new Date(d)) / 6e4));
+const readyAt = o => (o.status_at && o.status_at.ready) || o.created_at;
+function lateness(o) {
+  const a = AL(), t = mins(o.created_at);
+  if (o.status === 'new') return t >= a.accept ? 'late' : t >= a.accept - 1 ? 'warn' : '';
+  if (o.status === 'preparing') return t >= a.ready ? 'late' : t >= a.ready * .75 ? 'warn' : '';
+  if (o.status === 'ready' && o.order_type === 'delivery') return mins(readyAt(o)) >= a.pickup ? 'late' : '';
+  return '';
+}
+function ageChip(o) {
+  if (['done', 'cancelled'].includes(o.status)) return '';
+  const t = mins(o.created_at), lv = lateness(o);
+  return `<span class="age ${lv}" data-age="${o.id}">⏱ ${t} د${lv === 'late' ? ' · متأخر' : ''}</span>`;
+}
+const byOldest = (a, b) => new Date(a.created_at) - new Date(b.created_at);
+function updateAlerts() {
+  const fresh = ORDERS.filter(o => o.status === 'new'), late = ORDERS.filter(o => !['done', 'cancelled'].includes(o.status) && lateness(o) === 'late');
+  const bar = $('alertBar');
+  if (fresh.length) { $('alertTxt').textContent = '🔔 ' + (fresh.length === 1 ? 'طلب جديد #' + fresh[0].order_no + ' ينتظر القبول' : fresh.length + ' طلبات جديدة تنتظر القبول'); bar.style.display = 'flex'; }
+  else if (late.length) { $('alertTxt').textContent = '⏰ ' + late.length + ' طلب متأخر: ' + late.map(o => '#' + o.order_no).join('، '); bar.style.display = 'flex'; }
+  else bar.style.display = 'none';
+  document.title = fresh.length ? '(' + fresh.length + ') 🔔 طلب جديد' : late.length ? '⏰ طلب متأخر' : '10 BUNZ | لوحة التحكم';
+  return { fresh, late };
+}
+let ringT = 0;
+function tick() {
+  document.querySelectorAll('[data-age]').forEach(el => { const o = ORDERS.find(x => x.id == el.dataset.age); if (o) { const lv = lateness(o); el.className = 'age ' + lv; el.textContent = '⏱ ' + mins(o.created_at) + ' د' + (lv === 'late' ? ' · متأخر' : ''); } });
+  const { fresh, late } = updateAlerts();
+  // keep ringing every 20s while a new order is not accepted; a softer beep every 2 min for late orders
+  if (fresh.length && Date.now() - ringT > 2e4) { ringT = Date.now(); alarm(); }
+  else if (!fresh.length && late.length && Date.now() - ringT > 12e4) { ringT = Date.now(); beep(); }
+}
+setInterval(tick, 5000);
+let WL = null;
+async function keepAwake() { try { if ('wakeLock' in navigator && !WL && document.visibilityState === 'visible') { WL = await navigator.wakeLock.request('screen'); WL.addEventListener('release', () => WL = null); } } catch {} }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { keepAwake(); if (PIN && poll) loadOrders().then(() => { if (TAB === 'orders' || TAB === 'handover') render(); }); } });
+
 async function loadOrders(first) {
   const r = await call('bunz_admin_orders', { lim: 150 });
   ORDERS = r.orders;
   const max = ORDERS.length ? ORDERS[0].id : 0;
-  if (!first && max > lastMaxId) { beep(); toast('🔔 طلب جديد #' + ORDERS[0].order_no); document.title = '🔔 طلب جديد'; }
+  if (!first && max > lastMaxId) { ringT = Date.now(); alarm(); toast('🔔 طلب جديد #' + ORDERS[0].order_no); }
   lastMaxId = max; localStorage.setItem('bunz_last_seen', max);
+  updateAlerts();
 }
 function render() { ({ orders, menu, delivery, settings, qr, calls, handover, crm })[TAB](); }
 
@@ -293,26 +351,63 @@ function foundOrder(o) {
     <button class="btn s" onclick="closeModal()" style="width:100%;margin-top:8px">رجوع</button>`);
   if ($('handBtn')) $('handBtn').onclick = async () => { await setStatus(o, target); closeModal(); toast('✓ الطلب #' + o.order_no + ' انسلّم'); render(); };
 }
+// ---------- restaurant phones: new-order notifications ----------
+let STAFF = { ok: false, count: 0, this: false, why: '' };
+const isIOSd = () => /iphone|ipad|ipod/i.test(navigator.userAgent), standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const b64u = b => { const p = '='.repeat((4 - b.length % 4) % 4), r = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+async function swReg() { return navigator.serviceWorker.register('sw.js').then(() => navigator.serviceWorker.ready); }
+async function staffState() {
+  STAFF.ok = 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  STAFF.why = !STAFF.ok ? (isIOSd() && !standalone() ? 'ios' : 'no') : '';
+  if (isIOSd() && !standalone()) { STAFF.ok = false; STAFF.why = 'ios'; }
+  let ep = '';
+  try { if (STAFF.ok) { const reg = await swReg(), sub = await reg.pushManager.getSubscription(); ep = sub ? sub.endpoint : ''; } } catch {}
+  try { const r = await call('bunz_admin_staff_info', { ep }); STAFF.count = r.count; STAFF.this = r.this && Notification.permission === 'granted'; } catch {}
+  if (TAB === 'handover' || TAB === 'settings') { const el = $('staffBox'); if (el) el.innerHTML = staffHtml(TAB === 'settings'); bindStaff(); }
+}
+function staffHtml(full) {
+  if (STAFF.this) return full ? `<div class="enable" style="background:#e8f7ee;border-color:var(--green)"><b>✅ هذا الجهاز توصله إشعارات الطلبات</b><span class="muted">أجهزة مفعّلة: ${STAFF.count}</span><button class="btn s" id="stTest">تجربة</button><button class="btn r" id="stOff">إيقاف على هذا الجهاز</button></div>` : '';
+  if (STAFF.why === 'ios') return `<div class="enable"><div><b>🔔 حتى يوصلك إشعار كل طلب جديد على الآيفون:</b><div class="muted">اضغط زر المشاركة ⬆️ ثم "إضافة إلى الشاشة الرئيسية"، وافتح لوحة التحكم من الأيقونة، وبعدها فعّل الإشعارات.</div></div></div>`;
+  if (STAFF.why === 'no') return full ? '<div class="enable"><b>هذا المتصفح ما يدعم الإشعارات. جرّب Chrome.</b></div>' : '';
+  return `<div class="enable"><div><b>🔔 فعّل إشعار "طلب جديد" على هذا الجهاز</b><div class="muted">يوصلك إشعار مع صوت حتى لو الموبايل مقفول، وتنبيه إذا طلب تأخر. (أجهزة مفعّلة: ${STAFF.count})</div></div><button class="btn y" id="stOn">تفعيل</button></div>`;
+}
+function bindStaff() {
+  if ($('stOn')) $('stOn').onclick = async () => {
+    try {
+      if (await Notification.requestPermission() !== 'granted') return toast('لازم تسمح بالإشعارات من إعدادات المتصفح');
+      const reg = await swReg();
+      const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(BUNZ.VAPID_PUBLIC) });
+      const j = sub.toJSON();
+      await call('bunz_admin_staff_subscribe', { p: { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, device: (navigator.userAgentData && navigator.userAgentData.platform) || (isIOSd() ? 'iPhone' : /android/i.test(navigator.userAgent) ? 'Android' : 'PC') } });
+      toast('✓ تفعّلت. أي طلب جديد يوصلك إشعار'); reg.showNotification('✅ إشعارات الطلبات شغالة', { body: 'من يجي طلب جديد يطلعلك إشعار هنا.', icon: 'icon-192.png', dir: 'rtl', lang: 'ar' });
+      staffState();
+    } catch (e) { toast('ما تفعّلت: ' + e.message); }
+  };
+  if ($('stOff')) $('stOff').onclick = async () => { const reg = await swReg(), sub = await reg.pushManager.getSubscription(); if (sub) await call('bunz_admin_staff_unsubscribe', { ep: sub.endpoint }); toast('توقفت على هذا الجهاز'); staffState(); };
+  if ($('stTest')) $('stTest').onclick = async () => { const reg = await swReg(); reg.showNotification('🔔 طلب جديد #1234 · 15,000 د.ع', { body: '🛵 توصيل · تجربة\n2× بركر كلاسيك', icon: 'icon-192.png', dir: 'rtl', lang: 'ar', requireInteraction: true, vibrate: [400, 150, 400, 150, 400] }); alarm(); };
+}
 function handover() {
-  const act = ORDERS.filter(o => !['done', 'cancelled'].includes(o.status));
+  const act = ORDERS.filter(o => !['done', 'cancelled'].includes(o.status)).sort(byOldest);
   const cols = [['🔥 يتحضر', act.filter(o => ['new', 'preparing'].includes(o.status))], ['✅ جاهز للاستلام', act.filter(o => o.status === 'ready')], ['🛵 بالطريق', act.filter(o => o.status === 'on_the_way')]];
   const tile = o => {
     const del = o.order_type === 'delivery';
-    const next = ['new', 'preparing'].includes(o.status) ? ['ready', 'جاهز ✅'] : o.status === 'ready' ? [del ? 'on_the_way' : 'done', del ? 'سلّم للدلفري 🛵' : 'سلّم للزبون'] : ['done', 'تم التوصيل ✓'];
-    return `<div class="tile ${o.status}"><div class="row" style="justify-content:space-between"><div class="big">#${o.order_no}</div><div style="text-align:left"><b>${fmtIQD(o.total)}</b><div class="muted">${del ? '🛵 توصيل' : '🏃 استلام'}</div></div></div>
+    const next = o.status === 'new' ? ['preparing', '👍 قبول الطلب وبدء التحضير'] : o.status === 'preparing' ? ['ready', 'جاهز ✅'] : o.status === 'ready' ? [del ? 'on_the_way' : 'done', del ? 'سلّم للدلفري 🛵' : 'سلّم للزبون'] : ['done', 'تم التوصيل ✓'];
+    const q = ['new', 'preparing'].includes(o.status) ? act.filter(x => ['new', 'preparing'].includes(x.status)).indexOf(o) + 1 : 0;
+    return `<div class="tile ${o.status}${lateness(o) === 'late' ? ' islate' : ''}"><div class="row" style="justify-content:space-between"><div><div class="big">#${o.order_no}</div><div style="margin-top:4px">${q ? '<span class="qpos">الدور ' + q + '</span>' : ''}${o.status === 'new' ? '<span class="pill" style="background:var(--yellow)">جديد</span> ' : ''}${ageChip(o)}</div></div><div style="text-align:left"><b>${fmtIQD(o.total)}</b><div class="muted">${del ? '🛵 توصيل' : '🏃 استلام'}</div></div></div>
       <div style="font-weight:800;margin-top:4px">${esc(o.customer_name)} <span class="muted">· ${o.items.reduce((a, l) => a + l.qty, 0)} قطعة${o.driver_name ? ' · 🛵 ' + esc(o.driver_name) : ''}</span></div>
       ${del && o.status !== 'on_the_way' ? `<div class="row" style="margin-top:6px">${driverSelect(o)}<button class="btn g" data-senddrv="${o.id}" style="padding:7px 10px;width:auto;margin:0">إرسال للدلفري</button></div>` : ''}
-      <button class="btn${o.status === 'ready' ? ' g' : ''}" data-next="${o.id}" data-st="${next[0]}">${next[1]}</button></div>`;
+      ${o.items.some(l => l.note) || o.notes ? '<div style="color:var(--red);font-weight:800;font-size:13px;margin-top:4px">📝 بيه ملاحظات</div>' : ''}
+      <button class="btn${o.status === 'ready' ? ' g' : o.status === 'new' ? ' y' : ''}" data-next="${o.id}" data-st="${next[0]}">${next[1]}</button></div>`;
   };
-  $('view').innerHTML = `<div class="scanbar"><button class="btn y" id="scanBtn">📷 امسح QR الدلفري</button>
+  $('view').innerHTML = `<div id="staffBox">${staffHtml(false)}</div><div class="scanbar"><button class="btn y" id="scanBtn">📷 امسح QR الدلفري</button>
       <input class="i" id="findNo" inputmode="numeric" placeholder="أو اكتب رقم الطلب" style="width:180px"><button class="btn s" id="findBtn">بحث</button></div>
     <div class="hb">${cols.map(([t, l]) => `<div class="col"><h3><span>${t}</span><span class="pill">${l.length}</span></h3>${l.map(tile).join('') || '<div class="muted">لا شيء</div>'}</div>`).join('')}</div>
-    <div class="muted" style="margin-top:14px">الطريقة: الطلب يجهز ← اضغط "جاهز" ← اختار الدلفري واضغط "إرسال للدلفري" (يوصله رقم الطلب والفاتورة بواتساب) ← الدلفري يوصل ويورّيك الـQR ← تمسحه وتسلّمه الكيس اللي عليه نفس الرقم.</div>`;
+    <div class="muted" style="margin-top:14px">الترتيب: الأقدم فوق (الدور 1 يتحضر أول). الوقت يصير أصفر ثم أحمر إذا الطلب تأخر، وتطلع نغمة كل 20 ثانية لحد ما تقبل الطلب الجديد.<br>الطريقة: اضغط "قبول" ← الطلب يجهز ← اضغط "جاهز" ← اختار الدلفري واضغط "إرسال للدلفري" (يوصله رقم الطلب والفاتورة بواتساب) ← الدلفري يوصل ويورّيك الـQR ← تمسحه وتسلّمه الكيس اللي عليه نفس الرقم.</div>`;
   $('scanBtn').onclick = openScanner;
   const find = () => { const n = +$('findNo').value.replace(/\D/g, ''); foundOrder(ORDERS.find(o => +o.order_no === n)); };
   $('findBtn').onclick = find; $('findNo').onkeydown = e => { if (e.key === 'Enter') find(); };
-  $('view').querySelectorAll('[data-next]').forEach(b => b.onclick = async () => { await setStatus(ORDERS.find(o => o.id == b.dataset.next), b.dataset.st); handover(); });
-  bindDriverControls($('view'));
+  $('view').querySelectorAll('[data-next]').forEach(b => b.onclick = async () => { await setStatus(ORDERS.find(o => o.id == b.dataset.next), b.dataset.st); handover(); updateAlerts(); });
+  bindDriverControls($('view')); bindStaff();
 }
 
 // ---------- callbacks + push ----------
@@ -377,14 +472,15 @@ function orders() {
       <div class="stat"><small>آخر 7 أيام</small><div>${s.week_orders} · ${fmtIQD(s.week_revenue)}</div></div>
       <div class="stat"><small>عدد الزبائن</small><div>${s.customers}</div></div>
     </div>
-    <div class="row" style="margin-bottom:10px"><select class="i" id="fil" style="width:auto"><option value="active">الطلبات المفتوحة</option><option value="all">كل الطلبات</option></select><span class="muted">تتحدث كل 15 ثانية، وتطلع نغمة مع كل طلب جديد.</span></div>
+    <div class="row" style="margin-bottom:10px"><select class="i" id="fil" style="width:auto"><option value="active">الطلبات المفتوحة</option><option value="all">كل الطلبات</option></select><span class="muted">المفتوحة مرتبة من الأقدم. تتحدث كل 15 ثانية، والنغمة تتكرر لحد ما تقبل الطلب الجديد.</span></div>
     <div id="olist"></div>`;
   const draw = () => {
     const f = $('fil').value;
     const list = ORDERS.filter(o => f === 'all' || !['done', 'cancelled'].includes(o.status));
+    if (f === 'active') list.sort(byOldest);
     $('olist').innerHTML = list.length ? list.map(o => `
       <div class="card order ${o.status}">
-        <div class="row" style="justify-content:space-between"><h3><span class="ono">#${o.order_no}</span>${esc(o.customer_name)}</h3><b>${fmtIQD(o.total)}</b></div>
+        <div class="row" style="justify-content:space-between"><h3><span class="ono">#${o.order_no}</span>${esc(o.customer_name)} ${ageChip(o)}</h3><b>${fmtIQD(o.total)}</b></div>
         <div class="meta">${new Date(o.created_at).toLocaleString('ar-IQ', { timeZone: 'Asia/Baghdad', hour: 'numeric', minute: '2-digit', day: 'numeric', month: 'numeric' })}
           · ${o.order_type === 'delivery' ? '🛵 توصيل ' + (o.distance_m / 1000).toFixed(1) + ' كم (' + fmtIQD(o.delivery_fee) + ')' : '🏃 استلام'}
           · المصدر: ${esc(srcName(o.source))} · ${o.customer_order_count > 1 ? 'زبون راجع (طلب رقم ' + o.customer_order_count + ')' : '⭐ زبون جديد'}</div>
@@ -400,7 +496,7 @@ function orders() {
         ${o.order_type === 'delivery' && !['done', 'cancelled'].includes(o.status) ? `<div class="row" style="margin-top:8px">${driverSelect(o)}<button class="btn g" data-senddrv="${o.id}" style="padding:6px 12px">إرسال للدلفري بواتساب</button>${o.driver_name ? `<span class="pill">🛵 ${esc(o.driver_name)}</span>` : ''}</div>` : ''}
         <div class="row st" style="margin-top:10px">${Object.entries(ST).map(([k, v]) => `<button data-o="${o.id}" data-s="${k}" class="${o.status === k ? 'on' : ''}">${v}</button>`).join('')}</div>
       </div>`).join('') : '<div class="card muted">ماكو طلبات هسه.</div>';
-    $('olist').querySelectorAll('[data-s]').forEach(b => b.onclick = async () => { await call('bunz_admin_set_status', { order_id: +b.dataset.o, new_status: b.dataset.s }); ORDERS.find(o => o.id == b.dataset.o).status = b.dataset.s; draw(); });
+    $('olist').querySelectorAll('[data-s]').forEach(b => b.onclick = async () => { await call('bunz_admin_set_status', { order_id: +b.dataset.o, new_status: b.dataset.s }); ORDERS.find(o => o.id == b.dataset.o).status = b.dataset.s; draw(); updateAlerts(); });
     bindDriverControls($('olist'));
   };
   $('fil').value = sessionStorage.getItem('bunz_fil') || 'active';
@@ -543,6 +639,12 @@ function settings() {
       <input class="i" id="ann" value="${esc(s.announcement)}">
     </div>
     <div class="card"><h2>تغيير الرمز السري</h2><input class="i" id="np" type="password" inputmode="numeric" placeholder="رمز جديد (6 أرقام أو أكثر)، اتركه فارغ إذا ما تريد تغيّره"></div>
+    <div class="card"><h2>🔔 تنبيهات الطلبات</h2>
+      <div id="staffBox">${staffHtml(true)}</div>
+      <div class="muted">يوصلك إشعار على الأجهزة المفعّلة إذا الطلب:</div>
+      <div class="grid2" style="grid-template-columns:1fr 1fr 1fr"><div><label>ما انقبل خلال (دقيقة)</label><input class="i" id="alA" type="number" min="1" max="60" value="${s.alert_accept_min || 3}"></div>
+        <div><label>ما جهز خلال (دقيقة)</label><input class="i" id="alR" type="number" min="5" max="120" value="${s.alert_ready_min || 20}"></div>
+        <div><label>جاهز وما طلع للدلفري (دقيقة)</label><input class="i" id="alP" type="number" min="3" max="120" value="${s.alert_pickup_min || 10}"></div></div></div>
     <div class="card"><h2>🛵 الدلفرية</h2><div class="muted">تختارهم بالطلب، ويوصلهم رقم الطلب والفاتورة بواتساب.</div>
       <div id="drvList"></div><button class="btn s" id="addDrv" style="margin-top:8px">+ دلفري</button></div>
     <button class="btn y" id="saveSet" style="width:100%;padding:14px">حفظ</button>`;
@@ -551,7 +653,7 @@ function settings() {
     $('drvList').querySelectorAll('input').forEach(x => x.oninput = () => drv[+x.dataset.dk][x.dataset.dx] = x.value);
     $('drvList').querySelectorAll('[data-drm]').forEach(b => b.onclick = () => { drv.splice(+b.dataset.drm, 1); drawDrv(); }); };
   drawDrv(); $('addDrv').onclick = () => { drv.push({ name: '', phone: '' }); drawDrv(); };
-  $('ov').value = s.open_override;
+  $('ov').value = s.open_override; bindStaff(); staffState();
   $('saveSet').onclick = async () => {
     let wa = $('wa').value.replace(/\D/g, ''); if (wa.startsWith('0')) wa = '964' + wa.slice(1);
     if (!/^9647\d{9}$/.test(wa)) return toast('رقم الواتساب لازم يكون مثل 07XXXXXXXXX');
@@ -559,6 +661,7 @@ function settings() {
     await call('bunz_admin_save_settings', { v: { whatsapp: wa, phone_display: $('ph').value, address: $('addr').value, open_time: $('ot').value, close_time: $('ct').value, open_override: $('ov').value, announcement: $('ann').value, new_pin: np || null } });
     if (np) { PIN = np; sessionStorage.setItem('bunz_pin', np); }
     await call('bunz_admin_save_drivers', { d: drv.filter(d => d.name.trim()).map(d => { let p = String(d.phone || '').replace(/\D/g, ''); if (p.startsWith('0')) p = '964' + p.slice(1); return { name: d.name.trim(), phone: p }; }) });
+    if (+$('alA').value !== s.alert_accept_min || +$('alR').value !== s.alert_ready_min || +$('alP').value !== s.alert_pickup_min) await call('bunz_admin_set_alerts', { accept_min: +$('alA').value, ready_min: +$('alR').value, pickup_min: +$('alP').value });
     if ($('eta').value.trim() && $('eta').value.trim() !== (s.eta_text || '')) await call('bunz_admin_set_eta', { eta: $('eta').value.trim() });
     toast('انحفظ ✓'); await refresh(); settings();
   };
