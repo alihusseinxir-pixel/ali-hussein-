@@ -33,6 +33,12 @@ app.get("/webhook", (req, res) => {
 });
 
 function validSignature(req) {
+  // 360dialog ما يوقّع الرسائل: نحمي الويبهوك بمفتاح سري بالرابط ‎/webhook?key=...
+  const shared = process.env.WEBHOOK_KEY;
+  if (shared && req.query.key) {
+    const a = Buffer.from(String(req.query.key)), b = Buffer.from(shared);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  }
   const secret = process.env.META_APP_SECRET;
   if (!secret) return process.env.NODE_ENV !== "production"; // بالتجربة المحلية نسمح، بالإنتاج لازم السر
   const sig = req.get("x-hub-signature-256") || "";

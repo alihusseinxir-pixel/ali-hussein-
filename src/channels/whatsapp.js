@@ -1,6 +1,10 @@
 // واتساب عبر WhatsApp Business Cloud API (من Meta)
 // الوثائق: https://developers.facebook.com/docs/whatsapp/cloud-api
+// أو عبر شريك رسمي 360dialog (نفس شكل الرسائل، بس عنوان ومفتاح مختلف): WHATSAPP_PROVIDER=360dialog
 const GRAPH = () => `${process.env.META_GRAPH_URL || "https://graph.facebook.com"}/${process.env.META_GRAPH_VERSION || "v23.0"}`;
+export const is360 = () => (process.env.WHATSAPP_PROVIDER || "").toLowerCase() === "360dialog";
+export const D360 = () => process.env.D360_URL || "https://waba-v2.360dialog.io";
+export const authHeaders = (token) => (is360() ? { "D360-API-KEY": token } : { Authorization: `Bearer ${token}` });
 
 /** يحول جسم الويبهوك لرسائل موحدة: [{channel, accountId, customerId, customerName, text, externalId}] */
 export function parseWebhook(body) {
@@ -51,9 +55,10 @@ export async function sendText({ accountId, customerId, text, token, buttons = [
         },
       }
     : { type: "text", text: { preview_url: false, body: text.slice(0, 4096) } };
-  const res = await fetch(`${GRAPH()}/${accountId}/messages`, {
+  const url = is360() ? `${D360()}/messages` : `${GRAPH()}/${accountId}/messages`;
+  const res = await fetch(url, {
     method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    headers: { ...authHeaders(token), "Content-Type": "application/json" },
     body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to: customerId, ...payload }),
   });
   if (!res.ok) throw new Error(`WhatsApp send failed ${res.status}: ${await res.text()}`);

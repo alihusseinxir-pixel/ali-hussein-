@@ -39,7 +39,7 @@ const mock = http.createServer((req, res) => {
       return res.end(JSON.stringify({ id: "msg_x", type: "message", role: "assistant", model: json.model, usage: { input_tokens: 1, output_tokens: 1 }, ...next }));
     }
     if (req.url.includes("/messages")) {
-      sent.push({ url: req.url, json, auth: req.headers.authorization });
+      sent.push({ url: req.url, json, auth: req.headers.authorization, d360: req.headers["d360-api-key"] });
       return res.end(JSON.stringify({ messages: [{ id: "wamid.out" }] }));
     }
     res.statusCode = 404;
@@ -331,4 +331,25 @@ test("التقرير اليومي يستخدم مخرجات منظمة وينح�
   assert.equal(req.output_config.format.schema.additionalProperties, false);
   const [after] = await json(await fetch(base + "/api/tenants"));
   assert.equal(after.reports[0].summary, "يوم زين");
+});
+
+test("واتساب عبر الشريك 360dialog: مفتاح بالرابط وإرسال بمفتاح D360", async () => {
+  const mockUrl = process.env.META_GRAPH_URL;
+  Object.assign(process.env, { WHATSAPP_PROVIDER: "360dialog", D360_URL: mockUrl, WEBHOOK_KEY: "hook-key" });
+  try {
+    const before = sent.length;
+    const bad = await post("/webhook?key=wrong-key", waMsg("wamid.Q1", "9647700000099", "هلو"));
+    assert.equal(bad.status, 401);
+    script = [{ stop_reason: "end_turn", content: [{ type: "text", text: "هلا بيك 🌹" }] }];
+    const ok = await post("/webhook?key=hook-key", waMsg("wamid.Q2", "9647700000099", "هلو"));
+    assert.equal(ok.status, 200);
+    await waitFor(() => sent.length > before);
+    const m = sent.at(-1);
+    assert.equal(m.url, "/messages");
+    assert.equal(m.d360, "wa-token");
+    assert.equal(m.auth, undefined);
+    assert.equal(m.json.to, "9647700000099");
+  } finally {
+    delete process.env.WHATSAPP_PROVIDER; delete process.env.D360_URL; delete process.env.WEBHOOK_KEY;
+  }
 });
