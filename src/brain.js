@@ -291,10 +291,12 @@ export async function generateReply({ tenant, conversation }) {
   if (!conversation.stage) db.updateConversation(conversation.id, { stage: "browsing" });
 
   const actions = [];
+  // التعليمات تنبني مرة وحدة لكل رد: كتل التفكير مربوطة بنفس التعليمات، وإذا تغيرت بنص الحلقة (مثلاً السلة بعد quote_order) Claude يرفض الطلب
+  const system = systemBlocks(tenant, db.getConversation(conversation.id));
   for (let step = 0; step < 5; step++) {
     const response = await createMessage({
       max_tokens: 4000,
-      system: systemBlocks(tenant, db.getConversation(conversation.id)),
+      system,
       tools: TOOLS,
       messages,
     });
