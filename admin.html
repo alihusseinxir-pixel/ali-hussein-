@@ -388,11 +388,11 @@ function bindStaff() {
 }
 function handover() {
   const act = ORDERS.filter(o => !['done', 'cancelled'].includes(o.status)).sort(byOldest);
-  const cols = [['🔥 يتحضر', act.filter(o => ['new', 'preparing'].includes(o.status))], ['✅ جاهز للاستلام', act.filter(o => o.status === 'ready')], ['🛵 بالطريق', act.filter(o => o.status === 'on_the_way')]];
+  const cols = [['🔥 يتحضر', [...act.filter(o => o.status === 'new'), ...act.filter(o => o.status === 'preparing')]], ['✅ جاهز للاستلام', act.filter(o => o.status === 'ready')], ['🛵 بالطريق', act.filter(o => o.status === 'on_the_way')]];
   const tile = o => {
     const del = o.order_type === 'delivery';
     const next = o.status === 'new' ? ['preparing', '👍 قبول الطلب وبدء التحضير'] : o.status === 'preparing' ? ['ready', 'جاهز ✅'] : o.status === 'ready' ? [del ? 'on_the_way' : 'done', del ? 'سلّم للدلفري 🛵' : 'سلّم للزبون'] : ['done', 'تم التوصيل ✓'];
-    const q = ['new', 'preparing'].includes(o.status) ? act.filter(x => ['new', 'preparing'].includes(x.status)).indexOf(o) + 1 : 0;
+    const q = o.status === 'preparing' ? act.filter(x => x.status === 'preparing').indexOf(o) + 1 : 0;
     return `<div class="tile ${o.status}${lateness(o) === 'late' ? ' islate' : ''}"><div class="row" style="justify-content:space-between"><div><div class="big">#${o.order_no}</div><div style="margin-top:4px">${q ? '<span class="qpos">الدور ' + q + '</span>' : ''}${o.status === 'new' ? '<span class="pill" style="background:var(--yellow)">جديد</span> ' : ''}${ageChip(o)}</div></div><div style="text-align:left"><b>${fmtIQD(o.total)}</b><div class="muted">${del ? '🛵 توصيل' : '🏃 استلام'}</div></div></div>
       <div style="font-weight:800;margin-top:4px">${esc(o.customer_name)} <span class="muted">· ${o.items.reduce((a, l) => a + l.qty, 0)} قطعة${o.driver_name ? ' · 🛵 ' + esc(o.driver_name) : ''}</span></div>
       ${del && o.status !== 'on_the_way' ? `<div class="row" style="margin-top:6px">${driverSelect(o)}<button class="btn g" data-senddrv="${o.id}" style="padding:7px 10px;width:auto;margin:0">إرسال للدلفري</button></div>` : ''}
@@ -402,7 +402,7 @@ function handover() {
   $('view').innerHTML = `<div id="staffBox">${staffHtml(false)}</div><div class="scanbar"><button class="btn y" id="scanBtn">📷 امسح QR الدلفري</button>
       <input class="i" id="findNo" inputmode="numeric" placeholder="أو اكتب رقم الطلب" style="width:180px"><button class="btn s" id="findBtn">بحث</button></div>
     <div class="hb">${cols.map(([t, l]) => `<div class="col"><h3><span>${t}</span><span class="pill">${l.length}</span></h3>${l.map(tile).join('') || '<div class="muted">لا شيء</div>'}</div>`).join('')}</div>
-    <div class="muted" style="margin-top:14px">الترتيب: الأقدم فوق (الدور 1 يتحضر أول). الوقت يصير أصفر ثم أحمر إذا الطلب تأخر، وتطلع نغمة كل 20 ثانية لحد ما تقبل الطلب الجديد.<br>الطريقة: اضغط "قبول" ← الطلب يجهز ← اضغط "جاهز" ← اختار الدلفري واضغط "إرسال للدلفري" (يوصله رقم الطلب والفاتورة بواتساب) ← الدلفري يوصل ويورّيك الـQR ← تمسحه وتسلّمه الكيس اللي عليه نفس الرقم.</div>`;
+    <div class="muted" style="margin-top:14px">الترتيب: الطلبات الجديدة فوق حتى تنقبل، وبعدها الأقدم أول (الدور 1 يتحضر أول). الوقت يصير أصفر ثم أحمر إذا الطلب تأخر، وتطلع نغمة كل 20 ثانية لحد ما تقبل الطلب الجديد.<br>الطريقة: اضغط "قبول" ← الطلب يجهز ← اضغط "جاهز" ← اختار الدلفري واضغط "إرسال للدلفري" (يوصله رقم الطلب والفاتورة بواتساب) ← الدلفري يوصل ويورّيك الـQR ← تمسحه وتسلّمه الكيس اللي عليه نفس الرقم.</div>`;
   $('scanBtn').onclick = openScanner;
   const find = () => { const n = +$('findNo').value.replace(/\D/g, ''); foundOrder(ORDERS.find(o => +o.order_no === n)); };
   $('findBtn').onclick = find; $('findNo').onkeydown = e => { if (e.key === 'Enter') find(); };
