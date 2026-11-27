@@ -7,7 +7,7 @@ import * as whatsapp from "./channels/whatsapp.js";
 import * as meta from "./channels/meta.js";
 import { handleIncoming, staffReply } from "./engine.js";
 import { aiEnabled } from "./brain.js";
-import { seedIfEmpty, demoTenant, salesTenant } from "./seed.js";
+import { seedIfEmpty, demoTenant, salesTenant, prospectTenant, prospectBrand } from "./seed.js";
 import { notifyText } from "./notify.js";
 import { runFollowups, startFollowupLoop } from "./followup.js";
 import { generateReport, runDailyReports } from "./report.js";
@@ -219,20 +219,37 @@ function demoLimit(req, res, next) {
 }
 
 app.post("/demo/chat", demoLimit, async (req, res) => {
-  const { sessionId, text, mode } = req.body || {};
+  const { sessionId, text, mode, slug } = req.body || {};
   const clean = String(text || "").trim().slice(0, 500);
   const sid = String(sessionId || "").replace(/[^a-z0-9]/gi, "").slice(0, 24);
-  const tenant = mode === "sales" ? salesTenant() : demoTenant();
+  const tenant = slug ? prospectTenant(String(slug)) : mode === "sales" ? salesTenant() : demoTenant();
   if (!clean || !sid || !tenant) return res.status(400).json({ error: "رسالة فارغة" });
   try {
     const result = await handleIncoming({ channel: "demo", tenantId: tenant.id, customerId: `demo-${sid}`, customerName: "", text: clean });
+    if (!result?.reply && slug) {
+      const c = db.listConversations(tenant.id).find((x) => x.customerId === `demo-${sid}`);
+      if (c?.mode === "human") return res.json({ reply: "", buttons: [], events: [{ type: "handoff_active" }] });
+    }
     if (!result?.reply) return res.status(503).json({ error: "التجربة الحية متوقفة مؤقتاً، جرب بعد شوية أو اترك رقمك تحت ونتواصل وياك 🌹" });
-    res.json({ reply: result.reply, buttons: result.buttons || [] });
+    // أحداث تبين لصاحب المحل شنو يصير وراء الكواليس (طلب انسجل، تحويل لموظف)
+    const events = (result.actions || [])
+      .map((a) => (a.type === "order" ? { type: "order", ref: a.order.id.slice(-6), summary: a.order.summary || "", total: a.order.total || 0 } : a.type === "handoff" ? { type: "handoff" } : null))
+      .filter(Boolean);
+    res.json({ reply: result.reply, buttons: result.buttons || [], events });
   } catch (e) {
     console.error("[demo]", e.message);
     res.status(500).json({ error: "صار خطأ، جرب مرة ثانية" });
   }
 });
+
+// صفحة تجربة باسم محل حقيقي: /try/10bunz
+app.get("/demo/info/:slug", (req, res) => {
+  const brand = prospectBrand(req.params.slug);
+  const t = prospectTenant(req.params.slug);
+  if (!brand || !t) return res.status(404).json({ error: "غير موجود" });
+  res.json({ ...brand, hours: t.knowledge?.hours || "", location: t.knowledge?.location || "" });
+});
+app.get("/try/:slug", (req, res) => (prospectBrand(req.params.slug) ? res.sendFile(path.resolve("public/try/index.html")) : res.redirect("/")));
 
 app.post("/demo/lead", demoLimit, async (req, res) => {
   const b = req.body || {};
