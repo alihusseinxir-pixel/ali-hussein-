@@ -233,7 +233,13 @@ app.post("/demo/chat", demoLimit, async (req, res) => {
     if (!result?.reply) return res.status(503).json({ error: "التجربة الحية متوقفة مؤقتاً، جرب بعد شوية أو اترك رقمك تحت ونتواصل وياك 🌹" });
     // أحداث تبين لصاحب المحل شنو يصير وراء الكواليس (طلب انسجل، تحويل لموظف)
     const events = (result.actions || [])
-      .map((a) => (a.type === "order" ? { type: "order", ref: a.order.id.slice(-6), summary: a.order.summary || "", total: a.order.total || 0 } : a.type === "handoff" ? { type: "handoff" } : null))
+      .map((a) =>
+        a.type === "order"
+          ? { type: "order", ref: a.order.external?.orderNo ? `${a.order.external.orderNo}` : a.order.id.slice(-6), panel: Boolean(a.order.external), track: a.order.external?.track || "", summary: a.order.summary || "", total: a.order.total || 0 }
+          : a.type === "handoff"
+            ? { type: "handoff" }
+            : null
+      )
       .filter(Boolean);
     res.json({ reply: result.reply, buttons: result.buttons || [], events });
   } catch (e) {

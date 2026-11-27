@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import * as db from "./db.js";
 import { quote } from "./pricing.js";
 import { getImage } from "./media.js";
+import { bunzConfig, contextFor as bunzContext, placeOrder as bunzPlaceOrder } from "./integrations/bunz.js";
 
 const MODEL = process.env.CLAUDE_MODEL || "claude-opus-5-5";
 const EFFORT = process.env.CLAUDE_EFFORT || "medium";
@@ -185,6 +186,42 @@ const TOOLS = [
   },
 ];
 
+// طلب يروح مباشرة لنظام طلبات المطعم (لوحة التحكم + إشعار) بدل create_request
+const PLACE_MENU_ORDER = {
+  name: "place_menu_order",
+  description:
+    "يسجل طلب الأكل مباشرة بنظام طلبات المطعم: يظهر بلوحة التحكم ويوصلهم إشعار. استخدمه بس بعد ما الزبون يوافق على الملخص، وعندك الاسم والرقم، وللتوصيل لازم يكون الزبون دز اللوكيشن. يرجع رقم الطلب والمجموع النهائي ويه أجرة التوصيل، أو شنو الناقص.",
+  strict: true,
+  input_schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            name: { type: "string", description: "اسم الصنف مثل ما مكتوب بالمنيو" },
+            qty: { type: "integer" },
+            options: { type: "array", items: { type: "string" }, description: "الاختيارات بالاسم، وكررها حسب العدد. مثال بركر: [\"سماش\"]. مثال بوكس: [\"سماش 10 بنز\",\"سماش 10 بنز\",\"سماش جيزي\",\"كلاسك 10 بنز دجاج\",\"سبايسي 10 بنز دجاج\"]" },
+            note: { type: "string", description: "ملاحظة على الصنف (بدون بصل...)، فارغ إذا ماكو" },
+          },
+          required: ["name", "qty", "options", "note"],
+        },
+      },
+      order_type: { type: "string", enum: ["delivery", "pickup"] },
+      customer_name: { type: "string" },
+      phone: { type: "string", description: "رقم عراقي 07XXXXXXXXX. بالواتساب إذا الزبون ما ذكر رقم ثاني، اتركه فارغ ونستخدم رقمه" },
+      address_note: { type: "string", description: "وصف العنوان (المنطقة + أقرب نقطة دالة)، فارغ للاستلام" },
+      notes: { type: "string" },
+      upsell_accepted: { type: "boolean", description: "true إذا الزبون قبل اقتراح إضافي منك" },
+    },
+    required: ["items", "order_type", "customer_name", "phone", "address_note", "notes", "upsell_accepted"],
+  },
+};
+const toolsFor = (tenant) => (bunzConfig(tenant) ? [...TOOLS.filter((t) => t.name !== "create_request"), PLACE_MENU_ORDER] : TOOLS);
+
 /** يحول سجل المحادثة لصيغة رسائل Claude (الزبون = user، النظام والموظف = assistant) */
 function toClaudeMessages(history) {
   const out = [];
@@ -251,12 +288,12 @@ function customerContext(conversation) {
   return lines.length ? `<الزبون>\n${lines.join("\n")}\n</الزبون>` : "زبون جديد، ماكو معلومات محفوظة عنه.";
 }
 
-function systemBlocks(tenant, conversation) {
+function systemBlocks(tenant, conversation, extra = "") {
   return [
     { type: "text", text: BASE_RULES + "\n\n" + buildBusinessProfile(tenant), cache_control: { type: "ephemeral" } },
     {
       type: "text",
-      text: `الوقت الحالي (${TIMEZONE}): ${nowText()}. القناة: ${conversation.channel}.\n${customerContext(conversation)}`,
+      text: `الوقت الحالي (${TIMEZONE}): ${nowText()}. القناة: ${conversation.channel}.\n${customerContext(conversation)}${extra ? `\n${extra}` : ""}`,
     },
   ];
 }
@@ -292,12 +329,12 @@ export async function generateReply({ tenant, conversation }) {
 
   const actions = [];
   // التعليمات تنبني مرة وحدة لكل رد: كتل التفكير مربوطة بنفس التعليمات، وإذا تغيرت بنص الحلقة (مثلاً السلة بعد quote_order) Claude يرفض الطلب
-  const system = systemBlocks(tenant, db.getConversation(conversation.id));
+  const system = systemBlocks(tenant, db.getConversation(conversation.id), await bunzContext(tenant, history));
   for (let step = 0; step < 5; step++) {
     const response = await createMessage({
       max_tokens: 4000,
       system,
-      tools: TOOLS,
+      tools: toolsFor(tenant),
       messages,
     });
 
@@ -313,23 +350,55 @@ export async function generateReply({ tenant, conversation }) {
     }
 
     messages.push({ role: "assistant", content: response.content });
-    const results = toolUses.map((tu) => {
+    const results = [];
+    for (const tu of toolUses) {
       try {
-        const r = runTool(tu, tenant, conversation);
+        const r = await runTool(tu, tenant, conversation, history);
         if (r.action) actions.push(r.action);
-        return { type: "tool_result", tool_use_id: tu.id, content: r.result };
+        results.push({ type: "tool_result", tool_use_id: tu.id, content: r.result, ...(r.isError ? { is_error: true } : {}) });
       } catch (err) {
-        return { type: "tool_result", tool_use_id: tu.id, content: String(err.message), is_error: true };
+        console.error("[tool]", tu.name, err.message);
+        results.push({ type: "tool_result", tool_use_id: tu.id, content: `صار خلل: ${err.message}. گول للزبون إن موظف راح يكمل وياه، واستخدم handoff_to_human.`, is_error: true });
       }
-    });
+    }
     messages.push({ role: "user", content: results });
   }
   return { reply: "", actions };
 }
 
-function runTool(tu, tenant, conversation) {
+async function runTool(tu, tenant, conversation, history = []) {
   const input = tu.input || {};
   const conv = db.getConversation(conversation.id);
+
+  if (tu.name === "place_menu_order") {
+    const r = await bunzPlaceOrder(tenant, conv, history, input, { test: db.TEST_CHANNELS.has(conv.channel) });
+    if (!r.ok) return { result: r.result, isError: true };
+    const o = r.order;
+    const order = db.addOrder({
+      tenantId: tenant.id,
+      conversationId: conv.id,
+      channel: conv.channel,
+      customerId: conv.customerId,
+      kind: "order",
+      summary: `#${o.orderNo} · ${o.summary}`,
+      total: o.total,
+      customer_name: input.customer_name,
+      phone: input.phone || (conv.channel === "whatsapp" ? conv.customerId : ""),
+      address: o.type === "pickup" ? "استلام من المطعم" : input.address_note,
+      when: "",
+      notes: input.notes,
+      upsell_accepted: Boolean(input.upsell_accepted),
+      external: { system: "10bunz", orderNo: o.orderNo, token: o.token, track: o.track },
+      afterFollowup: Boolean(conv.followupSentAt),
+    });
+    const p = conv.profile || {};
+    db.updateConversation(conv.id, {
+      stage: "ordered",
+      cart: null,
+      profile: { ...p, name: input.customer_name || p.name || "", phone: input.phone || p.phone || "", address: input.address_note || p.address || "", lastOrder: o.summary, orderCount: (p.orderCount || 0) + 1, totalSpent: (p.totalSpent || 0) + o.total },
+    });
+    return { result: r.result, action: { type: "order", order, external: true } };
+  }
 
   if (tu.name === "quote_order") {
     const q = quote(tenant.knowledge?.menu, input.items, input.delivery_fee);

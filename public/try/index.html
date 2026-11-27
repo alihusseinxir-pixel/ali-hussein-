@@ -37,7 +37,7 @@
   .msg time { display: block; font-size: 11px; color: var(--muted); text-align: left; margin-top: 2px; }
   .btns { align-self: flex-end; display: flex; flex-wrap: wrap; gap: 6px; max-width: 82%; justify-content: flex-end; }
   .btns button, .chips button { background: #fff; border: 1px solid #d0d7db; color: #027eb5; border-radius: 99px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
-  .event { align-self: center; background: #fff7d1; border: 1px solid #f0dc8a; color: #5c4a00; font-size: 13px; border-radius: 10px; padding: 8px 12px; max-width: 92%; text-align: center; line-height: 1.6; }
+  .event { white-space: pre-wrap; align-self: center; background: #fff7d1; border: 1px solid #f0dc8a; color: #5c4a00; font-size: 13px; border-radius: 10px; padding: 8px 12px; max-width: 92%; text-align: center; line-height: 1.6; }
   .event.order { background: #e7f6ec; border-color: #9fd8b1; color: #11532a; }
   .typing { align-self: flex-end; background: #fff; border-radius: 10px; padding: 10px 14px; color: var(--muted); font-size: 13px; }
   .chips { display: flex; gap: 6px; overflow-x: auto; padding: 8px 10px 0; scrollbar-width: none; }
@@ -59,7 +59,7 @@
     <ul class="points">
       <li><b>يرد خلال ثواني، 24 ساعة</b>، حتى لو 50 زبون بنفس الوقت.</li>
       <li><b>يبيع مو بس يجاوب:</b> يحول البركر لوجبة، يقترح الصوص، ويطلع البوكس للمجموعات.</li>
-      <li><b>يسجل الطلب كامل</b> (الاسم، الرقم، العنوان، المجموع) ويوصل للمطعم إشعار فوراً.</li>
+      <li><b>الطلب يوصل للوحة التحكم مباشرة</b> ويه إشعار «طلب جديد» لأجهزة المطعم، بالاسم والرقم واللوكيشن والمجموع ويه التوصيل.</li>
       <li><b>الزبون الزعلان يروح للموظف</b> مباشرة، والنظام ما يعد بشي من عنده.</li>
     </ul>
     <p class="meta" id="bMeta"></p>
@@ -131,7 +131,12 @@
         if (d.reply) add("msg bot", d.reply);
         addButtons(d.buttons);
         for (const e of d.events || []) {
-          if (e.type === "order") add("event order", `✅ انسجل طلب جديد #${e.ref}${e.total ? ` · ${fmt(e.total)} د.ع` : ""}\nوصل إشعار للمطعم ويظهر بلوحة الطلبات`);
+          if (e.type === "order") {
+            const box = add("event order", e.panel
+              ? `✅ الطلب #${e.ref} وصل للوحة تحكم المطعم${e.total ? ` · ${fmt(e.total)} د.ع` : ""}\n🔔 وصل إشعار «طلب جديد» لأجهزة المطعم`
+              : `✅ انسجل طلب جديد #${e.ref}${e.total ? ` · ${fmt(e.total)} د.ع` : ""}\nوصل إشعار للمطعم ويظهر بلوحة الطلبات`);
+            if (e.track) { const a = document.createElement("a"); a.href = e.track; a.target = "_blank"; a.rel = "noopener"; a.textContent = "\nفتح صفحة متابعة الطلب ↗"; a.style.display = "block"; box.appendChild(a); }
+          }
           if (e.type === "handoff") add("event", "👤 النظام حول المحادثة لموظف المطعم ووصله تنبيه. من هنا الموظف يكمل ويه الزبون.");
           if (e.type === "handoff_active") add("event", "👤 المحادثة هسه عند موظف المطعم. اضغط «محادثة جديدة» حتى تجرب من جديد.");
         }
@@ -156,6 +161,18 @@
     ["bName", "bName2", "bTitle"].forEach((id) => ($(id).textContent = b.title));
     $("bAvatar").textContent = b.title.replace(/\s+/g, "").slice(0, 3);
     $("bMeta").textContent = [b.location, b.hours].filter(Boolean).join(" · ");
+    if (b.demoLocation) {
+      const L = b.demoLocation, x = document.createElement("button");
+      x.type = "button"; x.textContent = "📍 دز موقع تجريبي";
+      x.onclick = () => send(`📍 موقع الزبون: ${L.lat},${L.lng} ${L.label}`);
+      $("chips").appendChild(x);
+      if (navigator.geolocation) {
+        const y = document.createElement("button");
+        y.type = "button"; y.textContent = "📍 موقعي الحقيقي";
+        y.onclick = () => navigator.geolocation.getCurrentPosition((p) => send(`📍 موقع الزبون: ${p.coords.latitude.toFixed(6)},${p.coords.longitude.toFixed(6)}`), () => add("event", "ما گدرنا ناخذ موقعك. جرب «موقع تجريبي»."));
+        $("chips").appendChild(y);
+      }
+    }
     (b.suggestions || []).forEach((s) => { const x = document.createElement("button"); x.type = "button"; x.textContent = s; x.onclick = () => send(s); $("chips").appendChild(x); });
     greet();
   }).catch(() => greet());
